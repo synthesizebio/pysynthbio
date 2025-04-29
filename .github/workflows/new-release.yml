@@ -85,7 +85,7 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/pysynthbio
     permissions:
-      id-token: write  # REQUIRED for trusted publishing
+      id-token: write  
 
     steps:
       - name: Download all the dists
@@ -108,7 +108,8 @@ jobs:
       name: pypi
       url: https://pypi.org/p/pysynthbio
     permissions:
-      id-token: write  # REQUIRED for trusted publishing
+      id-token: write  
+
     steps:
       - name: Download all the dists
         uses: actions/download-artifact@v4
@@ -127,7 +128,7 @@ jobs:
       name: pypi
       url: https://pypi.org/p/pysynthbio
     permissions:
-      id-token: write  # REQUIRED for trusted publishing
+      id-token: write  
     
     steps:
      - name: Setup UV and Python
@@ -147,4 +148,11 @@ jobs:
         git config --global user.email 'github-actions[bot]@users.noreply.github.com'
         git add --force docs/*
         git commit -m 'Render docs' || echo "No changes to commit"
-        git push origin main || echo "No changes to push"
+
+     - name: Create Pull Request
+       uses: peter-evans/create-pull-request@v7
+       title: "Automatic PR for updated docs upon new release"
+       body: |
+         This is PR automatically filed by the new-release.yml GitHub Action 
+         which is triggered whenever a new release of this package is made. 
+         This PR shows an automatic rendering of the docs. 
