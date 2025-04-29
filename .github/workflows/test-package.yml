@@ -31,7 +31,7 @@ jobs:
       - name: Type check with mypy
         run: |
           uv pip install mypy
-          mypy --install-types --non-interactive .
+          mypy --disallow-untyped-defs --namespace-packages --explicit-package-bases src
           
       - name: Check formatting with black
         run: |
