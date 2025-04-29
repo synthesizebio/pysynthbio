@@ -61,32 +61,6 @@ jobs:
         run: |
           uv pip install pytest pytest-cov
           pytest --cov=./ --cov-report=xml
-      
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          file: ./coverage.xml
-          fail_ci_if_error: false
-
-  integration:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup UV and Python
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.12"
-      
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-      
-      - name: Run integration tests
-        run: |
-          uv pip install pytest
-          pytest tests/integration/ -v
 
   build:
     name: Build Package
@@ -127,6 +101,10 @@ jobs:
       
       - name: Install dependencies
         run: |
+          # Rebuild 
+          python3 -m pip install --upgrade build
+
+          # Sync with uv
           uv sync --all-extras --dev 
           uv pip install sphinx sphinx-rtd-theme
       
