@@ -21,3 +21,6 @@ build-backend = "setuptools.build_meta"
 [project.urls]
 Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
