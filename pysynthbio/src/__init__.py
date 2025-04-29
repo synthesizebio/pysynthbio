@@ -5,7 +5,7 @@ __version__ = version("pysynthbio")
 
 
 # populate package namespace
-from pysynthbio.call_model_api import (
+from .call_model_api import (
     get_model_endpoints as get_model_endpoints,
     get_valid_modalities as get_valid_modalities,
     get_valid_query as get_valid_query,
