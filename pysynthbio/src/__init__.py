@@ -9,6 +9,22 @@ import ast
 
 __version__ = version("pysynthbio")
 
+
+# populate package namespace
+from pysynthbio.call_model_api import (
+    get_model_endpoints,
+    get_valid_modalities,
+    get_valid_query,
+    predict_query,
+    validate_query,
+    process_samples,
+    get_gene_order,
+    expand_metadata,
+    validate_modality,
+    transform_to_counts,
+    log_cpm
+)
+
 MODEL_MODALITIES = {
     "rMetalv0.2": {
         "bulk_rna-seq",
