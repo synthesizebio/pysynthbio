@@ -334,7 +334,7 @@ def process_samples(samples: list, modality: str) -> pd.DataFrame:
 
 
 @lru_cache()
-def get_gene_order(modality):
+def get_gene_order(modality) -> list:
     """
     Reads the gene order for a given modality.
 
