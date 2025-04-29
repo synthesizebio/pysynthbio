@@ -8,3 +8,16 @@ authors = [
 ]
 readme = "README.md"
 license = "MIT"
+dependencies = [
+    "numpy>=2.2.5",
+    "pandas>=2.2.3",
+    "requests",
+]
+
+[build-system]
+requires = ["setuptools >= 77.0.3"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+Homepage = "https://github.com/synthesizebio/pysynthbio"
+Issues = "https://github.com/synthesizebio/pysynthbio/issues"

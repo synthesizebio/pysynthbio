@@ -1,11 +1,23 @@
 # pysynthbio
-The Pythonic API calling package for Synthesize Bio
 
+The Pythonic API calling package for Synthesize Bio
 
 ## Installation 
 
-Probably pip install here 
+To start using pysynthbio, first you need to have an account with synthesize.bio. 
+[Go here to create one](https://app.synthesize.bio/)
+
+Then on your machine you can install using pip: 
+```
+pip install pysynthbio
+```
+
+To ensure it installed you can run `pip show pysynthbio`. 
 
 ## Usage 
 
-Some instructions here about how to use
+### Get your API key 
+
+Go to https://app.synthesize.bio/profile and click the copy button next to your API key. 
+
+ ### Form a request 
