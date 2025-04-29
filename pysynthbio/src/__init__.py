@@ -1,3 +1,5 @@
+# read version from installed package
+from importlib.metadata import version
 
 __version__ = version("pysynthbio")
 
@@ -10,7 +12,7 @@ from pysynthbio.call_model_api import (
     predict_query as predict_query,
     validate_query as validate_query,
     process_samples as process_samples,
-    get_gene_order as et_gene_order,
+    get_gene_order as get_gene_order,
     expand_metadata as expand_metadata,
     validate_modality as validate_modality,
     transform_to_counts as transform_to_counts,
