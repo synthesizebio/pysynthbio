@@ -103,10 +103,9 @@ jobs:
         run: |
           # Sync with uv
           uv sync --all-extras --dev 
-          uv pip install sphinx sphinx-rtd-theme
+          uv pip install sphinx sphinx-autobuild
       
       - name: Build documentation
         run: |
-          cd docs
           make html
       
