@@ -101,9 +101,6 @@ jobs:
       
       - name: Install dependencies
         run: |
-          # Rebuild 
-          python3 -m pip install --upgrade build
-
           # Sync with uv
           uv sync --all-extras --dev 
           uv pip install sphinx sphinx-rtd-theme
