@@ -334,7 +334,7 @@ def process_samples(samples: list, modality: str) -> pd.DataFrame:
 
 
 @lru_cache()
-def get_gene_order(modality):
+def get_gene_order(modality) -> list:
     """
     Reads the gene order for a given modality.
 
@@ -418,10 +418,10 @@ def transform_to_counts(expression: pd.DataFrame) -> pd.DataFrame:
         A DataFrame containing counts data.
     """
     counts = (np.expm1(expression) * 30).astype(int)
-    return counts
+    return pd.DataFrame(counts)
 
 
-def log_cpm(expression: pd.DataFrame):
+def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     """
     Transforms expression data into log1p cpm.
 
@@ -439,4 +439,4 @@ def log_cpm(expression: pd.DataFrame):
     cpm = expression.div(expression.sum(axis=1), axis=0) * 1e6
     log_cpm = np.log1p(cpm)
 
-    return log_cpm
+    return pd.DataFrame(log_cpm)
