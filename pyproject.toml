@@ -26,5 +26,5 @@ Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 package-dir = {"" = "src"}
 
 [[tool.mypy.overrides]]
-module = "setuptools"
+module = ["setuptools", "pandas-stubs", "requests"]
 ignore_missing_imports = true
