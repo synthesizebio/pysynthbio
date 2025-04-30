@@ -9,99 +9,82 @@ import ast
 
 PROXY_API_BASE_URL = "http://localhost"
 
+# Updated nested structure
 MODEL_MODALITIES = {
-    "rMetalv0.2": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
+    "rMetal": {
+        "v0.2": {"bulk_rna-seq", "lincs", "sra"},
+        "v0.4": {"bulk_rna-seq", "lincs", "sra"},
+        "v0.5": {"bulk_rna-seq", "lincs", "sra"},
+        "v0.6": {"bulk_rna-seq", "lincs", "sra"},
     },
-    "rMetalv0.4": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
+    "DoGMA": {
+        "v0.1": {"bulk_rna-seq", "lincs", "sra"},
+        "v0.2": {"bulk_rna-seq", "lincs", "sra"},
+        "v0.3": {"bulk_rna-seq", "lincs", "sra"},
     },
-    "rMetalv0.5": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-    },
-    "rMetalv0.6": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-    },
-    "DoGMAv0.1": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-    },
-    "DoGMAv0.2": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-    },
-    "DoGMAv0.3": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-    },
-    "combinedv1.0": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-        "single_cell_rna-seq",
-        "microarray",
-        "pseudo_bulk",
+    "combined": {
+        "v1.0": {
+            "bulk_rna-seq",
+            "lincs",
+            "sra",
+            "single_cell_rna-seq",
+            "microarray",
+            "pseudo_bulk",
+        }
     },
 }
 
+# Define default family and version
+DEFAULT_MODEL_FAMILY = "combined"
+DEFAULT_MODEL_VERSION = "v1.0"
 
-DEFAULT_MODEL = "combinedv1.0"
-
-LOG_CPM_MODELS = {"rMetalv0.2", "rMetalv0.4", "rMetalv0.5", "DoGMAv0.1", "DoGMAv0.2"}
+# Keep this as is for now, uses combined name
+# Change to store tuples (family, version)
+LOG_CPM_MODEL_TUPLES = {
+    ("rMetal", "v0.2"),
+    ("rMetal", "v0.4"),
+    ("rMetal", "v0.5"),
+    ("DoGMA", "v0.1"),
+    ("DoGMA", "v0.2"),
+}
 
 
 def get_valid_modalities() -> dict:
     """
-    Returns a dictionary of possible modalities per model.
+    Returns a dictionary of possible modalities per model family and version.
 
     Returns
     -------
     dict
-        A dictionary containing the modalities.
+        A nested dictionary containing the modalities.
     """
     return MODEL_MODALITIES
 
 
-def get_valid_query(model) -> dict:
+def get_valid_query(model_family: str, model_version: str) -> dict:
     """
     Generates a sample query for prediction and validation based on model version.
 
     Parameters
     ----------
-    model: str
-        name of the model (e.g., 'rMetalv0.6', 'combinedv1.0')
+    model_family: str
+        Family name of the model (e.g., 'rMetal', 'combined').
+    model_version: str
+        Version string of the model (e.g., 'v0.6', 'v1.0').
     Returns
     -------
     dict
-        A dictionary representing a valid query with modality and input data.
+        A dictionary representing a valid query structure.
     """
-    # Extract the version number from the model name
-    match = re.search(r"v(\d+\.\d+)", model)
-    if not match:
-        # Try parsing model name and version for pre-v1 models like 'rMetal', 'v0.6'
-        name_version_match = re.match(r"([a-zA-Z]+)(v\d+\.\d+)", model)
-        if not name_version_match:
-            raise ValueError(f"Model name '{model}' is not valid. Check available models.")
-        version_str = name_version_match.group(2)
-        version_match = re.search(r"(\d+\.\d+)", version_str)
-        if not version_match:
-             raise ValueError(f"Could not extract version number from '{model}'.")
-        version_number = float(version_match.group(1))
-
-    else:
-        version_number = float(match.group(1))
-
+    try:
+        # Extract float from version string like "v1.0"
+        # Ensure the version string starts with 'v' before slicing and converting
+        if not model_version.startswith('v'):
+            raise ValueError(f"Invalid model version format '{model_version}'. Expected prefix 'v'.")
+        version_number = float(model_version[1:])
+    except (ValueError, IndexError, TypeError) as e:
+        # Catch broader errors including float conversion issues
+        raise ValueError(f"Invalid model version format '{model_version}'. Failed to parse float: {e}")
 
     if version_number < 1.0:
         # Corresponds to RequestBodyV0.x schema
@@ -163,7 +146,8 @@ def get_valid_query(model) -> dict:
 
 def predict_query(
     query: dict,
-    model_name: str = DEFAULT_MODEL,
+    model_family: str = DEFAULT_MODEL_FAMILY,
+    model_version: str = DEFAULT_MODEL_VERSION,
     as_counts: bool = True,
 ) -> dict[str, pd.DataFrame]:
     """
@@ -173,10 +157,13 @@ def predict_query(
     ----------
     query : dict
         A dictionary representing the query data to send to the API.
-        Use `get_valid_query(model_name)` to generate an example.
-    model_name : str, optional
-        The name of the model to query (e.g., 'rMetalv0.6', 'combinedv1.0').
-        Defaults to 'combinedv1.0'.
+        Use `get_valid_query(family, version)` to generate an example.
+    model_family : str, optional
+        The family name of the model (e.g., 'rMetal', 'combined').
+        Defaults to 'combined'.
+    model_version : str, optional
+        The version string of the model (e.g., 'v0.6', 'v1.0').
+        Defaults to 'v1.0'.
     as_counts : bool, optional
         If True, transforms the predicted expression data into counts if the model
         returns logCPM (default is True). If the model returns counts and as_counts
@@ -193,33 +180,24 @@ def predict_query(
     KeyError
         If the SYNTHESIZE_API_KEY environment variable is not set.
     ValueError
-        If API fails, model name is invalid, or response is invalid.
+        If API fails, model family/version is invalid, or response is invalid.
     """
 
     if "SYNTHESIZE_API_KEY" not in os.environ:
         raise KeyError("Please set the SYNTHESIZE_API_KEY environment variable")
 
-    # Construct the API endpoint URL based on the model name
-    if model_name == "combinedv1.0":
-        api_url = f"{PROXY_API_BASE_URL}/api/model/combined/v1.0"
+    # Construct API URL using family and version
+    if model_family and model_version:
+        # Use the general template for all valid cases
+        api_url = f"{PROXY_API_BASE_URL}/api/model/{model_family}/{model_version}"
+        if model_family not in MODEL_MODALITIES or model_version not in MODEL_MODALITIES.get(model_family, {}):
+            print(f"Warning: Model {model_family}/{model_version} not found in known MODEL_MODALITIES.")
     else:
-        # Expecting format like "rMetalv0.6"
-        match = re.match(r"([a-zA-Z]+)(v\d+\.\d+)", model_name)
-        if not match:
-            raise ValueError(
-                f"Invalid model name format for pre-v1.0 model: '{model_name}'. "
-                "Expected format like 'rMetalv0.6'."
-            )
-        name, version = match.groups()
-        api_url = f"{PROXY_API_BASE_URL}/api/model/{name}/{version}"
-        # Validate the split name/version is known (optional, based on API behavior)
-        if model_name not in MODEL_MODALITIES:
-             print(f"Warning: Model '{model_name}' not found in known MODEL_MODALITIES.")
+        raise ValueError("Invalid model_family or model_version provided.")
 
-
-    # Pass model_name to the updated validate_query function
-    validate_query(query, model_name)
-    print(f"Skipping modality validation for model '{model_name}' as validate_modality function requires endpoint parameter.")
+    # Validate query structure and modality against the specific model
+    validate_query(query, model_family, model_version)
+    validate_modality(query, model_family, model_version)
 
     response = requests.post(
         url=api_url,
@@ -234,7 +212,7 @@ def predict_query(
     # Check the HTTP status code
     if response.status_code != 200:
         raise ValueError(
-            f"API request failed with status {response.status_code}: {response.text}"
+            f"API request to {api_url} failed with status {response.status_code}: {response.text}"
         )
     # Parse the response JSON
     try:
@@ -254,7 +232,6 @@ def predict_query(
             raise ValueError(f"Error in response from API received: {content[key]}")
 
     # Determine response structure based on keys (adapt based on actual proxy response)
-    # Assuming v1.0 structure is the default now
     if "outputs" in content and "gene_order" in content: # v1.0 structure
         expression = pd.concat(
             [
@@ -269,7 +246,6 @@ def predict_query(
             for _ in range(len(output["expression"])) # Replicate metadata for each sample within the output
         ]
         metadata = pd.DataFrame(metadata_rows)
-        # Cannot easily verify gene order without modality from query/response consistently
 
     elif "samples" in content: # Pre-v1.0 structure (assuming proxy might return this)
         samples = content["samples"]
@@ -285,7 +261,8 @@ def predict_query(
 
     # --- Count transformation logic ---
     # Determine if the *queried model* typically returns logCPM
-    model_returns_logcpm = model_name in LOG_CPM_MODELS
+    # Check using tuple against the updated set
+    model_returns_logcpm = (model_family, model_version) in LOG_CPM_MODEL_TUPLES
 
     if as_counts:
         if model_returns_logcpm:
@@ -305,16 +282,18 @@ def predict_query(
     return {"metadata": metadata, "expression": expression}
 
 
-def validate_query(query: dict, model_name: str) -> None:
+def validate_query(query: dict, model_family: str, model_version: str) -> None:
     """
-    Validates the structure and contents of the query based on the target model.
+    Validates the structure and contents of the query based on the target model version.
 
     Parameters
     ----------
     query : dict
         The query dictionary.
-    model_name : str
-        The name of the model being queried.
+    model_family : str
+        Family name of the model (e.g., 'rMetal', 'combined').
+    model_version : str
+        Version string of the model (e.g., 'v0.6', 'v1.0').
 
     Raises
     -------
@@ -328,9 +307,15 @@ def validate_query(query: dict, model_name: str) -> None:
             f"Expected `query` to be a dictionary, but got {type(query).__name__}"
         )
 
-    # Determine required keys based on model version (similar logic as get_valid_query)
-    match = re.search(r"v(\d+\.\d+)", model_name)
-    is_v1_or_later = match and float(match.group(1)) >= 1.0
+    # Determine required keys based on model version
+    try:
+        version_number = float(model_version[1:]) # Extract float from e.g., "v1.0"
+    except (ValueError, IndexError):
+        # Cannot validate query structure if model version is invalid
+        print(f"Warning: Skipping query validation due to invalid model version '{model_version}'.")
+        return
+
+    is_v1_or_later = version_number >= 1.0
 
     if is_v1_or_later:
         required_keys = {"inputs", "mode", "output_modality"}
@@ -339,9 +324,11 @@ def validate_query(query: dict, model_name: str) -> None:
 
     missing_keys = required_keys - query.keys()
     if missing_keys:
+        # Construct combined name for error message
+        model_name_combined = f"{model_family}{model_version}" if model_family != "combined" else "combinedv1.0"
         raise ValueError(
-            f"Missing required keys in query for model '{model_name}': {missing_keys}. "
-            f"Use `get_valid_query('{model_name}')` to get an example."
+            f"Missing required keys in query for model '{model_name_combined}': {missing_keys}. "
+            f"Use `get_valid_query('{model_family}', '{model_version}')` to get an example."
         )
 
     # Further validation could be added here (e.g., type checks for values)
@@ -445,33 +432,65 @@ def expand_metadata(query: dict) -> pd.DataFrame:
     return metadata
 
 
-def validate_modality(query: dict, endpoint: str) -> None:
+def validate_modality(query: dict, model_family: str, model_version: str) -> None:
     """
-    Validates the modality in the query is within the allowed modalities for model.
+    Validates the modality in the query is within the allowed modalities for the specified model.
 
     Parameters
     ----------
     query : dict
         A dictionary containing the query data.
-    endpoint : str
-        The endpoint of the model being queried (e.g., 'rMetalv0.6', 'combinedv1.0').
+    model_family : str
+        Family name of the model (e.g., 'rMetal', 'combined').
+    model_version : str
+        Version string of the model (e.g., 'v0.6', 'v1.0').
 
     Raises
     -------
     ValueError
-        If the modality key is missing or the selected modality is not allowed for the model.
+        If the model family/version is invalid, the modality key is missing, or the selected
+        modality is not allowed for the model.
     """
-    if "modality" in query:
-        selected_modality = query["modality"]
+
+    if model_family not in MODEL_MODALITIES or model_version not in MODEL_MODALITIES.get(model_family, {}):
+        # If the model isn't explicitly listed, we might not be able to validate modalities.
+        # Depending on requirements, could warn or raise an error.
+        print(f"Warning: Cannot validate modality for unknown model {model_family}/{model_version}. Known families: {list(MODEL_MODALITIES.keys())}")
+        return
+
+    allowed_modalities = MODEL_MODALITIES[model_family][model_version]
+
+    # Determine which modality key to check based on model version
+    try:
+        version_number = float(model_version[1:])
+    except (ValueError, IndexError):
+         raise ValueError(f"Cannot validate modality for invalid model version '{model_version}'.")
+
+    is_v1_or_later = version_number >= 1.0
+
+    if is_v1_or_later:
+        modality_key = "output_modality"
+        if modality_key not in query:
+             # Construct combined name for error message
+             model_name_combined = f"{model_family}{model_version}" if model_family != "combined" else "combinedv1.0"
+             raise ValueError(f"Query for model '{model_name_combined}' requires '{modality_key}' key.")
+        selected_modality = query[modality_key]
     else:
-        selected_modality = query["inputs"]["modality"]
+        modality_key = "modality"
+        if modality_key not in query:
+             # Construct combined name for error message
+             model_name_combined = f"{model_family}{model_version}"
+             raise ValueError(f"Query for model '{model_name_combined}' requires '{modality_key}' key.")
+        selected_modality = query[modality_key]
 
-    model_name = next(k for k, v in MODEL_MODALITIES.items() if v == endpoint)
-    assert (
-        selected_modality in MODEL_MODALITIES[model_name]
-    ), f"Invalid modality: '{selected_modality}' not in {MODEL_MODALITIES[model_name]}"
 
-    return None
+    if selected_modality not in allowed_modalities:
+        # Construct combined name for error message
+        model_name_combined = f"{model_family}{model_version}" if model_family != "combined" else "combinedv1.0"
+        raise ValueError(
+            f"Invalid modality '{selected_modality}' for model '{model_name_combined}'. "
+            f"Allowed modalities: {allowed_modalities}"
+        )
 
 
 def transform_to_counts(expression: pd.DataFrame) -> pd.DataFrame:

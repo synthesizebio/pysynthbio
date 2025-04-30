@@ -22,6 +22,11 @@ build-backend = "setuptools.build_meta"
 Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
