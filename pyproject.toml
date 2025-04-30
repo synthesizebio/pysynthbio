@@ -26,5 +26,5 @@ Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 package-dir = {"" = "src"}
 
 [[tool.mypy.overrides]]
-module = ["untyped_package.*"]
-follow_untyped_imports = true
+module = "setuptools"
+ignore_missing_imports = true
