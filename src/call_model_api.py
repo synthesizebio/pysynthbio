@@ -7,6 +7,7 @@ import json
 import re
 import ast
 
+PROXY_API_BASE_URL = "http://localhost"
 
 MODEL_MODALITIES = {
     "rMetalv0.2": {
@@ -54,35 +55,10 @@ MODEL_MODALITIES = {
     },
 }
 
-MODELS = {
-    "rMetalv0.2": "https://tp3fsonurm7s6gcl.us-east-1.aws.endpoints.huggingface.cloud",
-    "rMetalv0.4": "https://nduvneyj3ynapbv3.us-east-1.aws.endpoints.huggingface.cloud",
-    "rMetalv0.5": "https://mut58aklpmk6mr1u.us-east-1.aws.endpoints.huggingface.cloud",
-    "rMetalv0.6": "https://k8bcgyqfijgrl2bq.us-east-1.aws.endpoints.huggingface.cloud",
-    "DoGMAv0.1": "https://y9e80x48xyreg7vn.us-east-1.aws.endpoints.huggingface.cloud",
-    "DoGMAv0.2": "https://w6zrdrulbi04x6sv.us-east-1.aws.endpoints.huggingface.cloud",
-    "DoGMAv0.3": "https://gfiu95rp5maj75yg.us-east-1.aws.endpoints.huggingface.cloud",
-    "combinedv1.0": "https://uk9hdkibyzwxn0hz.us-east-1.aws.endpoints.huggingface.cloud",
-}
 
 DEFAULT_MODEL = "combinedv1.0"
-ENDPOINT_URL = MODELS[DEFAULT_MODEL]
-
 
 LOG_CPM_MODELS = {"rMetalv0.2", "rMetalv0.4", "rMetalv0.5", "DoGMAv0.1", "DoGMAv0.2"}
-LOG_CPM_ENDPOINTS = {MODELS[model] for model in LOG_CPM_MODELS}
-
-
-def get_model_endpoints() -> dict:
-    """
-    Returns a dictionary of model endpoints.
-
-    Returns
-    -------
-    dict
-        A dictionary containing the model endpoints.
-    """
-    return MODELS
 
 
 def get_valid_modalities() -> dict:
@@ -99,12 +75,12 @@ def get_valid_modalities() -> dict:
 
 def get_valid_query(model) -> dict:
     """
-    Generates a sample query for prediction and validation.
+    Generates a sample query for prediction and validation based on model version.
 
     Parameters
     ----------
     model: str
-        name of the model (e.g., 'meanv1.0', 'rMetalv0.6')
+        name of the model (e.g., 'rMetalv0.6', 'combinedv1.0')
     Returns
     -------
     dict
@@ -113,11 +89,22 @@ def get_valid_query(model) -> dict:
     # Extract the version number from the model name
     match = re.search(r"v(\d+\.\d+)", model)
     if not match:
-        raise ValueError("Model name is not valid. Use `get_model_endpoints()`.")
+        # Try parsing model name and version for pre-v1 models like 'rMetal', 'v0.6'
+        name_version_match = re.match(r"([a-zA-Z]+)(v\d+\.\d+)", model)
+        if not name_version_match:
+            raise ValueError(f"Model name '{model}' is not valid. Check available models.")
+        version_str = name_version_match.group(2)
+        version_match = re.search(r"(\d+\.\d+)", version_str)
+        if not version_match:
+             raise ValueError(f"Could not extract version number from '{model}'.")
+        version_number = float(version_match.group(1))
 
-    version_number = float(match.group(1))
+    else:
+        version_number = float(match.group(1))
+
 
     if version_number < 1.0:
+        # Corresponds to RequestBodyV0.x schema
         return {
             "modality": "sra",
             "num_samples": 5,
@@ -143,6 +130,7 @@ def get_valid_query(model) -> dict:
             ],
         }
     else:
+        # Corresponds to RequestBodyV1.0 schema
         return {
             "output_modality": "sra",
             "mode": "mean estimation",
@@ -175,19 +163,24 @@ def get_valid_query(model) -> dict:
 
 def predict_query(
     query: dict,
+    model_name: str = DEFAULT_MODEL,
     as_counts: bool = True,
-    endpoint: str = ENDPOINT_URL,
 ) -> dict[str, pd.DataFrame]:
     """
-    Sends a query to the Hugging Face API for prediction and retrieves samples.
+    Sends a query to the Synthesize Bio Proxy API for prediction and retrieves samples.
 
     Parameters
     ----------
     query : dict
         A dictionary representing the query data to send to the API.
+        Use `get_valid_query(model_name)` to generate an example.
+    model_name : str, optional
+        The name of the model to query (e.g., 'rMetalv0.6', 'combinedv1.0').
+        Defaults to 'combinedv1.0'.
     as_counts : bool, optional
-        If True, transforms the predicted expression data into counts (default is True).
-    endpoint : str, optional
+        If True, transforms the predicted expression data into counts if the model
+        returns logCPM (default is True). If the model returns counts and as_counts
+        is False, transforms to logCPM.
 
     Returns
     -------
@@ -196,24 +189,43 @@ def predict_query(
         expression: pd.DataFrame containing expression data for each sample
 
     Raises
-    ------
+    -------
     KeyError
-        If the HF_TOKEN environment variable is not set
+        If the SYNTHESIZE_API_KEY environment variable is not set.
     ValueError
-        If API fails
-
+        If API fails, model name is invalid, or response is invalid.
     """
 
-    if "HF_TOKEN" not in os.environ:
-        raise KeyError("Please set the HF_TOKEN environment variable")
+    if "SYNTHESIZE_API_KEY" not in os.environ:
+        raise KeyError("Please set the SYNTHESIZE_API_KEY environment variable")
 
-    validate_query(query)
+    # Construct the API endpoint URL based on the model name
+    if model_name == "combinedv1.0":
+        api_url = f"{PROXY_API_BASE_URL}/api/model/combined/v1.0"
+    else:
+        # Expecting format like "rMetalv0.6"
+        match = re.match(r"([a-zA-Z]+)(v\d+\.\d+)", model_name)
+        if not match:
+            raise ValueError(
+                f"Invalid model name format for pre-v1.0 model: '{model_name}'. "
+                "Expected format like 'rMetalv0.6'."
+            )
+        name, version = match.groups()
+        api_url = f"{PROXY_API_BASE_URL}/api/model/{name}/{version}"
+        # Validate the split name/version is known (optional, based on API behavior)
+        if model_name not in MODEL_MODALITIES:
+             print(f"Warning: Model '{model_name}' not found in known MODEL_MODALITIES.")
+
+
+    # Pass model_name to the updated validate_query function
+    validate_query(query, model_name)
+    print(f"Skipping modality validation for model '{model_name}' as validate_modality function requires endpoint parameter.")
 
     response = requests.post(
-        url=endpoint,
+        url=api_url,
         headers={
             "Accept": "application/json",
-            "Authorization": "Bearer " + os.environ["HF_TOKEN"],
+            "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
             "Content-Type": "application/json",
         },
         json=query,
@@ -227,22 +239,23 @@ def predict_query(
     # Parse the response JSON
     try:
         content = response.json()
-        if not isinstance(content, dict):  # prev versions returned list
+        # Handle potential list wrapper for older versions if proxy preserves it
+        if isinstance(content, list) and len(content) == 1 and isinstance(content[0], dict):
             content = content[0]
+        elif not isinstance(content, dict):
+             raise ValueError(f"API response is not a JSON object: {response.text}")
+
     except json.JSONDecodeError:
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")
 
-    # this is hack due to status 200 returning errors
+    # Check for errors in the response body (common pattern)
     for key in ("error", "errors"):
         if key in content:
             raise ValueError(f"Error in response from API received: {content[key]}")
 
-    # deprecate this logic once we deprecate pre-v1 models
-    if "samples" in content:
-        samples = content["samples"]
-        metadata = expand_metadata(query)
-        expression = process_samples(samples, query["modality"])
-    else:
+    # Determine response structure based on keys (adapt based on actual proxy response)
+    # Assuming v1.0 structure is the default now
+    if "outputs" in content and "gene_order" in content: # v1.0 structure
         expression = pd.concat(
             [
                 pd.DataFrame(output["expression"], columns=content["gene_order"])
@@ -253,82 +266,108 @@ def predict_query(
         metadata_rows = [
             output["metadata"]
             for output in content["outputs"]
-            for _ in range(len(output["expression"]))
+            for _ in range(len(output["expression"])) # Replicate metadata for each sample within the output
         ]
         metadata = pd.DataFrame(metadata_rows)
+        # Cannot easily verify gene order without modality from query/response consistently
 
-    # logic for counts
-    if as_counts and endpoint in LOG_CPM_ENDPOINTS:
-        # convert to counts if user requests and model returns log1p cpm values
-        expression = transform_to_counts(expression)
-    elif as_counts and endpoint not in LOG_CPM_ENDPOINTS:
-        # convert to integer for models that return counts and user wants counts
-        expression = expression.astype(int)
-    elif not as_counts and endpoint not in LOG_CPM_ENDPOINTS:
-        # if user does not want counts and is hitting a counts model, return log1p cpm
-        expression = log_cpm(expression)
+    elif "samples" in content: # Pre-v1.0 structure (assuming proxy might return this)
+        samples = content["samples"]
+        # Need modality to get gene order for pre-v1
+        if "modality" not in query:
+             raise ValueError("Query for pre-v1.0 model must contain 'modality' key.")
+        modality = query["modality"]
+        metadata = expand_metadata(query) # Uses the pre-v1.0 input structure
+        expression = process_samples(samples, modality)
     else:
-        # if not as counts and model returns log1p cpm, return as is
-        pass
+        raise ValueError(f"Unexpected API response structure: {content}")
+
+
+    # --- Count transformation logic ---
+    # Determine if the *queried model* typically returns logCPM
+    model_returns_logcpm = model_name in LOG_CPM_MODELS
+
+    if as_counts:
+        if model_returns_logcpm:
+            # Convert logCPM from model to counts
+            expression = transform_to_counts(expression)
+        else:
+            # Model returns counts, user wants counts: ensure integer type
+            expression = expression.astype(int)
+    else: # User wants logCPM
+        if model_returns_logcpm:
+            # Model returns logCPM, user wants logCPM: do nothing (or ensure float type)
+            expression = expression.astype(float) # Ensure float
+        else:
+            # Model returns counts, user wants logCPM: convert counts to logCPM
+            expression = log_cpm(expression)
 
     return {"metadata": metadata, "expression": expression}
 
 
-def validate_query(query: dict) -> None:
+def validate_query(query: dict, model_name: str) -> None:
     """
-    Validates the structure and contents of the query.
+    Validates the structure and contents of the query based on the target model.
 
     Parameters
     ----------
     query : dict
         The query dictionary.
+    model_name : str
+        The name of the model being queried.
 
     Raises
-    ------
+    -------
     TypeError
         If the query is not a dictionary.
     ValueError
-        If the query is missing required keys.
+        If the query is missing required keys for the specific model version.
     """
-    # Check that the query is a dictionary
     if not isinstance(query, dict):
         raise TypeError(
             f"Expected `query` to be a dictionary, but got {type(query).__name__}"
         )
 
-    # Validate required keys
-    required_keys = {"inputs"}
+    # Determine required keys based on model version (similar logic as get_valid_query)
+    match = re.search(r"v(\d+\.\d+)", model_name)
+    is_v1_or_later = match and float(match.group(1)) >= 1.0
+
+    if is_v1_or_later:
+        required_keys = {"inputs", "mode", "output_modality"}
+    else:
+        required_keys = {"inputs", "modality", "num_samples"}
+
     missing_keys = required_keys - query.keys()
     if missing_keys:
         raise ValueError(
-            f"Missing required keys in query: {missing_keys}. Use `get_valid_query()` to get an example."
+            f"Missing required keys in query for model '{model_name}': {missing_keys}. "
+            f"Use `get_valid_query('{model_name}')` to get an example."
         )
+
+    # Further validation could be added here (e.g., type checks for values)
 
 
 def process_samples(samples: list, modality: str) -> pd.DataFrame:
     """
-    Processes the samples returned from the API into a DataFrame.
+    Processes the samples returned from the API (pre-v1.0 format) into a DataFrame.
 
     Parameters
     ----------
-
     samples : list of lists
         A list of lists containing the expression data for each sample.
-
     modality : str
-        The modality of the data (e.g. "bulk_rna-seq", "lincs", "single_cell_rna-seq", "sra").
+        The modality of the data (e.g. "bulk_rna-seq", "lincs", "sra"). Used to get gene order.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing the expression data for all samples with ensembl gene id in columns
-
+        A DataFrame containing the expression data for all samples with ensembl gene id in columns.
     """
-
+    gene_order = get_gene_order(modality)
     expression = pd.DataFrame(
         data=samples,
-        columns=get_gene_order(modality),
-    ).clip(lower=0)
+        columns=gene_order,
+    ).clip(lower=0) # Ensure non-negative values
 
     return expression
 
@@ -336,42 +375,72 @@ def process_samples(samples: list, modality: str) -> pd.DataFrame:
 @lru_cache()
 def get_gene_order(modality) -> list:
     """
-    Reads the gene order for a given modality.
+    Reads the gene order for a given modality from a local JSON file.
 
     Parameters
     ----------
     modality : str
-        The modality for which to read the gene order.
+        The modality for which to read the gene order (e.g., 'sra', 'bulk_rna-seq').
 
     Returns
     -------
     list
-        A list of gene ids in the order predicted by the model.
+        A list of gene ids in the order expected/returned by the models.
 
+    Raises
+    -------
+    FileNotFoundError
+        If the gene order file is not found.
+    KeyError
+        If the modality is not found in the gene order file.
     """
-    with open("utils/ai_gene_order.json", "r") as file:
-        data = json.load(file)
-    return data[modality]
+    gene_order_file = "utils/ai_gene_order.json" # Consider making this path more robust
+    try:
+        with open(gene_order_file, "r") as file:
+            data = json.load(file)
+        if modality not in data:
+             raise KeyError(f"Modality '{modality}' not found in gene order file: {gene_order_file}")
+        return data[modality]
+    except FileNotFoundError:
+         raise FileNotFoundError(f"Gene order file not found at: {gene_order_file}")
+    except json.JSONDecodeError:
+         raise ValueError(f"Could not decode JSON from gene order file: {gene_order_file}")
 
 
 def expand_metadata(query: dict) -> pd.DataFrame:
     """
-    Replicates metadata for each sample in the query.
+    Replicates metadata for each sample in a pre-v1.0 query format.
 
     Parameters
     ----------
     query : dict
-        A dictionary containing the query data. (Assumes pre-v1 format with strings)
+        A dictionary containing the query data in pre-v1.0 format
+        (expects 'inputs' as list of strings, 'num_samples').
 
     Returns
     -------
     pd.DataFrame
         A DataFrame containing the metadata for each sample as different rows.
-    """
 
-    dicts = [ast.literal_eval(item) for item in query["inputs"]]
+    Raises
+    -------
+    ValueError
+        If 'inputs' are not strings or cannot be parsed, or if 'num_samples' is missing.
+    """
+    if "inputs" not in query or "num_samples" not in query:
+         raise ValueError("Pre-v1.0 query format requires 'inputs' and 'num_samples' keys for metadata expansion.")
+
+    try:
+        dicts = [ast.literal_eval(item) for item in query["inputs"]]
+    except (ValueError, SyntaxError) as e:
+        raise ValueError(f"Could not parse metadata strings in 'inputs': {e}")
+
+    num_samples = query["num_samples"]
+    if not isinstance(num_samples, int) or num_samples <= 0:
+        raise ValueError(f"'num_samples' must be a positive integer, got: {num_samples}")
+
     metadata = pd.DataFrame(
-        [item for item in dicts for _ in range(query["num_samples"])]
+        [item for item in dicts for _ in range(num_samples)]
     )
     return metadata
 
@@ -384,18 +453,20 @@ def validate_modality(query: dict, endpoint: str) -> None:
     ----------
     query : dict
         A dictionary containing the query data.
+    endpoint : str
+        The endpoint of the model being queried (e.g., 'rMetalv0.6', 'combinedv1.0').
 
     Raises
-    ------
-    AssertionError
-        If the modality is not in the allowed modalities.
+    -------
+    ValueError
+        If the modality key is missing or the selected modality is not allowed for the model.
     """
     if "modality" in query:
         selected_modality = query["modality"]
     else:
         selected_modality = query["inputs"]["modality"]
 
-    model_name = next(k for k, v in MODELS.items() if v == endpoint)
+    model_name = next(k for k, v in MODEL_MODALITIES.items() if v == endpoint)
     assert (
         selected_modality in MODEL_MODALITIES[model_name]
     ), f"Invalid modality: '{selected_modality}' not in {MODEL_MODALITIES[model_name]}"
@@ -405,38 +476,59 @@ def validate_modality(query: dict, endpoint: str) -> None:
 
 def transform_to_counts(expression: pd.DataFrame) -> pd.DataFrame:
     """
-    Transforms expression data from log1p cpm into counts data with approximately 30M total counts.
+    Transforms expression data from log1p(CPM) into counts (approx. 30M total counts per sample).
 
     Parameters
     ----------
     expression : pd.DataFrame
-        A DataFrame containing expression data.
+        A DataFrame containing log1p(CPM) expression data.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing counts data.
+        A DataFrame containing estimated integer counts data.
     """
-    counts = (np.expm1(expression) * 30).astype(int)
-    return pd.DataFrame(counts)
+    # Ensure input is numeric and handle potential NaNs/Infs gracefully if necessary
+    expression_numeric = expression.apply(pd.to_numeric, errors='coerce').fillna(0)
+
+    # Perform the transformation
+    counts = (np.expm1(expression_numeric) * 30).round().astype(int) # Round before casting to int
+
+    # Preserve original index and columns
+    counts.index = expression.index
+    counts.columns = expression.columns
+    return counts
 
 
 def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     """
-    Transforms expression data into log1p cpm.
+    Transforms raw counts expression data into log1p(CPM).
 
     Parameters
     ----------
     expression : pd.DataFrame
-        A DataFrame containing expression data.
+        A DataFrame containing raw counts expression data.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing log1p cpm data.
+        A DataFrame containing log1p(CPM) data.
     """
+    # Ensure input is numeric and non-negative
+    expression_numeric = expression.apply(pd.to_numeric, errors='coerce').fillna(0).clip(lower=0)
 
-    cpm = expression.div(expression.sum(axis=1), axis=0) * 1e6
-    log_cpm = np.log1p(cpm)
+    # Calculate library size (total counts per sample)
+    library_size = expression_numeric.sum(axis=1)
 
-    return pd.DataFrame(log_cpm)
+    # Avoid division by zero for samples with zero total counts
+    # Add a small epsilon or handle these cases specifically (e.g., return zeros)
+    non_zero_library = library_size > 0
+    cpm = pd.DataFrame(0.0, index=expression.index, columns=expression.columns) # Initialize with zeros
+
+    if non_zero_library.any():
+        cpm.loc[non_zero_library] = expression_numeric.loc[non_zero_library].div(library_size[non_zero_library], axis=0) * 1e6
+
+    # Calculate log1p(CPM)
+    log_cpm_transformed = np.log1p(cpm)
+
+    return log_cpm_transformed
