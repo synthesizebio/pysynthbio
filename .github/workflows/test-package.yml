@@ -108,5 +108,6 @@ jobs:
       
       - name: Build documentation
         run: |
+          sphinx-quickstart
           make html
       
