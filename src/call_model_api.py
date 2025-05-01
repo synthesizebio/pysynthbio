@@ -146,7 +146,7 @@ def get_valid_query(model_family: str, model_version: str) -> dict:
     if version_number < 1.0:
         # Corresponds to RequestBodyV0.x schema
         return {
-            "modality": "bulk_rna-seq",
+            "modality": "sra",
             "num_samples": 5,
             "inputs": [
                 str(
