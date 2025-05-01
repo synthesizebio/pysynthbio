@@ -54,10 +54,27 @@ def test_predict_query_live_call_success(test_model_family, test_model_version):
     Tests a live call to predict_query for various model parameters.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
     Requires the local proxy API server to be running at PROXY_API_BASE_URL.
+    This test first checks if the parameterized model is available via get_available_models()
+    and skips if not.
     NOTE: This is more of an integration test as it makes a real network call.
           For true unit tests, `requests.post` should be mocked.
     """
     print(f"\nTesting live predict_query call for {test_model_family} {test_model_version}...")
+
+    # 0. Check if model is listed as available by the API first
+    try:
+        available_models_list = get_available_models()
+        available_model_tuples = {(m['name'], m['version']) for m in available_models_list}
+        print(f"API reports available models: {available_model_tuples}")
+    except Exception as e:
+        # If we can't even get the list of models, skip subsequent tests related to predict_query
+        pytest.skip(f"Could not retrieve available models from API, skipping predict_query tests. Error: {e}")
+
+    current_model_tuple = (test_model_family, test_model_version)
+    if current_model_tuple not in available_model_tuples:
+        pytest.skip(f"Model {test_model_family}{test_model_version} not reported as available by the API via get_available_models().")
+
+    # --- Proceed with the test only if the model is available --- 
 
     # 1. Get a valid query
     try:
