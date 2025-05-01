@@ -77,12 +77,10 @@ def test_predict_query_live_call_success(test_model_name, test_model_version):
         )
 
     try:
-        test_query = get_valid_query(test_model_name, test_model_version)
+        test_query = get_valid_query(test_model_version)
         print("Generated query:", test_query)
     except Exception as e:
-        pytest.fail(
-            f"get_valid_query failed for {test_model_name}{test_model_version}: {e}"
-        )
+        pytest.fail(f"get_valid_query failed for {test_model_version}: {e}")
 
     try:
         results = predict_query(
@@ -201,19 +199,18 @@ def test_get_valid_modalities():
 
 
 @pytest.mark.parametrize(
-    "name, version, expected_keys, not_expected_keys",
+    "version, expected_keys, not_expected_keys",
     [
         (
-            TEST_MODEL_NAME_V0,
             TEST_MODEL_VERSION_V0,
             {"modality", "num_samples", "inputs"},
             {"output_modality", "mode"},
         ),
     ],
 )
-def test_get_valid_query_structure(name, version, expected_keys, not_expected_keys):
+def test_get_valid_query_structure(version, expected_keys, not_expected_keys):
     """Tests get_valid_query returns the correct structure for different versions."""
-    query = get_valid_query(name, version)
+    query = get_valid_query(version)
     assert isinstance(query, dict)
     assert expected_keys.issubset(query.keys())
     assert not any(key in query for key in not_expected_keys)
@@ -223,9 +220,9 @@ def test_get_valid_query_structure(name, version, expected_keys, not_expected_ke
 def test_get_valid_query_invalid_version():
     """Tests get_valid_query raises ValueError for invalid version format."""
     with pytest.raises(ValueError, match=r"Invalid model version format"):
-        get_valid_query("combined", "1.0")
+        get_valid_query("1.0")
     with pytest.raises(ValueError, match=r"Invalid model version format"):
-        get_valid_query("rMetal", "v0x6")
+        get_valid_query("v0x6")
 
 
 V1_MODEL_NAME = "combined"
