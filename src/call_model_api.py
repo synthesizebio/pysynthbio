@@ -117,7 +117,7 @@ def get_available_models() -> list[dict]:
         )
 
 
-def get_valid_query(model_name: str, model_version: str) -> dict:
+def get_valid_query(model_version: str) -> dict:
     """
     Generates a sample query for prediction and validation based on model version.
 
