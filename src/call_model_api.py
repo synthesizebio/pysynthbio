@@ -9,7 +9,6 @@ import ast
 
 PROXY_API_BASE_URL = "http://localhost"
 
-# Updated nested structure
 MODEL_MODALITIES = {
     "rMetal": {
         "v0.2": {"bulk_rna-seq", "lincs", "sra"},
@@ -34,12 +33,9 @@ MODEL_MODALITIES = {
     },
 }
 
-# Define default family and version
 DEFAULT_MODEL_FAMILY = "combined"
 DEFAULT_MODEL_VERSION = "v1.0"
 
-# Keep this as is for now, uses combined name
-# Change to store tuples (family, version)
 LOG_CPM_MODEL_TUPLES = {
     ("rMetal", "v0.2"),
     ("rMetal", "v0.4"),
@@ -59,6 +55,67 @@ def get_valid_modalities() -> dict:
         A nested dictionary containing the modalities.
     """
     return MODEL_MODALITIES
+
+
+def get_available_models() -> list[dict]:
+    """
+    Retrieves the list of available models and their details from the proxy API.
+
+    Returns
+    -------
+    list[dict]
+        A list of dictionaries, where each dictionary contains details
+        about an available model (e.g., name, version, description).
+        Example: [{'name': 'rMetal', 'version': 'v0.2', ...}, ...]
+
+    Raises
+    -------
+    KeyError
+        If the SYNTHESIZE_API_KEY environment variable is not set.
+    ValueError
+        If the API request fails or the response format is invalid (not a list of dicts).
+    """
+    if "SYNTHESIZE_API_KEY" not in os.environ:
+        raise KeyError("Please set the SYNTHESIZE_API_KEY environment variable")
+
+    api_url = f"{PROXY_API_BASE_URL}/api/model"
+
+    try:
+        response = requests.get(
+            url=api_url,
+            headers={
+                "Accept": "application/json",
+                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
+            },
+        )
+
+        if response.status_code != 200:
+            raise ValueError(
+                f"API request to {api_url} failed with status {response.status_code}: {response.text}"
+            )
+
+        content = response.json()
+
+        # Expecting a list of dictionaries like:
+        # [{'name': 'rMetal', 'version': 'v0.2', ...}, ...]
+        if not isinstance(content, list) or not all(isinstance(item, dict) for item in content):
+            raise ValueError(f"API response from {api_url} is not a list of dictionaries: {content}")
+
+        # Optionally: Validate required keys within each dict if needed, but for now just return the list
+        # for item in content:
+        #     if 'name' not in item or 'version' not in item:
+        #         raise ValueError(f"Invalid model entry in API response, missing 'name' or 'version': {item}")
+
+        return content # Return the list of dictionaries directly
+
+    except requests.exceptions.RequestException as e:
+        raise ValueError(f"Network error calling {api_url}: {e}")
+    except json.JSONDecodeError:
+        raise ValueError(f"Failed to decode JSON from API response: {response.text}")
+    except Exception as e:
+        # Catch any other unexpected errors during the process
+        # Let's refine the error message here slightly
+        raise ValueError(f"An unexpected error occurred while processing the response from {api_url}: {e}")
 
 
 def get_valid_query(model_family: str, model_version: str) -> dict:
@@ -381,7 +438,28 @@ def get_gene_order(modality) -> list:
     KeyError
         If the modality is not found in the gene order file.
     """
-    gene_order_file = "utils/ai_gene_order.json" # Consider making this path more robust
+    # Construct path relative to this file's directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    # Assuming ai_gene_order.json is in a 'utils' subdir *relative to this script's location*
+    # If 'utils' is at the project root, adjust accordingly.
+    # For now, assuming utils/ is beside call_model_api.py needs fixing if structure is different.
+    # Let's assume utils is at the *project root* relative to where pytest runs from.
+    # This might be fragile.
+    # A better approach might be using package resources if utils is part of the package data.
+
+    # --- Option 1: Assume utils/ is at project root --- #
+    # gene_order_file = os.path.join("utils", "ai_gene_order.json")
+
+    # --- Option 2: Calculate path relative to this script --- #
+    # Assuming src/utils/ai_gene_order.json structure
+    # This is usually more robust when the package is installed.
+    # gene_order_file = os.path.join(current_dir, "..", "utils", "ai_gene_order.json") # Old path, assumed utils was at root
+    # gene_order_file = os.path.join(current_dir, "utils", "ai_gene_order.json") # Previous path, assumed utils was inside src/
+    # Correct path assuming file is directly inside src/ alongside this script
+    gene_order_file = os.path.join(current_dir, "ai_gene_order.json")
+    gene_order_file = os.path.normpath(gene_order_file)
+
+
     try:
         with open(gene_order_file, "r") as file:
             data = json.load(file)

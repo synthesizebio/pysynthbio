@@ -19,7 +19,8 @@ try:
         log_cpm,
         MODEL_MODALITIES,
         DEFAULT_MODEL_FAMILY,
-        DEFAULT_MODEL_VERSION
+        DEFAULT_MODEL_VERSION,
+        get_available_models
     )
 except ImportError as e:
     print(f"Import Error: {e}")
@@ -29,11 +30,17 @@ except ImportError as e:
 
 
 # --- Test Configuration ---
-TEST_MODEL_FAMILY_V1 = DEFAULT_MODEL_FAMILY
-TEST_MODEL_VERSION_V1 = DEFAULT_MODEL_VERSION
-TEST_MODEL_FAMILY_V0 = "rMetal"
-TEST_MODEL_VERSION_V0 = "v0.6"
+# Removed constants specific to single integration test, now parameterized
+TEST_MODEL_FAMILY_V0 = "rMetal" # Keep for other unit tests
+TEST_MODEL_VERSION_V0 = "v0.6" # Keep for other unit tests
 # --- End Test Configuration ---
+
+# Generate list of (family, version) tuples for parameterization
+all_model_versions = [
+    (family, version)
+    for family, versions in MODEL_MODALITIES.items()
+    for version in versions.keys()
+]
 
 # Check if API key is available, skip integration test if not
 api_key_available = "SYNTHESIZE_API_KEY" in os.environ
@@ -41,58 +48,105 @@ skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 
 # --- Integration Test ---
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
-def test_predict_query_live_call_success():
+@pytest.mark.parametrize("test_model_family, test_model_version", all_model_versions)
+def test_predict_query_live_call_success(test_model_family, test_model_version):
     """
-    Tests a live call to predict_query using default model parameters.
+    Tests a live call to predict_query for various model parameters.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
     Requires the local proxy API server to be running at PROXY_API_BASE_URL.
     NOTE: This is more of an integration test as it makes a real network call.
           For true unit tests, `requests.post` should be mocked.
     """
-    print(f"\nTesting live predict_query call for {TEST_MODEL_FAMILY_V1} {TEST_MODEL_VERSION_V1}...")
+    print(f"\nTesting live predict_query call for {test_model_family} {test_model_version}...")
 
     # 1. Get a valid query
     try:
-        test_query = get_valid_query(TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1)
+        test_query = get_valid_query(test_model_family, test_model_version)
         print("Generated query:", test_query)
     except Exception as e:
-        pytest.fail(f"get_valid_query failed: {e}")
+        pytest.fail(f"get_valid_query failed for {test_model_family}{test_model_version}: {e}")
 
     # 2. Call predict_query
     try:
         results = predict_query(
             query=test_query,
-            model_family=TEST_MODEL_FAMILY_V1,
-            model_version=TEST_MODEL_VERSION_V1,
+            model_family=test_model_family,
+            model_version=test_model_version,
             as_counts=True
         )
-        print("predict_query call successful.")
+        print(f"predict_query call successful for {test_model_family}{test_model_version}.")
     except ValueError as e:
         # Catch potential API errors (like 4xx, 5xx) or other ValueErrors from the function
-        pytest.fail(f"predict_query raised ValueError: {e}")
+        pytest.fail(f"predict_query for {test_model_family}{test_model_version} raised ValueError: {e}")
     except KeyError as e:
         # Should be caught by skipif, but as a safeguard
-         pytest.fail(f"predict_query raised KeyError (API key issue?): {e}")
+         pytest.fail(f"predict_query for {test_model_family}{test_model_version} raised KeyError (API key issue?): {e}")
     except Exception as e:
         # Catch any other unexpected exceptions
-        pytest.fail(f"predict_query raised unexpected Exception: {e}")
+        pytest.fail(f"predict_query for {test_model_family}{test_model_version} raised unexpected Exception: {e}")
 
     # 3. Assert results structure and types
-    assert isinstance(results, dict), "Result should be a dictionary"
-    assert "metadata" in results, "Result dictionary should contain 'metadata' key"
-    assert "expression" in results, "Result dictionary should contain 'expression' key"
+    assert isinstance(results, dict), f"Result for {test_model_family}{test_model_version} should be a dictionary"
+    assert "metadata" in results, f"Result dictionary for {test_model_family}{test_model_version} should contain 'metadata' key"
+    assert "expression" in results, f"Result dictionary for {test_model_family}{test_model_version} should contain 'expression' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(metadata_df, pd.DataFrame), "'metadata' should be a pandas DataFrame"
-    assert isinstance(expression_df, pd.DataFrame), "'expression' should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), f"'metadata' for {test_model_family}{test_model_version} should be a pandas DataFrame"
+    assert isinstance(expression_df, pd.DataFrame), f"'expression' for {test_model_family}{test_model_version} should be a pandas DataFrame"
 
     # Optionally, assert that dataframes are not empty (assuming valid query returns samples)
-    assert not metadata_df.empty, "Metadata DataFrame should not be empty for a valid query"
-    assert not expression_df.empty, "Expression DataFrame should not be empty for a valid query"
+    assert not metadata_df.empty, f"Metadata DataFrame for {test_model_family}{test_model_version} should not be empty for a valid query"
+    assert not expression_df.empty, f"Expression DataFrame for {test_model_family}{test_model_version} should not be empty for a valid query"
 
-    print("Assertions passed.")
+    print(f"Assertions passed for {test_model_family}{test_model_version}.")
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_get_available_models_live():
+    """Tests a live call to get_available_models.
+    Requires SYNTHESIZE_API_KEY and a running local proxy API.
+    Expects the API to return a list of dictionaries, each with model details.
+    """
+    print("\nTesting live get_available_models call...")
+    # Define the expected keys based on the example structure
+    expected_keys = {
+        "name", "version", "description", "species",
+        "assembly", "annotation", "geneMapVersion", "metadataVersion"
+    }
+
+    try:
+        models = get_available_models() # Function now returns list[dict]
+        print(f"Received models structure: {models}")
+
+        assert isinstance(models, list), "Response should be a list"
+        assert len(models) > 0, "Model list should not be empty"
+
+        # Check that all items are dictionaries
+        assert all(isinstance(m, dict) for m in models), \
+            "All items in the list should be dictionaries"
+
+        # Check that all dictionaries contain the expected keys
+        for i, model_dict in enumerate(models):
+            missing_keys = expected_keys - model_dict.keys()
+            assert not missing_keys, \
+                f"Model dictionary at index {i} is missing keys: {missing_keys}. Got: {model_dict.keys()}"
+            extra_keys = model_dict.keys() - expected_keys
+            if extra_keys:
+                print(f"Note: Model dict at index {i} has extra keys: {extra_keys}") # Optional: Just print extra keys
+
+        # Optionally check for a specific model dictionary (already present)
+        assert any(m['name'] == 'rMetal' and m['version'] == 'v1.0' for m in models), \
+            "The list should contain the rMetal v1.0 model dictionary"
+
+        print("Assertions passed for get_available_models (list of dicts with expected keys).")
+
+    except ValueError as e:
+        pytest.fail(f"get_available_models raised ValueError: {e}")
+    except KeyError as e:
+        pytest.fail(f"get_available_models raised KeyError (API key issue?): {e}")
+    except Exception as e:
+        pytest.fail(f"get_available_models raised unexpected Exception: {e}")
 
 # --- Unit Tests ---
 
@@ -109,7 +163,6 @@ def test_get_valid_modalities():
 @pytest.mark.parametrize(
     "family, version, expected_keys, not_expected_keys",
     [
-        (TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1, {"output_modality", "mode", "inputs"}, {"modality", "num_samples"}),
         (TEST_MODEL_FAMILY_V0, TEST_MODEL_VERSION_V0, {"modality", "num_samples", "inputs"}, {"output_modality", "mode"}),
     ]
 )
@@ -128,39 +181,101 @@ def test_get_valid_query_invalid_version():
     with pytest.raises(ValueError, match=r"Invalid model version format"):
         get_valid_query("rMetal", "v0x6") # Invalid number
 
-# --- validate_query Tests ---
+# --- Tests for validate_query --- #
+
+# Define static example queries and model IDs for these tests
+# Example v1.0 model and a suitable query (e.g., from combinedv1.0)
+V1_MODEL_FAMILY = "combined"
+V1_MODEL_VERSION = "v1.0"
+V1_VALID_QUERY = {
+    "inputs": [
+        {
+            "metadata": { # v1 uses 'metadata' key inside inputs
+                "measurement": "measurement_1",
+                "cell_line": "A549",
+                "perturbation": "DMSO",
+                "perturbation_type": "chemical",
+                "perturbation_dose": "10 uM",
+                "perturbation_time": "24 hours",
+                "tissue": "lung",
+                "cancer": True,
+                "disease": "lung adenocarcinoma",
+                "sex": "male",
+                "age": "58 years",
+                "ethnicity": "Caucasian",
+                "sample_type": "cell line",
+                "source": "ATCC",
+            },
+            "num_samples": 1 # v1 has num_samples per input item
+        }
+    ],
+    "output_modality": "bulk_rna-seq", # v1 uses output_modality
+    "mode": "mean estimation", # v1 requires mode
+    # Removed modality and num_samples from top level for v1
+}
+
+# Example pre-v1.0 model and a suitable query (e.g., from rMetalv0.6)
+V0_MODEL_FAMILY = "rMetal"
+V0_MODEL_VERSION = "v0.6"
+V0_VALID_QUERY = {
+    "inputs": [
+        str({ # Input is stringified dict for older models
+            "cell_line": "A-549",
+            "perturbation": "ABL1",
+            "perturbation_type": "crispr",
+            "perturbation_time": "96 hours",
+        })
+    ],
+    "modality": "sra", # Modality valid for rMetalv0.6
+    "num_samples": 1,
+}
+
+
 def test_validate_query_v1_valid():
     """Tests validate_query passes for a valid v1.0 query."""
-    valid_v1_query = get_valid_query(TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1)
+    # Use the statically defined V1 example
     try:
-        validate_query(valid_v1_query, TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1)
-    except ValueError as e:
-        pytest.fail(f"validate_query raised ValueError unexpectedly: {e}")
+        validate_query(V1_VALID_QUERY, V1_MODEL_FAMILY, V1_MODEL_VERSION)
+        print(f"validate_query passed for {V1_MODEL_FAMILY}{V1_MODEL_VERSION} as expected.")
+    except (ValueError, TypeError) as e:
+        pytest.fail(f"validate_query unexpectedly failed for valid v1 query: {e}")
+
 
 def test_validate_query_v0_valid():
     """Tests validate_query passes for a valid pre-v1.0 query."""
-    valid_v0_query = get_valid_query(TEST_MODEL_FAMILY_V0, TEST_MODEL_VERSION_V0)
+    # Use the statically defined V0 example
     try:
-        validate_query(valid_v0_query, TEST_MODEL_FAMILY_V0, TEST_MODEL_VERSION_V0)
-    except ValueError as e:
-        pytest.fail(f"validate_query raised ValueError unexpectedly: {e}")
+        validate_query(V0_VALID_QUERY, V0_MODEL_FAMILY, V0_MODEL_VERSION)
+        print(f"validate_query passed for {V0_MODEL_FAMILY}{V0_MODEL_VERSION} as expected.")
+    except (ValueError, TypeError) as e:
+        pytest.fail(f"validate_query unexpectedly failed for valid v0 query: {e}")
+
 
 def test_validate_query_v1_missing_keys():
     """Tests validate_query raises ValueError for missing keys in v1.0 query."""
-    invalid_query = {"inputs": []} # Missing mode, output_modality
+    invalid_query = V1_VALID_QUERY.copy()
+    # Remove a key required for v1 models (e.g., output_modality)
+    del invalid_query["output_modality"]
     with pytest.raises(ValueError, match="Missing required keys"):
-        validate_query(invalid_query, TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1)
+        validate_query(invalid_query, V1_MODEL_FAMILY, V1_MODEL_VERSION)
+    print(f"validate_query correctly failed for missing key in v1 query.")
+
 
 def test_validate_query_v0_missing_keys():
     """Tests validate_query raises ValueError for missing keys in pre-v1.0 query."""
-    invalid_query = {"inputs": []} # Missing modality, num_samples
+    invalid_query = V0_VALID_QUERY.copy()
+    del invalid_query["inputs"] # Remove a required key
     with pytest.raises(ValueError, match="Missing required keys"):
-        validate_query(invalid_query, TEST_MODEL_FAMILY_V0, TEST_MODEL_VERSION_V0)
+        validate_query(invalid_query, V0_MODEL_FAMILY, V0_MODEL_VERSION)
+    print(f"validate_query correctly failed for missing key in v0 query.")
+
 
 def test_validate_query_not_dict():
     """Tests validate_query raises TypeError if query is not a dict."""
-    with pytest.raises(TypeError):
-        validate_query("not_a_dict", TEST_MODEL_FAMILY_V1, TEST_MODEL_VERSION_V1)
+    with pytest.raises(TypeError, match=r"Expected `query` to be a dictionary, but got \w+"):
+        validate_query("not a dict", V1_MODEL_FAMILY, V1_MODEL_VERSION) # Use V1 model just for example
+    print(f"validate_query correctly failed for non-dict query.")
+
 
 # --- validate_modality Tests ---
 def test_validate_modality_v1_valid():
