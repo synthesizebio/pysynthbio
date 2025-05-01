@@ -4,7 +4,6 @@ from functools import lru_cache
 import os
 import requests
 import json
-import re
 import ast
 
 API_BASE_URL = "https://app.synthesize.bio"

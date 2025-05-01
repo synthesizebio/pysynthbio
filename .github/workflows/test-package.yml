@@ -26,17 +26,14 @@ jobs:
 
       - name: Lint with ruff
         run: |
-          uv pip install ruff
           ruff check .
 
       - name: Type check with mypy
         run: |
-          uv pip install mypy
           mypy . --namespace-packages --explicit-package-bases --ignore-missing-imports
 
       - name: Check formatting with black
         run: |
-          uv pip install black
           black --check .
 
   test:
@@ -60,7 +57,7 @@ jobs:
 
       - name: Run tests with pytest
         run: |
-          uv run pytest tests/
+          uv run pytest
 
   build:
     name: Build Package
@@ -82,7 +79,7 @@ jobs:
           python -m build
 
       - name: Store built package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist/

@@ -241,7 +241,7 @@ def test_validate_query_v1_missing_keys():
     del invalid_query["output_modality"]
     with pytest.raises(ValueError, match="Missing required keys"):
         validate_query(invalid_query, V1_MODEL_NAME, V1_MODEL_VERSION)
-    print(f"validate_query correctly failed for missing key in v1 query.")
+    print("validate_query correctly failed for missing key in v1 query.")
 
 
 def test_validate_query_v0_missing_keys():
@@ -250,14 +250,14 @@ def test_validate_query_v0_missing_keys():
     del invalid_query["inputs"]
     with pytest.raises(ValueError, match="Missing required keys"):
         validate_query(invalid_query, V0_MODEL_NAME, V0_MODEL_VERSION)
-    print(f"validate_query correctly failed for missing key in v0 query.")
+    print("validate_query correctly failed for missing key in v0 query.")
 
 
 def test_validate_query_not_dict():
     """Tests validate_query raises TypeError if query is not a dict."""
     with pytest.raises(TypeError, match=r"Expected `query` to be a dictionary, but got \w+"):
         validate_query("not a dict", V1_MODEL_NAME, V1_MODEL_VERSION)
-    print(f"validate_query correctly failed for non-dict query.")
+    print("validate_query correctly failed for non-dict query.")
 
 
 def test_validate_modality_v1_valid():
