@@ -42,11 +42,7 @@ available_models = pysynthbio.get_available_models()
 The structure of the query required by the API depends on the model version. You can use `get_valid_query` to get a correctly structured example dictionary for a specific model name and version.
 
 ```python
-# Example for a pre-v1.0 model (e.g., rMetal v0.6)
-example_query_v0 = pysynthbio.get_valid_query('rMetal', 'v0.6')
-
-# Example for a v1.0 model (e.g., combined v1.0)
-example_query_v1 = pysynthbio.get_valid_query('combined', 'v1.0')
+example_query_v1 = pysynthbio.get_valid_query('v1.0')
 ```
 
 ### Get Predictions
