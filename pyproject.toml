@@ -28,6 +28,7 @@ dev = [
     "ruff",
     "mypy",
     "black",
+    "build",
 ]
 
 [tool.setuptools]

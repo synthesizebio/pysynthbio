@@ -97,9 +97,13 @@ def get_available_models() -> list[dict]:
 
         # Expecting a list of dictionaries like:
         # [{'name': 'rMetal', 'version': 'v0.2', ...}, ...]
-        if not isinstance(content, list) or not all(isinstance(item, dict) for item in content):
-            raise ValueError(f"API response from {api_url} is not a list of dictionaries: {content}")
-        
+        if not isinstance(content, list) or not all(
+            isinstance(item, dict) for item in content
+        ):
+            raise ValueError(
+                f"API response from {api_url} is not a list of dictionaries: {content}"
+            )
+
         return content
 
     except requests.exceptions.RequestException as e:
@@ -108,7 +112,9 @@ def get_available_models() -> list[dict]:
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")
     except Exception as e:
         # Let's refine the error message here slightly
-        raise ValueError(f"An unexpected error occurred while processing the response from {api_url}: {e}")
+        raise ValueError(
+            f"An unexpected error occurred while processing the response from {api_url}: {e}"
+        )
 
 
 def get_valid_query(model_name: str, model_version: str) -> dict:
@@ -129,12 +135,16 @@ def get_valid_query(model_name: str, model_version: str) -> dict:
     try:
         # Extract float from version string like "v1.0"
         # Ensure the version string starts with 'v' before slicing and converting
-        if not model_version.startswith('v'):
-            raise ValueError(f"Invalid model version format '{model_version}'. Expected prefix 'v'.")
+        if not model_version.startswith("v"):
+            raise ValueError(
+                f"Invalid model version format '{model_version}'. Expected prefix 'v'."
+            )
         version_number = float(model_version[1:])
     except (ValueError, IndexError, TypeError) as e:
         # Catch broader errors including float conversion issues
-        raise ValueError(f"Invalid model version format '{model_version}'. Failed to parse float: {e}")
+        raise ValueError(
+            f"Invalid model version format '{model_version}'. Failed to parse float: {e}"
+        )
 
     if version_number < 1.0:
         # Corresponds to RequestBodyV0.x schema
@@ -238,8 +248,13 @@ def predict_query(
 
     if model_name and model_version:
         api_url = f"{API_BASE_URL}/api/model/{model_name}/{model_version}"
-        if model_name not in MODEL_MODALITIES or model_version not in MODEL_MODALITIES.get(model_name, {}):
-            print(f"Warning: Model {model_name}/{model_version} not found in known MODEL_MODALITIES.")
+        if (
+            model_name not in MODEL_MODALITIES
+            or model_version not in MODEL_MODALITIES.get(model_name, {})
+        ):
+            print(
+                f"Warning: Model {model_name}/{model_version} not found in known MODEL_MODALITIES."
+            )
     else:
         raise ValueError("Invalid model_name or model_version provided.")
 
@@ -263,10 +278,14 @@ def predict_query(
     try:
         content = response.json()
         # Handle potential list wrapper for older versions if proxy preserves it
-        if isinstance(content, list) and len(content) == 1 and isinstance(content[0], dict):
+        if (
+            isinstance(content, list)
+            and len(content) == 1
+            and isinstance(content[0], dict)
+        ):
             content = content[0]
         elif not isinstance(content, dict):
-             raise ValueError(f"API response is not a JSON object: {response.text}")
+            raise ValueError(f"API response is not a JSON object: {response.text}")
 
     except json.JSONDecodeError:
         raise ValueError(f"Failed to decode JSON from API response: {response.text}")
@@ -297,14 +316,13 @@ def predict_query(
         samples = content["samples"]
         # Need modality to get gene order for pre-v1
         if "modality" not in query:
-             raise ValueError("Query for pre-v1.0 model must contain 'modality' key.")
+            raise ValueError("Query for pre-v1.0 model must contain 'modality' key.")
         modality = query["modality"]
         # Uses the pre-v1.0 input structure
         metadata = expand_metadata(query)
         expression = process_samples(samples, modality)
     else:
         raise ValueError(f"Unexpected API response structure: {content}")
-
 
     # --- Count transformation logic ---
     # Determine if the *queried model* typically returns logCPM
@@ -316,7 +334,7 @@ def predict_query(
             expression = transform_to_counts(expression)
         else:
             expression = expression.astype(int)
-    else: # User wants logCPM
+    else:  # User wants logCPM
         if model_returns_logcpm:
             expression = expression.astype(float)
         else:
@@ -353,7 +371,9 @@ def validate_query(query: dict, model_name: str, model_version: str) -> None:
     try:
         version_number = float(model_version[1:])
     except (ValueError, IndexError):
-        print(f"Warning: Skipping query validation due to invalid model version '{model_version}'.")
+        print(
+            f"Warning: Skipping query validation due to invalid model version '{model_version}'."
+        )
         return
 
     is_v1_or_later = version_number >= 1.0
@@ -365,7 +385,11 @@ def validate_query(query: dict, model_name: str, model_version: str) -> None:
 
     missing_keys = required_keys - query.keys()
     if missing_keys:
-        model_name_combined = f"{model_name}{model_version}" if model_name != "combined" else "combinedv1.0"
+        model_name_combined = (
+            f"{model_name}{model_version}"
+            if model_name != "combined"
+            else "combinedv1.0"
+        )
         raise ValueError(
             f"Missing required keys in query for model '{model_name_combined}': {missing_keys}. "
             f"Use `get_valid_query('{model_name}', '{model_version}')` to get an example."
@@ -423,17 +447,20 @@ def get_gene_order(modality) -> list:
     gene_order_file = os.path.join(current_dir, "ai_gene_order.json")
     gene_order_file = os.path.normpath(gene_order_file)
 
-
     try:
         with open(gene_order_file, "r") as file:
             data = json.load(file)
         if modality not in data:
-             raise KeyError(f"Modality '{modality}' not found in gene order file: {gene_order_file}")
+            raise KeyError(
+                f"Modality '{modality}' not found in gene order file: {gene_order_file}"
+            )
         return data[modality]
     except FileNotFoundError:
-         raise FileNotFoundError(f"Gene order file not found at: {gene_order_file}")
+        raise FileNotFoundError(f"Gene order file not found at: {gene_order_file}")
     except json.JSONDecodeError:
-         raise ValueError(f"Could not decode JSON from gene order file: {gene_order_file}")
+        raise ValueError(
+            f"Could not decode JSON from gene order file: {gene_order_file}"
+        )
 
 
 def expand_metadata(query: dict) -> pd.DataFrame:
@@ -457,7 +484,9 @@ def expand_metadata(query: dict) -> pd.DataFrame:
         If 'inputs' are not strings or cannot be parsed, or if 'num_samples' is missing.
     """
     if "inputs" not in query or "num_samples" not in query:
-         raise ValueError("Pre-v1.0 query format requires 'inputs' and 'num_samples' keys for metadata expansion.")
+        raise ValueError(
+            "Pre-v1.0 query format requires 'inputs' and 'num_samples' keys for metadata expansion."
+        )
 
     try:
         dicts = [ast.literal_eval(item) for item in query["inputs"]]
@@ -466,11 +495,11 @@ def expand_metadata(query: dict) -> pd.DataFrame:
 
     num_samples = query["num_samples"]
     if not isinstance(num_samples, int) or num_samples <= 0:
-        raise ValueError(f"'num_samples' must be a positive integer, got: {num_samples}")
+        raise ValueError(
+            f"'num_samples' must be a positive integer, got: {num_samples}"
+        )
 
-    metadata = pd.DataFrame(
-        [item for item in dicts for _ in range(num_samples)]
-    )
+    metadata = pd.DataFrame([item for item in dicts for _ in range(num_samples)])
     return metadata
 
 
@@ -494,8 +523,12 @@ def validate_modality(query: dict, model_name: str, model_version: str) -> None:
         modality is not allowed for the model.
     """
 
-    if model_name not in MODEL_MODALITIES or model_version not in MODEL_MODALITIES.get(model_name, {}):
-        print(f"Warning: Cannot validate modality for unknown model {model_name}/{model_version}. Known names: {list(MODEL_MODALITIES.keys())}")
+    if model_name not in MODEL_MODALITIES or model_version not in MODEL_MODALITIES.get(
+        model_name, {}
+    ):
+        print(
+            f"Warning: Cannot validate modality for unknown model {model_name}/{model_version}. Known names: {list(MODEL_MODALITIES.keys())}"
+        )
         return
 
     allowed_modalities = MODEL_MODALITIES[model_name][model_version]
@@ -503,26 +536,39 @@ def validate_modality(query: dict, model_name: str, model_version: str) -> None:
     try:
         version_number = float(model_version[1:])
     except (ValueError, IndexError):
-         raise ValueError(f"Cannot validate modality for invalid model version '{model_version}'.")
+        raise ValueError(
+            f"Cannot validate modality for invalid model version '{model_version}'."
+        )
 
     is_v1_or_later = version_number >= 1.0
 
     if is_v1_or_later:
         modality_key = "output_modality"
         if modality_key not in query:
-             model_name_combined = f"{model_name}{model_version}" if model_name != "combined" else "combinedv1.0"
-             raise ValueError(f"Query for model '{model_name_combined}' requires '{modality_key}' key.")
+            model_name_combined = (
+                f"{model_name}{model_version}"
+                if model_name != "combined"
+                else "combinedv1.0"
+            )
+            raise ValueError(
+                f"Query for model '{model_name_combined}' requires '{modality_key}' key."
+            )
         selected_modality = query[modality_key]
     else:
         modality_key = "modality"
         if modality_key not in query:
-             model_name_combined = f"{model_name}{model_version}"
-             raise ValueError(f"Query for model '{model_name_combined}' requires '{modality_key}' key.")
+            model_name_combined = f"{model_name}{model_version}"
+            raise ValueError(
+                f"Query for model '{model_name_combined}' requires '{modality_key}' key."
+            )
         selected_modality = query[modality_key]
 
-
     if selected_modality not in allowed_modalities:
-        model_name_combined = f"{model_name}{model_version}" if model_name != "combined" else "combinedv1.0"
+        model_name_combined = (
+            f"{model_name}{model_version}"
+            if model_name != "combined"
+            else "combinedv1.0"
+        )
         raise ValueError(
             f"Invalid modality '{selected_modality}' for model '{model_name_combined}'. "
             f"Allowed modalities: {allowed_modalities}"
@@ -543,7 +589,7 @@ def transform_to_counts(expression: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         A DataFrame containing estimated integer counts data.
     """
-    expression_numeric = expression.apply(pd.to_numeric, errors='coerce').fillna(0)
+    expression_numeric = expression.apply(pd.to_numeric, errors="coerce").fillna(0)
 
     counts = (np.expm1(expression_numeric) * 30).round().astype(int)
 
@@ -566,7 +612,9 @@ def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         A DataFrame containing log1p(CPM) data.
     """
-    expression_numeric = expression.apply(pd.to_numeric, errors='coerce').fillna(0).clip(lower=0)
+    expression_numeric = (
+        expression.apply(pd.to_numeric, errors="coerce").fillna(0).clip(lower=0)
+    )
 
     library_size = expression_numeric.sum(axis=1)
 
@@ -576,7 +624,12 @@ def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     cpm = pd.DataFrame(0.0, index=expression.index, columns=expression.columns)
 
     if non_zero_library.any():
-        cpm.loc[non_zero_library] = expression_numeric.loc[non_zero_library].div(library_size[non_zero_library], axis=0) * 1e6
+        cpm.loc[non_zero_library] = (
+            expression_numeric.loc[non_zero_library].div(
+                library_size[non_zero_library], axis=0
+            )
+            * 1e6
+        )
 
     log_cpm_transformed = np.log1p(cpm)
 
