@@ -36,6 +36,7 @@ all_model_versions = [
 api_key_available = "SYNTHESIZE_API_KEY" in os.environ
 skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 
+
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 @pytest.mark.parametrize("test_model_name, test_model_version", all_model_versions)
 def test_predict_query_live_call_success(test_model_name, test_model_version):
