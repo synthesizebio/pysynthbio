@@ -19,6 +19,6 @@ To ensure it installed you can run `pip show pysynthbio`.
 
 ### Get your API key
 
-Go to https://app.synthesize.bio/profile to generate an API key.
+Go to https://app.synthesize.bio/profile to generate an API key. Then set this key as an environment variable named SYNTHESIZE_API_KEY to authenticate your API requests.
 
 ### Form a request
