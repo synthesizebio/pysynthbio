@@ -217,7 +217,7 @@ def predict_query(
     ----------
     query : dict
         A dictionary representing the query data to send to the API.
-        Use `get_valid_query(name, version)` to generate an example.
+        Use `get_valid_query(version)` to generate an example.
     model_name : str, optional
         The name of the model (e.g., 'rMetal', 'combined').
         Defaults to 'combined'.
@@ -392,7 +392,7 @@ def validate_query(query: dict, model_name: str, model_version: str) -> None:
         )
         raise ValueError(
             f"Missing required keys in query for model '{model_name_combined}': {missing_keys}. "
-            f"Use `get_valid_query('{model_name}', '{model_version}')` to get an example."
+            f"Use `get_valid_query('{model_version}')` to get an example."
         )
 
 
