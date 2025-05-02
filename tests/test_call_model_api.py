@@ -34,7 +34,7 @@ def test_predict_query_live_call_success():
     NOTE: This is more of an integration test as it makes a real network call.
           For true unit tests, `requests.post` should be mocked.
     """
-    print(f"\nTesting live predict_query call for combined v1.0...")
+    print("\nTesting live predict_query call for combined v1.0...")
 
     try:
         test_query = get_valid_query()
@@ -47,7 +47,7 @@ def test_predict_query_live_call_success():
             query=test_query,
             as_counts=True,
         )
-        print(f"predict_query call successful for combined v1.0.")
+        print("predict_query call successful for combined v1.0.")
     except ValueError as e:
         pytest.fail(f"predict_query for combined v1.0 raised ValueError: {e}")
     except KeyError as e:
@@ -57,32 +57,32 @@ def test_predict_query_live_call_success():
     except Exception as e:
         pytest.fail(f"predict_query for combined v1.0 raised unexpected Exception: {e}")
 
-    assert isinstance(results, dict), f"Result for combined v1.0 should be a dictionary"
+    assert isinstance(results, dict), "Result for combined v1.0 should be a dictionary"
     assert "metadata" in results, (
-        f"Result dictionary for combined v1.0 should contain 'metadata' key"
+        "Result dictionary for combined v1.0 should contain 'metadata' key"
     )
     assert "expression" in results, (
-        f"Result dictionary for combined v1.0 should contain 'expression' key"
+        "Result dictionary for combined v1.0 should contain 'expression' key"
     )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
     assert isinstance(metadata_df, pd.DataFrame), (
-        f"'metadata' for combined v1.0 should be a pandas DataFrame"
+        "'metadata' for combined v1.0 should be a pandas DataFrame"
     )
     assert isinstance(expression_df, pd.DataFrame), (
-        f"'expression' for combined v1.0 should be a pandas DataFrame"
+        "'expression' for combined v1.0 should be a pandas DataFrame"
     )
 
     assert not metadata_df.empty, (
-        f"Metadata DataFrame for combined v1.0 should not be empty for a valid query"
+        "Metadata DataFrame for combined v1.0 should not be empty for a valid query"
     )
     assert not expression_df.empty, (
-        f"Expression DataFrame for combined v1.0 should not be empty for a valid query"
+        "Expression DataFrame for combined v1.0 should not be empty for a valid query"
     )
 
-    print(f"Assertions passed for combined v1.0.")
+    print("Assertions passed for combined v1.0.")
 
 
 def test_get_valid_modalities():
@@ -132,7 +132,7 @@ def test_validate_query_valid():
     """Tests validate_query passes for a valid v1.0 query."""
     try:
         validate_query(VALID_QUERY)
-        print(f"validate_query passed as expected.")
+        print("validate_query passed as expected.")
     except (ValueError, TypeError) as e:
         pytest.fail(f"validate_query unexpectedly failed for valid query: {e}")
 
