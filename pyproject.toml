@@ -33,6 +33,7 @@ dev = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
+packages = ["pysynthbio"]
 
 [[tool.mypy.overrides]]
 module = ["setuptools", "pandas-stubs", "requests"]
