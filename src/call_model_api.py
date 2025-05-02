@@ -20,6 +20,7 @@ MODEL_MODALITIES = {
     },
 }
 
+
 def get_valid_modalities() -> dict:
     """
     Returns a dictionary of possible modalities for the supported model.
@@ -29,7 +30,7 @@ def get_valid_modalities() -> dict:
     dict
         A nested dictionary containing the modalities.
     """
-    return MODEL_MODALITIES['combined']['v1.0']
+    return MODEL_MODALITIES["combined"]["v1.0"]
 
 
 def get_valid_query() -> dict:
@@ -155,7 +156,9 @@ def predict_query(
         ]
         metadata = pd.DataFrame(metadata_rows)
     else:
-        raise ValueError(f"Unexpected API response structure (expected 'outputs' and 'gene_order'): {content}")
+        raise ValueError(
+            f"Unexpected API response structure (expected 'outputs' and 'gene_order'): {content}"
+        )
 
     expression = expression.astype(int)
 
@@ -206,13 +209,11 @@ def validate_modality(query: dict) -> None:
         If the modality key is missing, or the selected modality is not allowed.
     """
 
-    allowed_modalities = MODEL_MODALITIES['combined']['v1.0']
+    allowed_modalities = MODEL_MODALITIES["combined"]["v1.0"]
 
     modality_key = "output_modality"
     if modality_key not in query:
-        raise ValueError(
-            f"Query requires '{modality_key}' key."
-        )
+        raise ValueError(f"Query requires '{modality_key}' key.")
     selected_modality = query[modality_key]
 
     if selected_modality not in allowed_modalities:
