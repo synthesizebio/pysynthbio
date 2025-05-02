@@ -29,35 +29,42 @@ First, import the necessary functions from the package:
 import pysynthbio
 ```
 
-### Discover Available Models
+### Discover Valid Modalities
 
-To see which models are currently available through the API, use `get_available_models`. This requires your API key environment variable to be set.
+To see which output modalities are supported by the current model, use `get_valid_modalities`. This function returns a set of strings representing the allowed values for the `output_modality` key in your query.
 
 ```python
-available_models = pysynthbio.get_available_models()
+supported_modalities = pysynthbio.get_valid_modalities()
+print(supported_modalities)
+# Output might look like: {'bulk_rna-seq', 'lincs', 'sra', ...}
 ```
 
 ### Generate Example Queries
 
-The structure of the query required by the API depends on the model version. You can use `get_valid_query` to get a correctly structured example dictionary for a specific model name and version.
+The structure of the query required by the API is fixed for the current supported model (combined v1.0). You can use `get_valid_query` to get a correctly structured example dictionary.
 
 ```python
-example_query_v1 = pysynthbio.get_valid_query('v1.0')
+# Get the example query structure
+example_query = pysynthbio.get_valid_query()
 ```
 
 ### Get Predictions
 
-Use `predict_query` to send a query to a specific model and get expression predictions. You'll typically use `get_valid_query` to help structure your request. This function also requires the API key.
+Use `predict_query` to send a query to the API and get expression predictions. You'll typically use `get_valid_query` to help structure your request. This function also requires the API key.
 
 ```python
-query_structure = pysynthbio.get_valid_query('combined', 'v1.0')
+# You can modify the example_query or create your own following the structure
+my_query = pysynthbio.get_valid_query() # Example: using the default valid query
+# Modify my_query as needed...
 
 results = pysynthbio.predict_query(
     query=my_query,
-    model_name=target_model_name,
-    model_version=target_model_version,
     as_counts=True # Get results as estimated counts (default). Set to False for logCPM.
 )
+
+# Access results:
+metadata_df = results["metadata"]
+expression_df = results["expression"]
 ```
 
-This covers the basic workflow: discovering models, understanding query structures, and making predictions.
+This covers the basic workflow: understanding the required query structure and making predictions.
