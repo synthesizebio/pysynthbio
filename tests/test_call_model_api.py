@@ -58,29 +58,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for combined v1.0 raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), "Result for combined v1.0 should be a dictionary"
-    assert "metadata" in results, (
-        "Result dictionary for combined v1.0 should contain 'metadata' key"
-    )
-    assert "expression" in results, (
-        "Result dictionary for combined v1.0 should contain 'expression' key"
-    )
+    assert (
+        "metadata" in results
+    ), "Result dictionary for combined v1.0 should contain 'metadata' key"
+    assert (
+        "expression" in results
+    ), "Result dictionary for combined v1.0 should contain 'expression' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(metadata_df, pd.DataFrame), (
-        "'metadata' for combined v1.0 should be a pandas DataFrame"
-    )
-    assert isinstance(expression_df, pd.DataFrame), (
-        "'expression' for combined v1.0 should be a pandas DataFrame"
-    )
+    assert isinstance(
+        metadata_df, pd.DataFrame
+    ), "'metadata' for combined v1.0 should be a pandas DataFrame"
+    assert isinstance(
+        expression_df, pd.DataFrame
+    ), "'expression' for combined v1.0 should be a pandas DataFrame"
 
-    assert not metadata_df.empty, (
-        "Metadata DataFrame for combined v1.0 should not be empty for a valid query"
-    )
-    assert not expression_df.empty, (
-        "Expression DataFrame for combined v1.0 should not be empty for a valid query"
-    )
+    assert (
+        not metadata_df.empty
+    ), "Metadata DataFrame for combined v1.0 should not be empty for a valid query"
+    assert (
+        not expression_df.empty
+    ), "Expression DataFrame for combined v1.0 should not be empty for a valid query"
 
     print("Assertions passed for combined v1.0.")
 
