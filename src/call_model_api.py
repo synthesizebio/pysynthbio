@@ -184,6 +184,11 @@ def validate_query(query: dict) -> None:
     ValueError
         If the query is missing required keys for the v1.0 model.
     """
+    if not isinstance(query, dict):
+        raise TypeError(
+            f"Expected `query` to be a dictionary, but got {type(query).__name__}"
+        )
+
     required_keys = {"inputs", "mode", "output_modality"}
 
     missing_keys = required_keys - query.keys()
