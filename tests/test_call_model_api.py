@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 try:
-    from call_model_api import (
+    from pysynthbio.call_model_api import (
         predict_query,
         get_valid_query,
         get_valid_modalities,
