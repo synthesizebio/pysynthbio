@@ -12,7 +12,19 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile
+# Target to run all checks (lint, type check, format check, tests) using uv
+checks:
+	@echo "Running ruff checks..."
+	@uv run ruff check .
+	@echo "\nRunning mypy type checks..."
+	@uv run mypy . --namespace-packages --explicit-package-bases --ignore-missing-imports
+	@echo "\nRunning black formatting checks..."
+	@uv run black --check .
+	@echo "\nRunning pytest tests..."
+	@uv run pytest
+	@echo "\nChecks completed."
+
+.PHONY: help Makefile checks
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
-from functools import lru_cache
 import os
 import requests
 import json
+from typing import Set
 
 API_BASE_URL = "https://app.synthesize.bio"
 
@@ -21,14 +21,14 @@ MODEL_MODALITIES = {
 }
 
 
-def get_valid_modalities() -> dict:
+def get_valid_modalities() -> Set[str]:
     """
-    Returns a dictionary of possible modalities for the supported model.
+    Returns a set of possible output modalities for the supported model.
 
     Returns
     -------
-    dict
-        A nested dictionary containing the modalities.
+    Set[str]
+        A set containing the valid modality strings.
     """
     return MODEL_MODALITIES["combined"]["v1.0"]
 
