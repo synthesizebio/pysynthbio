@@ -145,7 +145,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-extras --dev
-          uv pip install sphinx sphinx-rtd-theme # Ensure theme is installed if needed
+          uv pip install sphinx sphinx-rtd-theme
 
       - name: Build documentation
         run: |
