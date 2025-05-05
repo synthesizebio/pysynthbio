@@ -51,7 +51,9 @@ jobs:
         run: python -m build
 
       - name: Verify package
-        run: twine check dist/*
+        run: |
+          uv pip install twine
+          twine check dist/*
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@v4
