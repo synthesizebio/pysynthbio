@@ -15,6 +15,24 @@ pip install pysynthbio
 
 To ensure it installed you can run `pip show pysynthbio`.
 
+### Installing from a GitHub Release
+
+Alternatively, you can install a specific version directly from its GitHub Release page. This is useful for testing pre-releases or specific tagged versions.
+
+1.  Go to the [Releases page](https://github.com/synthesizebio/pysynthbio/releases) of the repository.
+2.  Find the release tag you want to install (e.g., `v0.1.0`).
+3.  Expand the "Assets" section for that release.
+4.  Download the `.whl` (wheel) file or the `.tar.gz` (source distribution) file. The wheel file is generally preferred if available for your platform.
+5.  Install the downloaded file using pip, replacing `<path_to_downloaded_file>` with the actual path to the file:
+
+    ```bash
+    # Example using a downloaded wheel file
+    pip install /path/to/pysynthbio-0.1.0-py3-none-any.whl
+
+    # Example using a downloaded source distribution
+    pip install /path/to/pysynthbio-0.1.0.tar.gz
+    ```
+
 ## Usage
 
 ### Get your API key
