@@ -28,7 +28,7 @@ To ensure it installed you can run `pip show pysynthbio`.
 
 Go to https://app.synthesize.bio/profile and click the copy button next to your API key. 
 
- ### Form a request 
+### Form a request 
 
 
 
