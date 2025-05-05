@@ -22,8 +22,18 @@ build-backend = "setuptools.build_meta"
 Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff",
+    "mypy",
+    "black",
+    "build",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
+packages = ["pysynthbio"]
 
 [[tool.mypy.overrides]]
 module = ["setuptools", "pandas-stubs", "requests"]
