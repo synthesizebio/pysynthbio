@@ -31,7 +31,7 @@ jobs:
       - name: Setup UV and Python
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12" # Or your preferred Python version for docs
+          python-version: "3.12"
 
       - name: Install dependencies
         run: |
