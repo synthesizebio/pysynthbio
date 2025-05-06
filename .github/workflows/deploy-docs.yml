@@ -1,9 +1,7 @@
 name: Deploy Documentation to GitHub Pages
 
 on:
-  # push:
-  #   branches: [main]
-  pull_request:
+  push:
     branches: [main]
 
   workflow_dispatch:
@@ -35,14 +33,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Install project dev dependencies + sphinx and any theme you use
           uv sync --all-extras --dev
-          uv pip install sphinx sphinx-rtd-theme # Add your theme here if not alabaster
+          uv pip install sphinx sphinx-rtd-theme
 
       - name: Build documentation
         run: |
-          # Build from the root directory '.' and output to '_build/html'
-          # Ensure conf.py has correct settings (theme, extensions, etc.)
           sphinx-build -b html . _build/html
 
       - name: Setup Pages
