@@ -16,12 +16,16 @@ release = "0.0.1"
 
 extensions: list[str] = []
 
-templates_path = ["_templates"]
+templates_path = []
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv", "venv"]
 
+# Optional: If you have other file types or want to be explicit
+source_suffix = {
+    '.rst': 'restructuredtext',
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "alabaster"
-html_static_path = ["_static"]
+html_static_path = []
