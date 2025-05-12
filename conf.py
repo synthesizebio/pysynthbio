@@ -6,22 +6,26 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "pysynthbio"
-copyright = "2025, Candace Savonen, Alex David"
-author = "Candace Savonen, Alex David"
-release = "0.0.1"
+project: str = "pysynthbio"
+copyright: str = "2025, Candace Savonen, Alex David"
+author: str = "Candace Savonen, Alex David"
+release: str = "0.0.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions: list[str] = []
 
-templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv", "venv"]
+templates_path: list[str] = []
+exclude_patterns: list[str] = ["_build", "Thumbs.db", ".DS_Store", ".venv", "venv"]
 
+# Optional: If you have other file types or want to be explicit
+source_suffix: dict[str, str] = {
+    ".rst": "restructuredtext",
+}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = "alabaster"
-html_static_path = ["_static"]
+html_theme: str = "alabaster"
+html_static_path: list[str] = []
