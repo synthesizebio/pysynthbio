@@ -1,8 +1,12 @@
 name: Deploy Documentation to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Release to PyPI"]
+    types:
+      - completed
+    branches:
+      - main
 
   workflow_dispatch:
 
@@ -17,6 +21,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Only run if the PyPI release workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
     name: Build and Deploy Docs
     environment:
       name: github-pages
@@ -25,6 +31,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Setup UV and Python
         uses: astral-sh/setup-uv@v5
