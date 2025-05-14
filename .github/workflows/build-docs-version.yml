@@ -96,6 +96,19 @@ jobs:
             echo "CHECKOUT_REF=$CHECKOUT_REF" >> $GITHUB_OUTPUT
           fi
 
+      - name: Setup Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          # Install Sphinx and other dependencies directly
+          uv pip install sphinx sphinx-rtd-theme docutils jinja2 sphinx-autobuild
+
+          # Install project dependencies
+          uv pip install -e .
+
       - name: Create branch for documentation
         run: |
           git checkout ${{ steps.setup-vars.outputs.CHECKOUT_REF }}

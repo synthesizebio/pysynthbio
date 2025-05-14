@@ -126,13 +126,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --all-extras --dev
-          uv pip install sphinx jinja2 sphinx-linkcheck
+          # Install Sphinx and other dependencies directly instead of using uv sync
+          uv pip install sphinx sphinx-rtd-theme docutils jinja2 sphinx-autobuild
+
+          # Install other project dependencies
+          uv pip install -e .
 
       - name: Validate RST files
         run: |
           # Simple validation of RST files for syntax errors
-          find . -name "*.rst" -type f -exec rst2html.py --halt=warning {} /dev/null \; || true
+          find . -name "*.rst" -type f -exec python -m docutils.parsers.rst {} /dev/null \; || true
 
       - name: Download existing versions list (if available)
         id: download-versions

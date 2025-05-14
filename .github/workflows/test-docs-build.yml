@@ -83,8 +83,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --all-extras --dev
-          uv pip install sphinx jinja2
+          # Install Sphinx and other dependencies directly instead of using uv sync
+          uv pip install sphinx sphinx-rtd-theme docutils jinja2 sphinx-autobuild
+
+          # Install other project dependencies
+          uv pip install -e .
 
       - name: Build documentation
         run: |

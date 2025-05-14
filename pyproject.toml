@@ -32,7 +32,6 @@ dev = [
     "build",
     "sphinx>=7.2.6",
     "sphinx-autobuild",
-    "sphinx-linkcheck",
     "sphinx-rtd-theme",
     "jinja2",
     "docutils",
