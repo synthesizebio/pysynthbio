@@ -33,6 +33,25 @@ Alternatively, you can install a specific version directly from its GitHub Relea
     pip install /path/to/pysynthbio-0.1.0.tar.gz
     ```
 
+## Documentation
+
+The full documentation for pysynthbio is available at [https://synthesizebio.github.io/pysynthbio/](https://synthesizebio.github.io/pysynthbio/).
+
+The documentation includes:
+
+- Installation instructions
+- Quickstart guides
+- API reference
+- Usage examples
+- Developer guide
+
+### Documentation Versions
+
+We maintain documentation for multiple versions of pysynthbio:
+
+- Latest stable version: [https://synthesizebio.github.io/pysynthbio/](https://synthesizebio.github.io/pysynthbio/)
+- Specific versions: [https://synthesizebio.github.io/pysynthbio/X.Y.Z/](https://synthesizebio.github.io/pysynthbio/X.Y.Z/) (replace X.Y.Z with the version number)
+
 ## Usage
 
 ### Get your API key
@@ -86,3 +105,29 @@ expression_df = results["expression"]
 ```
 
 This covers the basic workflow: understanding the required query structure and making predictions.
+
+## Development
+
+### Setup Development Environment
+
+Clone the repository and install development dependencies:
+
+```bash
+git clone https://github.com/synthesizebio/pysynthbio.git
+cd pysynthbio
+uv sync --all-extras --dev
+```
+
+### Building Documentation Locally
+
+We use Sphinx for documentation. To build the docs locally:
+
+```bash
+# Build HTML documentation
+make docs
+
+# Live preview with auto-reload
+make docs-live
+```
+
+For more information on working with the documentation, see the [Documentation Development Guide](https://synthesizebio.github.io/pysynthbio/docs/development.html).

@@ -1,6 +1,7 @@
 name: Deploy Documentation to GitHub Pages
 
 on:
+  # This will run after PyPI release workflow completes
   workflow_run:
     workflows: ["Release to PyPI"]
     types:
@@ -8,7 +9,23 @@ on:
     branches:
       - main
 
+  # Manual trigger with options
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build docs for (leave empty for latest release)"
+        required: false
+        default: ""
+      use_release:
+        description: "Use latest GitHub release (ignores version input if true)"
+        required: false
+        type: boolean
+        default: false
+      strict_mode:
+        description: "Treat warnings as errors (stop build on warnings)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -21,8 +38,8 @@ concurrency:
 
 jobs:
   deploy:
-    # Only run if the PyPI release workflow succeeded
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    # Only run when manually triggered or when the PyPI release workflow succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     name: Build and Deploy Docs
     environment:
       name: github-pages
@@ -33,6 +50,74 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+          fetch-depth: 0 # Fetch all history for proper versioning
+
+      - name: Get latest release
+        id: latest-release
+        if: ${{ github.event.inputs.use_release == 'true' || github.event_name == 'workflow_run' }}
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/{owner}/{repo}/releases/latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Determine version
+        id: determine-version
+        run: |
+          # For workflow run from PyPI release, use latest GitHub release if available
+          if [[ "${{ github.event_name }}" == "workflow_run" && "${{ steps.latest-release.outcome }}" == "success" ]]; then
+            RELEASE_VERSION=$(echo '${{ steps.latest-release.outputs.data }}' | jq -r '.tag_name' | sed 's/^v//')
+            echo "VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "TAG_REF=refs/tags/v$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "Using latest GitHub release: $RELEASE_VERSION (from PyPI release workflow)"
+
+          # For manual workflow with use_release=true
+          elif [[ "${{ github.event.inputs.use_release }}" == "true" && "${{ steps.latest-release.outcome }}" == "success" ]]; then
+            RELEASE_VERSION=$(echo '${{ steps.latest-release.outputs.data }}' | jq -r '.tag_name' | sed 's/^v//')
+            echo "VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "TAG_REF=refs/tags/v$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "Using latest GitHub release: $RELEASE_VERSION (manual trigger)"
+
+          # For manual workflow with specified version
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event.inputs.version }}" != "latest" ]]; then
+              echo "TAG_REF=refs/tags/v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "TAG_REF=${{ github.ref }}" >> $GITHUB_OUTPUT
+            fi
+            echo "Using manually specified version: ${{ github.event.inputs.version }}"
+
+          # Fallback to latest tag (if GitHub release wasn't found)
+          elif [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            # Extract version from the tag that triggered the release workflow
+            TAG_NAME=$(git tag --sort=-committerdate | grep "^v" | head -n 1)
+            if [[ -n "$TAG_NAME" ]]; then
+              VERSION=${TAG_NAME#v}
+              echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+              echo "TAG_REF=refs/tags/$TAG_NAME" >> $GITHUB_OUTPUT
+              echo "Using latest tag: $VERSION (GitHub release not found)"
+            else
+              echo "VERSION=latest" >> $GITHUB_OUTPUT
+              echo "TAG_REF=${{ github.ref }}" >> $GITHUB_OUTPUT
+              echo "No tags found, using 'latest'"
+            fi
+
+          # Default to latest for any other case
+          else
+            echo "VERSION=latest" >> $GITHUB_OUTPUT
+            echo "TAG_REF=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "Using default: latest"
+          fi
+
+          echo "Selected version: $(cat $GITHUB_OUTPUT | grep VERSION | cut -d= -f2)"
+
+      - name: Checkout the appropriate tag if needed
+        run: |
+          if [[ "${{ steps.determine-version.outputs.TAG_REF }}" != "${{ github.ref }}" ]]; then
+            git checkout ${{ steps.determine-version.outputs.TAG_REF }} || echo "Failed to checkout tag - using current ref"
+          fi
 
       - name: Setup UV and Python
         uses: astral-sh/setup-uv@v5
@@ -42,11 +127,176 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-extras --dev
-          uv pip install sphinx
+          uv pip install sphinx jinja2 sphinx-linkcheck
+
+      - name: Validate RST files
+        run: |
+          # Simple validation of RST files for syntax errors
+          find . -name "*.rst" -type f -exec rst2html.py --halt=warning {} /dev/null \; || true
+
+      - name: Download existing versions list (if available)
+        id: download-versions
+        continue-on-error: true
+        run: |
+          # Try to fetch the versions.json file
+          mkdir -p _build/html
+          curl -s -o _build/html/versions.json https://synthesizebio.github.io/pysynthbio/versions.json || echo "{}" > _build/html/versions.json
+
+      - name: Check existing versions.json format
+        id: check-versions
+        run: |
+          if [ -f _build/html/versions.json ]; then
+            if ! jq empty _build/html/versions.json 2>/dev/null; then
+              echo "{}" > _build/html/versions.json
+            fi
+          else
+            echo "{}" > _build/html/versions.json
+          fi
+
+      - name: Create or update versions list
+        run: |
+          VERSION="${{ steps.determine-version.outputs.VERSION }}"
+
+          # Read existing versions.json or create an empty one
+          if [ ! -f _build/html/versions.json ]; then
+            echo "{}" > _build/html/versions.json
+          fi
+
+          # Add the current version to the versions.json file
+          python -c "
+          import json
+          import os
+
+          version = '$VERSION'
+
+          try:
+              with open('_build/html/versions.json', 'r') as f:
+                  versions = json.load(f)
+          except (json.JSONDecodeError, FileNotFoundError):
+              versions = {}
+
+          # Add/update this version
+          versions[version] = {'url': f'/{version}/' if version != 'latest' else '/'}
+
+          # Write back to the file
+          with open('_build/html/versions.json', 'w') as f:
+              json.dump(versions, f, indent=2)
+          " || echo "{}" > _build/html/versions.json
+
+          cat _build/html/versions.json
 
       - name: Build documentation
+        id: build-docs
         run: |
-          sphinx-build -b html . _build/html
+          VERSION="${{ steps.determine-version.outputs.VERSION }}"
+
+          # Set output directory based on version
+          if [[ "$VERSION" == "latest" ]]; then
+            OUTPUT_DIR="_build/html"  # Latest version goes to root
+          else
+            OUTPUT_DIR="_build/html/$VERSION"  # Other versions go to their subdirectory
+            mkdir -p $OUTPUT_DIR
+          fi
+
+          # Update version in conf.py to match the one we're building docs for
+          if [[ "$VERSION" != "latest" ]]; then
+            sed -i "s/release: str = \"[^\"]*\"/release: str = \"$VERSION\"/" conf.py
+          fi
+
+          # Build the docs with appropriate warning level
+          if [[ "${{ github.event.inputs.strict_mode }}" == "true" ]]; then
+            echo "Running in strict mode - warnings will be treated as errors"
+            sphinx-build -b html -W --keep-going . $OUTPUT_DIR
+          else
+            sphinx-build -b html . $OUTPUT_DIR
+          fi
+
+          # Check for typical issues
+          echo "Checking for broken links in the documentation..."
+          sphinx-build -b linkcheck . _build/linkcheck || echo "Some links may be broken - see _build/linkcheck/output.txt"
+
+          echo "✓ Documentation build completed successfully"
+          echo "files_generated=$(find $OUTPUT_DIR -type f | wc -l)" >> $GITHUB_OUTPUT
+          echo "directory_size=$(du -sh $OUTPUT_DIR | cut -f1)" >> $GITHUB_OUTPUT
+
+          # Generate version selector script
+          cat > _build/html/version-selector.js << 'EOL'
+          document.addEventListener('DOMContentLoaded', function() {
+            fetch('/pysynthbio/versions.json')
+              .then(response => response.json())
+              .then(versions => {
+                const currentPath = window.location.pathname;
+                const currentVersion = Object.keys(versions).find(v => 
+                  currentPath.includes(`/pysynthbio/${v}/`) || 
+                  (v === 'latest' && currentPath === '/pysynthbio/') ||
+                  (v === 'latest' && currentPath === '/pysynthbio/index.html')
+                ) || 'latest';
+                
+                // Create the version selector
+                const select = document.createElement('select');
+                select.id = 'version-selector';
+                select.style.cssText = 'position: fixed; top: 10px; right: 10px; z-index: 1000; padding: 5px;';
+                
+                Object.keys(versions).sort((a, b) => {
+                  if (a === 'latest') return -1;
+                  if (b === 'latest') return 1;
+                  return b.localeCompare(a, undefined, {numeric: true});
+                }).forEach(version => {
+                  const option = document.createElement('option');
+                  option.value = version;
+                  option.text = version === 'latest' ? 'latest' : 'v' + version;
+                  option.selected = version === currentVersion;
+                  select.appendChild(option);
+                });
+                
+                select.addEventListener('change', function() {
+                  const selectedVersion = this.value;
+                  const basePath = '/pysynthbio/';
+                  const versionPath = selectedVersion === 'latest' ? '' : selectedVersion + '/';
+                  
+                  // Redirect to the same page in the new version
+                  window.location.href = basePath + versionPath;
+                });
+                
+                document.body.appendChild(select);
+              })
+              .catch(error => console.error('Error loading versions:', error));
+          });
+          EOL
+
+          # Add the script to all HTML files
+          find _build/html -name "*.html" -exec sh -c '
+            if ! grep -q "version-selector.js" "{}"; then
+              sed -i "s/<head>/<head><script src=\"\/pysynthbio\/version-selector.js\"><\/script>/" "{}"
+            fi
+          ' \;
+
+      - name: Create redirect from root to latest if needed
+        if: steps.determine-version.outputs.VERSION != 'latest'
+        run: |
+          # Create index.html at root that redirects to latest
+          mkdir -p _build/html
+          cat > _build/html/index.html << EOL
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta http-equiv="refresh" content="0; url=./latest/">
+              <title>Redirect to latest pysynthbio documentation</title>
+            </head>
+            <body>
+              <p>Redirecting to <a href="./latest/">latest documentation</a>...</p>
+            </body>
+          </html>
+          EOL
+
+      - name: Build summary
+        run: |
+          echo "# Documentation Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation build completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "📚 Version: ${{ steps.determine-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Files generated: ${{ steps.build-docs.outputs.files_generated }}" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Directory size: ${{ steps.build-docs.outputs.directory_size }}" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 URL (after deployment): ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

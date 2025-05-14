@@ -14,3 +14,15 @@ pysynthbio documentation
    usage/quickstart
    usage/license
 
+.. toctree::
+   :maxdepth: 2
+   :caption: API Reference:
+
+   docs/api
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Development:
+
+   docs/development
+

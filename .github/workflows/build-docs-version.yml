@@ -1,0 +1,117 @@
+name: Build Documentation for Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0) - no "v" prefix'
+        required: false
+        default: ""
+      tag:
+        description: "Git tag to use (default: v{version})"
+        required: false
+        default: ""
+      branch_name:
+        description: "Branch to create for future PRs (default: docs-v{version})"
+        required: false
+        default: ""
+      use_latest_release:
+        description: "Use latest GitHub release (ignores version if specified)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # Needed to create branches
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Get all tags
+
+      - name: Get latest release
+        id: latest-release
+        if: ${{ github.event.inputs.use_latest_release == 'true' }}
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/{owner}/{repo}/releases/latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Setup variables
+        id: setup-vars
+        run: |
+          # Use latest release if requested
+          if [[ "${{ github.event.inputs.use_latest_release }}" == "true" && "${{ steps.latest-release.outcome }}" == "success" ]]; then
+            RELEASE_TAG=$(echo '${{ steps.latest-release.outputs.data }}' | jq -r '.tag_name')
+            VERSION=${RELEASE_TAG#v}
+            TAG="$RELEASE_TAG"
+            echo "Using latest release: $RELEASE_TAG ($VERSION)"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+
+          BRANCH="${{ github.event.inputs.branch_name }}"
+
+          # If no version specified and not using latest release, default to getting latest tag
+          if [[ -z "$VERSION" && "${{ github.event.inputs.use_latest_release }}" != "true" ]]; then
+            LATEST_TAG=$(git tag --sort=-committerdate | grep "^v" | head -n 1)
+            if [[ -n "$LATEST_TAG" ]]; then
+              VERSION=${LATEST_TAG#v}
+              TAG="$LATEST_TAG"
+              echo "No version specified, using latest tag: $LATEST_TAG"
+            else
+              echo "::error::No version specified and no tags found. Please specify a version."
+              exit 1
+            fi
+          fi
+
+          # Set defaults if not provided
+          if [[ -z "$TAG" ]]; then
+            TAG="v$VERSION"
+          fi
+
+          if [[ -z "$BRANCH" ]]; then
+            BRANCH="docs-v$VERSION"
+          fi
+
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "BRANCH=$BRANCH" >> $GITHUB_OUTPUT
+
+          # Check if tag exists
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            CHECKOUT_REF="$TAG"
+            echo "CHECKOUT_REF=$CHECKOUT_REF" >> $GITHUB_OUTPUT
+            echo "Tag $TAG exists, will use it"
+          else
+            echo "Tag $TAG does not exist, will use current HEAD"
+            CHECKOUT_REF="HEAD"
+            echo "CHECKOUT_REF=$CHECKOUT_REF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create branch for documentation
+        run: |
+          git checkout ${{ steps.setup-vars.outputs.CHECKOUT_REF }}
+          git checkout -b ${{ steps.setup-vars.outputs.BRANCH }}
+
+          # Update version in conf.py
+          sed -i "s/release: str = \"[^\"]*\"/release: str = \"${{ steps.setup-vars.outputs.VERSION }}\"/" conf.py
+
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add conf.py
+          git commit -m "Update version to ${{ steps.setup-vars.outputs.VERSION }} for documentation"
+          git push origin ${{ steps.setup-vars.outputs.BRANCH }}
+
+      - name: Output instructions
+        run: |
+          echo "::notice::Documentation branch created: ${{ steps.setup-vars.outputs.BRANCH }} for version ${{ steps.setup-vars.outputs.VERSION }}"
+          echo "::notice::To publish this version, create a PR from ${{ steps.setup-vars.outputs.BRANCH }} to main"
+          echo "::notice::After merging, manually trigger the deploy-docs.yml workflow with version=${{ steps.setup-vars.outputs.VERSION }}"

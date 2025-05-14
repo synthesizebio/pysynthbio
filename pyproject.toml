@@ -21,6 +21,7 @@ build-backend = "setuptools.build_meta"
 [project.urls]
 Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
+Documentation = "https://synthesizebio.github.io/pysynthbio/"
 
 [project.optional-dependencies]
 dev = [
@@ -29,6 +30,12 @@ dev = [
     "mypy",
     "black",
     "build",
+    "sphinx>=7.2.6",
+    "sphinx-autobuild",
+    "sphinx-linkcheck",
+    "sphinx-rtd-theme",
+    "jinja2",
+    "docutils",
 ]
 
 [tool.setuptools]

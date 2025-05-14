@@ -1,0 +1,116 @@
+name: Test Documentation Build
+
+on:
+  pull_request:
+    paths:
+      - "**.rst"
+      - "**.md"
+      - "conf.py"
+      - ".github/workflows/deploy-docs.yml"
+      - ".github/workflows/test-docs-build.yml"
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to test docs for (leave empty for latest release)"
+        required: false
+        default: ""
+      use_release:
+        description: "Use latest GitHub release (ignores version input if true)"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  test-docs:
+    name: Test Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for proper versioning
+
+      - name: Get latest release
+        id: latest-release
+        if: ${{ github.event.inputs.use_release == 'true' }}
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/{owner}/{repo}/releases/latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Determine version
+        id: determine-version
+        run: |
+          # For manual workflow with use_release=true
+          if [[ "${{ github.event.inputs.use_release }}" == "true" && "${{ steps.latest-release.outcome }}" == "success" ]]; then
+            RELEASE_VERSION=$(echo '${{ steps.latest-release.outputs.data }}' | jq -r '.tag_name' | sed 's/^v//')
+            echo "VERSION=$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "TAG_REF=refs/tags/v$RELEASE_VERSION" >> $GITHUB_OUTPUT
+            echo "Using latest GitHub release: $RELEASE_VERSION (manual trigger)"
+
+          # For manual workflow with specified version
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            if [[ "${{ github.event.inputs.version }}" != "latest" ]]; then
+              echo "TAG_REF=refs/tags/v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "TAG_REF=${{ github.ref }}" >> $GITHUB_OUTPUT
+            fi
+            echo "Using manually specified version: ${{ github.event.inputs.version }}"
+
+          # Default to the current PR/branch version
+          else
+            echo "VERSION=latest" >> $GITHUB_OUTPUT
+            echo "TAG_REF=${{ github.ref }}" >> $GITHUB_OUTPUT
+            echo "Using current branch: ${{ github.ref }}"
+          fi
+
+          echo "Selected version: $(cat $GITHUB_OUTPUT | grep VERSION | cut -d= -f2)"
+
+      - name: Checkout the appropriate tag if needed
+        run: |
+          if [[ "${{ steps.determine-version.outputs.TAG_REF }}" != "${{ github.ref }}" ]]; then
+            git checkout ${{ steps.determine-version.outputs.TAG_REF }} || echo "Failed to checkout tag - using current ref"
+          fi
+
+      - name: Setup UV and Python
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras --dev
+          uv pip install sphinx jinja2
+
+      - name: Build documentation
+        run: |
+          VERSION="${{ steps.determine-version.outputs.VERSION }}"
+
+          # Update version in conf.py to match the one we're building docs for
+          if [[ "$VERSION" != "latest" ]]; then
+            sed -i "s/release: str = \"[^\"]*\"/release: str = \"$VERSION\"/" conf.py
+          fi
+
+          # Build the docs with warnings as errors
+          sphinx-build -b html -W --keep-going . _build/html
+
+          echo "✓ Documentation build completed successfully."
+
+      - name: Upload documentation as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: documentation-build
+          path: _build/html/
+          retention-days: 7
+
+      - name: Summary
+        run: |
+          echo "# Documentation Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Documentation build completed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "📚 Version: ${{ steps.determine-version.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Files generated: $(find _build/html -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "📁 Directory size: $(du -sh _build/html | cut -f1)" >> $GITHUB_STEP_SUMMARY
