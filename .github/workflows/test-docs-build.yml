@@ -101,7 +101,7 @@ jobs:
           echo "✓ Documentation build completed successfully."
 
       - name: Upload documentation as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: documentation-build
           path: _build/html/
