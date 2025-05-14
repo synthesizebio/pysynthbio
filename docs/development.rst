@@ -1,7 +1,7 @@
 .. _development-docs:
 
 Documentation System
-===================
+==================
 
 This guide explains how to work with the PySynthBio documentation system, including building, testing, and deploying documentation.
 
@@ -16,10 +16,10 @@ PySynthBio uses Sphinx to generate documentation from reStructuredText (RST) fil
 The documentation system supports multiple versions, allowing users to access documentation for any released version of PySynthBio.
 
 Local Development
-----------------
+---------------
 
 Building Documentation Locally
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The project includes several make commands to simplify working with documentation:
 
@@ -49,7 +49,7 @@ The project includes several make commands to simplify working with documentatio
 The built documentation will be available in the ``_build/html`` directory.
 
 Adding New Documentation
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 To add new documentation:
 
@@ -71,10 +71,10 @@ For example, to add a new guide for a specific feature:
     ...
 
 Versioned Documentation
-----------------------
+---------------------
 
 Documentation Structure
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 The documentation system supports multiple versions with the following structure:
 
@@ -85,7 +85,7 @@ The documentation system supports multiple versions with the following structure
 A version selector in the top corner of each page allows users to switch between versions.
 
 Updating Version Information
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Version information is automatically determined in several ways:
 
@@ -100,12 +100,12 @@ For local development, you can update the version in ``conf.py``:
     release: str = "1.0.0"  # Change this to the version you're working on
 
 GitHub Actions Workflows
------------------------
+----------------------
 
 The project includes several GitHub Actions workflows for documentation:
 
 deploy-docs.yml
-~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
 
 This workflow deploys documentation to GitHub Pages. It is triggered:
 
@@ -115,7 +115,7 @@ This workflow deploys documentation to GitHub Pages. It is triggered:
 The workflow determines the appropriate version, builds the documentation, and deploys it to GitHub Pages with version management.
 
 test-docs-build.yml
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 This workflow tests documentation building without deploying to GitHub Pages. It is triggered:
 
@@ -125,7 +125,7 @@ This workflow tests documentation building without deploying to GitHub Pages. It
 This workflow is helpful for testing documentation changes before merging them.
 
 Best Practices
--------------
+------------
 
 When working with documentation, follow these best practices:
 
@@ -138,10 +138,10 @@ When working with documentation, follow these best practices:
 7. **Preview PRs**: Use the test-docs-build workflow to verify documentation changes in PRs
 
 Troubleshooting
---------------
+-------------
 
 Common Issues
-~~~~~~~~~~~~
+~~~~~~~~~~~
 
 - **Missing dependencies**: Ensure you have all required packages with ``uv sync --all-extras --dev``
 - **Sphinx errors**: Check for RST syntax errors with the ``docs-strict`` target
@@ -149,7 +149,7 @@ Common Issues
 - **Version mismatch**: Ensure version in ``conf.py`` matches the version you're working on
 
 Getting Help
-~~~~~~~~~~~
+----------
 
 If you encounter issues with the documentation system:
 

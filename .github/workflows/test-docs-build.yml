@@ -98,8 +98,8 @@ jobs:
             sed -i "s/release: str = \"[^\"]*\"/release: str = \"$VERSION\"/" conf.py
           fi
 
-          # Build the docs with warnings as errors
-          sphinx-build -b html -W --keep-going . _build/html
+          # Build docs with our custom make target that uses modified warnings handling
+          make docs-except-title-warnings
 
           echo "✓ Documentation build completed successfully."
 

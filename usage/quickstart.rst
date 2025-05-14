@@ -4,12 +4,12 @@ Quickstart
 This guide will help you get started with pysynthbio quickly.
 
 Get your API key
-----------------
+---------------
 
 Go to `<https://app.synthesize.bio/profile>`_ to generate an API key. Then set this key as an environment variable named ``SYNTHESIZE_API_KEY`` to authenticate your API requests.
 
 Basic Usage
------------
+----------
 
 First, import the necessary functions from the package:
 
@@ -18,7 +18,7 @@ First, import the necessary functions from the package:
     import pysynthbio
 
 Discover Valid Modalities
--------------------------
+------------------------
 
 To see which output modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``output_modality`` key in your query.
 
@@ -29,7 +29,7 @@ To see which output modalities are supported by the current model, use ``get_val
     # Output might look like: {'bulk_rna-seq', 'lincs', 'sra', ...}
 
 Generate Example Queries
-------------------------
+-----------------------
 
 The structure of the query required by the API is fixed for the current supported model (combined v1.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
 
@@ -39,7 +39,7 @@ The structure of the query required by the API is fixed for the current supporte
     example_query = pysynthbio.get_valid_query()
 
 Get Predictions
-----------------
+---------------
 
 Use ``predict_query`` to send a query to the API and get expression predictions. You'll typically use ``get_valid_query`` to help structure your request. This function also requires the API key.
 

@@ -4,7 +4,7 @@
    contain the root `toctree` directive.
 
 pysynthbio documentation
-========================
+=======================
 
 .. toctree::
    :maxdepth: 2

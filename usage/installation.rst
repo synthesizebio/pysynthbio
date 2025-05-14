@@ -1,5 +1,5 @@
 Installation
-============
+===========
 
 Prerequisites
 -------------
@@ -23,7 +23,7 @@ To ensure it installed correctly you can run:
     pip show pysynthbio
 
 Installing from a GitHub Release
---------------------------------
+-------------------------------
 
 Alternatively, you can install a specific version directly from its GitHub Release page. This is useful for testing pre-releases or specific tagged versions.
 
@@ -42,7 +42,7 @@ Alternatively, you can install a specific version directly from its GitHub Relea
     pip install /path/to/pysynthbio-0.1.0.tar.gz
 
 Development Installation
-------------------------
+-----------------------
 
 For development purposes, you can install directly from the repository:
 

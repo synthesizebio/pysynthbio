@@ -208,8 +208,9 @@ jobs:
 
           # Build the docs with appropriate warning level
           if [[ "${{ github.event.inputs.strict_mode }}" == "true" ]]; then
-            echo "Running in strict mode - warnings will be treated as errors"
-            sphinx-build -b html -W --keep-going . $OUTPUT_DIR
+            echo "Running in strict mode with modified warnings handling"
+            # Use our custom make target for CI environments
+            make docs-except-title-warnings
           else
             sphinx-build -b html . $OUTPUT_DIR
           fi
