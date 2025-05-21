@@ -1,5 +1,5 @@
 import os
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -104,11 +104,11 @@ def test_predict_query_mocked_call_success(mock_post):
     """
     # Save the original API key state
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
-    
+
     try:
         # Ensure API key is set for this test
         os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
-        
+
         # Create mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -122,15 +122,15 @@ def test_predict_query_mocked_call_success(mock_post):
             "gene_order": ["gene1", "gene2", "gene3"]
         }
         mock_post.return_value = mock_response
-        
+
         print("\nTesting mocked predict_query call for combined v1.0...")
-        
+
         try:
             test_query = get_valid_query()
             print("Generated query:", test_query)
         except Exception as e:
             pytest.fail(f"get_valid_query failed: {e}")
-        
+
         try:
             results = predict_query(
                 query=test_query,
@@ -139,10 +139,10 @@ def test_predict_query_mocked_call_success(mock_post):
             print("predict_query mocked call successful for combined v1.0.")
         except Exception as e:
             pytest.fail(f"predict_query for combined v1.0 raised unexpected Exception: {e}")
-        
+
         # Verify mock was called
         mock_post.assert_called_once()
-        
+
         assert isinstance(results, dict), "Result for combined v1.0 should be a dictionary"
         assert (
             "metadata" in results
@@ -150,19 +150,19 @@ def test_predict_query_mocked_call_success(mock_post):
         assert (
             "expression" in results
         ), "Result dictionary for combined v1.0 should contain 'expression' key"
-        
+
         metadata_df = results["metadata"]
         expression_df = results["expression"]
-        
+
         assert isinstance(
             metadata_df, pd.DataFrame
         ), "'metadata' for combined v1.0 should be a pandas DataFrame"
         assert isinstance(
             expression_df, pd.DataFrame
         ), "'expression' for combined v1.0 should be a pandas DataFrame"
-        
+
         print("Assertions passed for combined v1.0 mocked call.")
-    
+
     finally:
         # Restore original API key state
         if original_api_key is not None:
@@ -178,15 +178,15 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
     """Test auto authentication in predict_query."""
     # Save the original API key state
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
-    
+
     try:
         # Ensure API key is not set initially
         if "SYNTHESIZE_API_KEY" in os.environ:
             del os.environ["SYNTHESIZE_API_KEY"]
-        
+
         # Configure mocks
         mock_set_token.side_effect = mock_set_token_implementation
-        
+
         # Create mock response
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -200,28 +200,28 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
             "gene_order": ["gene1", "gene2", "gene3"]
         }
         mock_post.return_value = mock_response
-        
+
         print("\nTesting auto-authentication in predict_query...")
-        
+
         # Get a valid query
         query = get_valid_query()
-        
+
         # Call function with auto-authentication
         results = predict_query(query, auto_authenticate=True)
-        
+
         # Verify set_token was called
         mock_set_token.assert_called_once_with(use_keyring=True)
-        
+
         # Verify API was called
         mock_post.assert_called_once()
-        
+
         # Verify results structure
         assert isinstance(results, dict)
         assert "metadata" in results
         assert "expression" in results
-        
+
         print("Auto-authentication test passed.")
-    
+
     finally:
         # Restore original API key state
         if original_api_key is not None:

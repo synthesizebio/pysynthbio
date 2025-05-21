@@ -1,12 +1,13 @@
 """
 Core API functionality for the Synthesize Bio API
 """
-import pandas as pd
-import numpy as np
-import os
-import requests
 import json
-from typing import Set, Dict, Optional
+import os
+from typing import Dict, Set
+
+import numpy as np
+import pandas as pd
+import requests
 
 try:
     from .key_handlers import has_synthesize_token, set_synthesize_token
