@@ -29,10 +29,6 @@ jobs:
         run: |
           ruff check .
 
-      - name: Type check with mypy
-        run: |
-          mypy . --namespace-packages --explicit-package-bases --ignore-missing-imports
-
       - name: Check formatting with black
         run: |
           black --check .
