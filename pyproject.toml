@@ -50,7 +50,7 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 
 [[tool.mypy.overrides]]
-module = ["setuptools", "pandas-stubs", "requests", "keyring", "matplotlib", "seaborn"]
+module = ["setuptools", "pandas-stubs", "requests", "keyring"]
 ignore_missing_imports = true
 
 [tool.black]
