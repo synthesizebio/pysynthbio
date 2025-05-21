@@ -5,7 +5,7 @@ Prerequisites
 -------------
 
 To start using pysynthbio, first you need to have an account with synthesize.bio.
-`Go here to create one <https://app.synthesize.bio/>`_.
+`Go here to create one <https://app.synthesize.bio/profile>`_.
 
 Standard Installation
 ---------------------
