@@ -13,4 +13,5 @@ pysynthbio documentation
    usage/installation
    usage/quickstart
    usage/v1
+   usage/license
 
