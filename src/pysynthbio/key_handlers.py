@@ -1,7 +1,7 @@
-import os
 import getpass
-import webbrowser
+import os
 import warnings
+import webbrowser
 
 try:
     import keyring
@@ -34,17 +34,17 @@ def set_synthesize_token(use_keyring=False, token=None):
         set_synthesize_token(use_keyring=True)
     """
     if token is None:
-        
+
         webbrowser.open("https://app.synthesize.bio/profile")
         token = getpass.getpass(
             prompt="Create an account at https://app.synthesize.bio/ then go to your profile.\n"
                    "Click create token then copy it.\n"
                    "Paste token here and press enter: "
         )
-    
+
     # Store in environment
     os.environ["SYNTHESIZE_API_KEY"] = token
-    
+
     # Optionally store in keyring if requested and available
     if use_keyring:
         if KEYRING_AVAILABLE:
@@ -56,7 +56,7 @@ def set_synthesize_token(use_keyring=False, token=None):
         else:
             warnings.warn("Package 'keyring' is not installed. Token not stored in keyring.")
             print("To store token in keyring, install with: pip install keyring")
-    
+
     print("API token set for current session.")
     return True
 
@@ -77,13 +77,13 @@ def load_synthesize_token_from_keyring():
         warnings.warn("Package 'keyring' is not installed. Cannot load token from keyring.")
         print("To use this feature, install with: pip install keyring")
         return False
-    
+
     try:
         token = keyring.get_password("pysynthbio", "api_token")
         if token is None:
             warnings.warn("No token found in keyring.")
             return False
-            
+
         os.environ["SYNTHESIZE_API_KEY"] = token
         print("API token loaded from keyring and set for current session.")
         return True
@@ -118,7 +118,7 @@ def clear_synthesize_token(remove_from_keyring=False):
         print("API token cleared from current session.")
     else:
         print("No API token was set in the current session.")
-    
+
     # Optionally remove from keyring
     if remove_from_keyring:
         if KEYRING_AVAILABLE:
@@ -127,13 +127,13 @@ def clear_synthesize_token(remove_from_keyring=False):
                 print("API token removed from system keyring.")
             except keyring.errors.PasswordDeleteError:
                 print("No API token was found in the keyring.")
-            except Exception as e:
+            except Exception:
                 # This might occur if no token exists or other keyring issues
                 print("No API token was found in the keyring or could not access keyring.")
         else:
             warnings.warn("Package 'keyring' is not installed. Cannot remove token from keyring.")
             print("To use this feature, install with: pip install keyring")
-    
+
     return True
 
 

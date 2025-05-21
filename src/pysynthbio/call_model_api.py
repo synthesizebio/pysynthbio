@@ -7,7 +7,12 @@ import os
 import requests
 import json
 from typing import Set, Dict, Optional
-from .key_handlers import has_synthesize_token, set_synthesize_token
+
+try:
+    from .key_handlers import has_synthesize_token, set_synthesize_token
+except ImportError:
+    # Fallback if relative import fails (e.g., in tests)
+    from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 
 API_BASE_URL = "https://app.synthesize.bio"
 

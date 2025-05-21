@@ -1,17 +1,19 @@
 import os
-import pytest
-import pandas as pd
+from unittest.mock import patch, MagicMock
+
 import numpy as np
+import pandas as pd
+import pytest
 
 try:
     from pysynthbio.call_model_api import (
-        predict_query,
-        get_valid_query,
-        get_valid_modalities,
-        validate_query,
-        validate_modality,
-        log_cpm,
         MODEL_MODALITIES,
+        get_valid_modalities,
+        get_valid_query,
+        log_cpm,
+        predict_query,
+        validate_modality,
+        validate_query,
     )
 except ImportError as e:
     print(f"Import Error: {e}")
@@ -21,6 +23,14 @@ except ImportError as e:
     )
 
 
+# Add this function to set up mocked authentication for tests
+def mock_set_token_implementation(use_keyring=False):
+    """Mock implementation that sets the environment variable"""
+    os.environ["SYNTHESIZE_API_KEY"] = "mock-token-for-testing"
+    return True
+
+
+# Test for both live API calls (if API key available) and mocked calls
 api_key_available = "SYNTHESIZE_API_KEY" in os.environ
 skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 
@@ -83,6 +93,141 @@ def test_predict_query_live_call_success():
     ), "Expression DataFrame for combined v1.0 should not be empty for a valid query"
 
     print("Assertions passed for combined v1.0.")
+
+
+# Add a mocked version of the API call test
+@patch('pysynthbio.call_model_api.requests.post')
+def test_predict_query_mocked_call_success(mock_post):
+    """
+    Tests a mocked call to predict_query for the combined/v1.0 model.
+    This test doesn't require an API key or actual API server.
+    """
+    # Save the original API key state
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    
+    try:
+        # Ensure API key is set for this test
+        os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
+        
+        # Create mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "outputs": [
+                {
+                    "metadata": {"sample_id": "test1", "cell_line": "A-549"},
+                    "expression": [[1, 2, 3], [4, 5, 6]]
+                }
+            ],
+            "gene_order": ["gene1", "gene2", "gene3"]
+        }
+        mock_post.return_value = mock_response
+        
+        print("\nTesting mocked predict_query call for combined v1.0...")
+        
+        try:
+            test_query = get_valid_query()
+            print("Generated query:", test_query)
+        except Exception as e:
+            pytest.fail(f"get_valid_query failed: {e}")
+        
+        try:
+            results = predict_query(
+                query=test_query,
+                as_counts=True,
+            )
+            print("predict_query mocked call successful for combined v1.0.")
+        except Exception as e:
+            pytest.fail(f"predict_query for combined v1.0 raised unexpected Exception: {e}")
+        
+        # Verify mock was called
+        mock_post.assert_called_once()
+        
+        assert isinstance(results, dict), "Result for combined v1.0 should be a dictionary"
+        assert (
+            "metadata" in results
+        ), "Result dictionary for combined v1.0 should contain 'metadata' key"
+        assert (
+            "expression" in results
+        ), "Result dictionary for combined v1.0 should contain 'expression' key"
+        
+        metadata_df = results["metadata"]
+        expression_df = results["expression"]
+        
+        assert isinstance(
+            metadata_df, pd.DataFrame
+        ), "'metadata' for combined v1.0 should be a pandas DataFrame"
+        assert isinstance(
+            expression_df, pd.DataFrame
+        ), "'expression' for combined v1.0 should be a pandas DataFrame"
+        
+        print("Assertions passed for combined v1.0 mocked call.")
+    
+    finally:
+        # Restore original API key state
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
+# Add test for auto-authentication
+@patch('pysynthbio.call_model_api.set_synthesize_token')
+@patch('pysynthbio.call_model_api.requests.post')
+def test_predict_query_auto_authenticate(mock_post, mock_set_token):
+    """Test auto authentication in predict_query."""
+    # Save the original API key state
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    
+    try:
+        # Ensure API key is not set initially
+        if "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+        
+        # Configure mocks
+        mock_set_token.side_effect = mock_set_token_implementation
+        
+        # Create mock response
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "outputs": [
+                {
+                    "metadata": {"sample_id": "test1"},
+                    "expression": [[1, 2, 3], [4, 5, 6]]
+                }
+            ],
+            "gene_order": ["gene1", "gene2", "gene3"]
+        }
+        mock_post.return_value = mock_response
+        
+        print("\nTesting auto-authentication in predict_query...")
+        
+        # Get a valid query
+        query = get_valid_query()
+        
+        # Call function with auto-authentication
+        results = predict_query(query, auto_authenticate=True)
+        
+        # Verify set_token was called
+        mock_set_token.assert_called_once_with(use_keyring=True)
+        
+        # Verify API was called
+        mock_post.assert_called_once()
+        
+        # Verify results structure
+        assert isinstance(results, dict)
+        assert "metadata" in results
+        assert "expression" in results
+        
+        print("Auto-authentication test passed.")
+    
+    finally:
+        # Restore original API key state
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
 
 
 def test_get_valid_modalities():
