@@ -34,8 +34,6 @@ def set_synthesize_token(use_keyring=False, token=None):
         set_synthesize_token(use_keyring=True)
     """
     if token is None:
-        print("Create an account at https://app.synthesize.bio/ then go to your profile.")
-        print("Click create token then click the copy button in the corner.")
         
         webbrowser.open("https://app.synthesize.bio/profile")
         token = getpass.getpass(
