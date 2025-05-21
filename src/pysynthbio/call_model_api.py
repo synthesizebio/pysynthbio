@@ -1,9 +1,20 @@
-import pandas as pd
-import numpy as np
-import os
-import requests
+"""
+Core API functionality for the Synthesize Bio API
+"""
+
 import json
-from typing import Set
+import os
+from typing import Dict, Set
+
+import numpy as np
+import pandas as pd
+import requests
+
+try:
+    from .key_handlers import has_synthesize_token, set_synthesize_token
+except ImportError:
+    # Fallback if relative import fails (e.g., in tests)
+    from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 
 API_BASE_URL = "https://app.synthesize.bio"
 
@@ -75,9 +86,11 @@ def get_valid_query() -> dict:
 def predict_query(
     query: dict,
     as_counts: bool = True,
-) -> dict[str, pd.DataFrame]:
+    auto_authenticate: bool = True,
+) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (combined/v1.0) for prediction and retrieves samples.
+    Sends a query to the Synthesize Bio API (combined/v1.0) for
+    prediction and retrieves samples.
 
     Parameters
     ----------
@@ -85,7 +98,11 @@ def predict_query(
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
     as_counts : bool, optional
-        If False, transforms the predicted expression counts into logCPM (default is True, returning counts).
+        If False, transforms the predicted expression counts into
+        logCPM (default is True, returning counts).
+    auto_authenticate : bool, optional
+        If True and no API token is found, will prompt the user to
+        input one (default is True).
 
     Returns
     -------
@@ -96,13 +113,22 @@ def predict_query(
     Raises
     -------
     KeyError
-        If the SYNTHESIZE_API_KEY environment variable is not set.
+        If the SYNTHESIZE_API_KEY environment variable is not set and
+        auto_authenticate is False.
     ValueError
         If API fails or response is invalid.
     """
-
-    if "SYNTHESIZE_API_KEY" not in os.environ:
-        raise KeyError("Please set the SYNTHESIZE_API_KEY environment variable")
+    # Check if token is available and prompt if needed
+    if not has_synthesize_token():
+        if auto_authenticate:
+            print("API token not found. Please provide your Synthesize Bio API token.")
+            set_synthesize_token(use_keyring=True)
+        else:
+            raise KeyError(
+                "No API token found. "
+                "Set the SYNTHESIZE_API_KEY environment variable or "
+                "call set_synthesize_token() before making API requests."
+            )
 
     api_url = f"{API_BASE_URL}/api/model/combined/v1.0"
 
@@ -121,7 +147,8 @@ def predict_query(
 
     if response.status_code != 200:
         raise ValueError(
-            f"API request to {api_url} failed with status {response.status_code}: {response.text}"
+            f"API request to {api_url} failed with status",
+            f"{response.status_code}: {response.text}",
         )
     try:
         content = response.json()
@@ -134,8 +161,10 @@ def predict_query(
         elif not isinstance(content, dict):
             raise ValueError(f"API response is not a JSON object: {response.text}")
 
-    except json.JSONDecodeError:
-        raise ValueError(f"Failed to decode JSON from API response: {response.text}")
+    except json.JSONDecodeError as err:
+        raise ValueError(
+            f"Failed to decode JSON from API response: {response.text}"
+        ) from err
 
     for key in ("error", "errors"):
         if key in content:
@@ -157,7 +186,8 @@ def predict_query(
         metadata = pd.DataFrame(metadata_rows)
     else:
         raise ValueError(
-            f"Unexpected API response structure (expected 'outputs' and 'gene_order'): {content}"
+            f"Unexpected API response structure "
+            f"(expected 'outputs' and 'gene_order'): {content}"
         )
 
     expression = expression.astype(int)
@@ -213,7 +243,6 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-
     allowed_modalities = MODEL_MODALITIES["combined"]["v1.0"]
 
     modality_key = "output_modality"
