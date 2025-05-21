@@ -1,6 +1,7 @@
 """
 Unit tests for the Synthesize Bio API authentication workflow.
 """
+
 import os
 import unittest
 from unittest.mock import MagicMock, patch
@@ -58,8 +59,8 @@ class TestTokenManagement(unittest.TestCase):
         # Test function returns False when token is empty
         self.assertFalse(has_synthesize_token())
 
-    @patch('webbrowser.open')
-    @patch('getpass.getpass')
+    @patch("webbrowser.open")
+    @patch("getpass.getpass")
     def test_set_synthesize_token_interactive(self, mock_getpass, mock_browser):
         """Test setting token interactively."""
         # Configure mocks
@@ -85,7 +86,7 @@ class TestTokenManagement(unittest.TestCase):
         # Verify token was set
         self.assertEqual(os.environ["SYNTHESIZE_API_KEY"], "test-direct-token")
 
-    @patch('keyring.set_password')
+    @patch("keyring.set_password")
     def test_set_synthesize_token_with_keyring(self, mock_set_password):
         """Test setting token with keyring storage."""
         # Skip if keyring is not available
@@ -125,8 +126,8 @@ class TestApiWithAuthentication(unittest.TestCase):
             if "SYNTHESIZE_API_KEY" in os.environ:
                 del os.environ["SYNTHESIZE_API_KEY"]
 
-    @patch('pysynthbio.call_model_api.set_synthesize_token')
-    @patch('pysynthbio.call_model_api.requests.post')
+    @patch("pysynthbio.call_model_api.set_synthesize_token")
+    @patch("pysynthbio.call_model_api.requests.post")
     def test_predict_query_auto_authenticate(self, mock_post, mock_set_token):
         """Test auto authentication in predict_query."""
         # Import here to avoid circular imports in tests
@@ -147,10 +148,10 @@ class TestApiWithAuthentication(unittest.TestCase):
             "outputs": [
                 {
                     "metadata": {"sample_id": "test1"},
-                    "expression": [[1, 2, 3], [4, 5, 6]]
+                    "expression": [[1, 2, 3], [4, 5, 6]],
                 }
             ],
-            "gene_order": ["gene1", "gene2", "gene3"]
+            "gene_order": ["gene1", "gene2", "gene3"],
         }
         mock_post.return_value = mock_response
 
@@ -168,7 +169,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertIn("metadata", results)
         self.assertIn("expression", results)
 
-    @patch('pysynthbio.call_model_api.requests.post')
+    @patch("pysynthbio.call_model_api.requests.post")
     def test_predict_query_without_auto_authenticate(self, mock_post):
         """Test predict_query without auto authentication."""
         # Import here to avoid circular imports in tests
@@ -182,7 +183,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Verify API was not called
         mock_post.assert_not_called()
 
-    @patch('pysynthbio.call_model_api.requests.post')
+    @patch("pysynthbio.call_model_api.requests.post")
     def test_predict_query_with_token(self, mock_post):
         """Test predict_query with token already set."""
         # Import here to avoid circular imports in tests
@@ -198,10 +199,10 @@ class TestApiWithAuthentication(unittest.TestCase):
             "outputs": [
                 {
                     "metadata": {"sample_id": "test1"},
-                    "expression": [[1, 2, 3], [4, 5, 6]]
+                    "expression": [[1, 2, 3], [4, 5, 6]],
                 }
             ],
-            "gene_order": ["gene1", "gene2", "gene3"]
+            "gene_order": ["gene1", "gene2", "gene3"],
         }
         mock_post.return_value = mock_response
 
@@ -212,15 +213,12 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Verify API was called with correct token
         mock_post.assert_called_once()
         _, kwargs = mock_post.call_args
-        self.assertEqual(
-            kwargs['headers']['Authorization'],
-            "Bearer test-api-token"
-        )
+        self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-api-token")
 
         # Verify results structure
         self.assertIn("metadata", results)
         self.assertIn("expression", results)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

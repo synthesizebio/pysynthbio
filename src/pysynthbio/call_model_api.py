@@ -1,6 +1,7 @@
 """
 Core API functionality for the Synthesize Bio API
 """
+
 import json
 import os
 from typing import Dict, Set
@@ -124,7 +125,7 @@ def predict_query(
             set_synthesize_token(use_keyring=True)
         else:
             raise KeyError(
-                "No API token found. " \
+                "No API token found. "
                 "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
@@ -147,7 +148,7 @@ def predict_query(
     if response.status_code != 200:
         raise ValueError(
             f"API request to {api_url} failed with status",
-            f"{response.status_code}: {response.text}"
+            f"{response.status_code}: {response.text}",
         )
     try:
         content = response.json()
@@ -158,17 +159,16 @@ def predict_query(
         ):
             content = content[0]
         elif not isinstance(content, dict):
-            raise ValueError(
-                f"API response is not a JSON object: {response.text}")
+            raise ValueError(f"API response is not a JSON object: {response.text}")
 
     except json.JSONDecodeError as err:
         raise ValueError(
-            f"Failed to decode JSON from API response: {response.text}") from err
+            f"Failed to decode JSON from API response: {response.text}"
+        ) from err
 
     for key in ("error", "errors"):
         if key in content:
-            raise ValueError(
-                f"Error in response from API received: {content[key]}")
+            raise ValueError(f"Error in response from API received: {content[key]}")
 
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(

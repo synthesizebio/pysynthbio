@@ -96,7 +96,7 @@ def test_predict_query_live_call_success():
 
 
 # Add a mocked version of the API call test
-@patch('pysynthbio.call_model_api.requests.post')
+@patch("pysynthbio.call_model_api.requests.post")
 def test_predict_query_mocked_call_success(mock_post):
     """
     Tests a mocked call to predict_query for the combined/v1.0 model.
@@ -116,10 +116,10 @@ def test_predict_query_mocked_call_success(mock_post):
             "outputs": [
                 {
                     "metadata": {"sample_id": "test1", "cell_line": "A-549"},
-                    "expression": [[1, 2, 3], [4, 5, 6]]
+                    "expression": [[1, 2, 3], [4, 5, 6]],
                 }
             ],
-            "gene_order": ["gene1", "gene2", "gene3"]
+            "gene_order": ["gene1", "gene2", "gene3"],
         }
         mock_post.return_value = mock_response
 
@@ -140,14 +140,14 @@ def test_predict_query_mocked_call_success(mock_post):
         except Exception as e:
             pytest.fail(
                 f"predict_query for combined v1.0 raised unexpected Exception: {e}"
-                )
+            )
 
         # Verify mock was called
         mock_post.assert_called_once()
 
         assert isinstance(
             results, dict
-            ), "Result for combined v1.0 should be a dictionary"
+        ), "Result for combined v1.0 should be a dictionary"
         assert (
             "metadata" in results
         ), "Result dictionary for combined v1.0 should contain 'metadata' key"
@@ -176,8 +176,8 @@ def test_predict_query_mocked_call_success(mock_post):
 
 
 # Add test for auto-authentication
-@patch('pysynthbio.call_model_api.set_synthesize_token')
-@patch('pysynthbio.call_model_api.requests.post')
+@patch("pysynthbio.call_model_api.set_synthesize_token")
+@patch("pysynthbio.call_model_api.requests.post")
 def test_predict_query_auto_authenticate(mock_post, mock_set_token):
     """Test auto authentication in predict_query."""
     # Save the original API key state
@@ -198,10 +198,10 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
             "outputs": [
                 {
                     "metadata": {"sample_id": "test1"},
-                    "expression": [[1, 2, 3], [4, 5, 6]]
+                    "expression": [[1, 2, 3], [4, 5, 6]],
                 }
             ],
-            "gene_order": ["gene1", "gene2", "gene3"]
+            "gene_order": ["gene1", "gene2", "gene3"],
         }
         mock_post.return_value = mock_response
 
@@ -283,8 +283,7 @@ def test_validate_query_valid():
         validate_query(VALID_QUERY)
         print("validate_query passed as expected.")
     except (ValueError, TypeError) as e:
-        pytest.fail(
-            f"validate_query unexpectedly failed for valid query: {e}")
+        pytest.fail(f"validate_query unexpectedly failed for valid query: {e}")
 
 
 def test_validate_query_missing_keys():
