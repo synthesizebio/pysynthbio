@@ -138,12 +138,16 @@ def test_predict_query_mocked_call_success(mock_post):
             )
             print("predict_query mocked call successful for combined v1.0.")
         except Exception as e:
-            pytest.fail(f"predict_query for combined v1.0 raised unexpected Exception: {e}")
+            pytest.fail(
+                f"predict_query for combined v1.0 raised unexpected Exception: {e}"
+                )
 
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(results, dict), "Result for combined v1.0 should be a dictionary"
+        assert isinstance(
+            results, dict
+            ), "Result for combined v1.0 should be a dictionary"
         assert (
             "metadata" in results
         ), "Result dictionary for combined v1.0 should contain 'metadata' key"
@@ -279,7 +283,8 @@ def test_validate_query_valid():
         validate_query(VALID_QUERY)
         print("validate_query passed as expected.")
     except (ValueError, TypeError) as e:
-        pytest.fail(f"validate_query unexpectedly failed for valid query: {e}")
+        pytest.fail(
+            f"validate_query unexpectedly failed for valid query: {e}")
 
 
 def test_validate_query_missing_keys():

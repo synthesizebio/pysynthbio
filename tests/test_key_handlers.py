@@ -132,7 +132,8 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import get_valid_query, predict_query
 
-        # Make the mock set_synthesize_token function actually set the environment variable
+        # Make the mock set_synthesize_token function
+        # actually set the environment variable
         def mock_set_token_implementation(use_keyring=False):
             os.environ["SYNTHESIZE_API_KEY"] = "mock-token-for-test"
             return True

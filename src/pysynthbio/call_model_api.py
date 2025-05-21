@@ -88,7 +88,8 @@ def predict_query(
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (combined/v1.0) for prediction and retrieves samples.
+    Sends a query to the Synthesize Bio API (combined/v1.0) for
+    prediction and retrieves samples.
 
     Parameters
     ----------
@@ -96,9 +97,11 @@ def predict_query(
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
     as_counts : bool, optional
-        If False, transforms the predicted expression counts into logCPM (default is True, returning counts).
+        If False, transforms the predicted expression counts into
+        logCPM (default is True, returning counts).
     auto_authenticate : bool, optional
-        If True and no API token is found, will prompt the user to input one (default is True).
+        If True and no API token is found, will prompt the user to
+        input one (default is True).
 
     Returns
     -------
@@ -109,7 +112,8 @@ def predict_query(
     Raises
     -------
     KeyError
-        If the SYNTHESIZE_API_KEY environment variable is not set and auto_authenticate is False.
+        If the SYNTHESIZE_API_KEY environment variable is not set and
+        auto_authenticate is False.
     ValueError
         If API fails or response is invalid.
     """
@@ -120,7 +124,8 @@ def predict_query(
             set_synthesize_token(use_keyring=True)
         else:
             raise KeyError(
-                "No API token found. Set the SYNTHESIZE_API_KEY environment variable or "
+                "No API token found. " \
+                "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
 
@@ -141,7 +146,8 @@ def predict_query(
 
     if response.status_code != 200:
         raise ValueError(
-            f"API request to {api_url} failed with status {response.status_code}: {response.text}"
+            f"API request to {api_url} failed with status",
+            f"{response.status_code}: {response.text}"
         )
     try:
         content = response.json()
@@ -152,14 +158,17 @@ def predict_query(
         ):
             content = content[0]
         elif not isinstance(content, dict):
-            raise ValueError(f"API response is not a JSON object: {response.text}")
+            raise ValueError(
+                f"API response is not a JSON object: {response.text}")
 
-    except json.JSONDecodeError:
-        raise ValueError(f"Failed to decode JSON from API response: {response.text}")
+    except json.JSONDecodeError as err:
+        raise ValueError(
+            f"Failed to decode JSON from API response: {response.text}") from err
 
     for key in ("error", "errors"):
         if key in content:
-            raise ValueError(f"Error in response from API received: {content[key]}")
+            raise ValueError(
+                f"Error in response from API received: {content[key]}")
 
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(
@@ -177,7 +186,8 @@ def predict_query(
         metadata = pd.DataFrame(metadata_rows)
     else:
         raise ValueError(
-            f"Unexpected API response structure (expected 'outputs' and 'gene_order'): {content}"
+            f"Unexpected API response structure "
+            f"(expected 'outputs' and 'gene_order'): {content}"
         )
 
     expression = expression.astype(int)
