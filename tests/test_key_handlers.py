@@ -7,9 +7,9 @@ from unittest.mock import patch, MagicMock
 import warnings
 import sys
 
-# Add path to synthbio package if needed
+# Add path to pysynthbio package if needed
 # sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from synthbio.auth import (
+from pysynthbio.key_handlers import (
     set_synthesize_token,
     load_synthesize_token_from_keyring,
     clear_synthesize_token,
@@ -130,7 +130,7 @@ class TestTokenManagement(unittest.TestCase):
         # Verify token was still set in environment
         self.assertEqual(os.environ["SYNTHESIZE_API_KEY"], "test-exception-token")
     
-    @patch('synthbio.auth.KEYRING_AVAILABLE', False)
+    @patch('pysynthbio.key_handlers.KEYRING_AVAILABLE', False)
     def test_set_synthesize_token_keyring_not_available(self):
         """Test setting token when keyring is not available."""
         # Capture warnings
@@ -162,7 +162,7 @@ class TestTokenManagement(unittest.TestCase):
         self.assertEqual(os.environ["SYNTHESIZE_API_KEY"], "test-loaded-token")
         
         # Verify keyring was called correctly
-        mock_get_password.assert_called_once_with("synthbio", "api_token")
+        mock_get_password.assert_called_once_with("pysynthbio", "api_token")
     
     @patch('keyring.get_password')
     def test_load_synthesize_token_from_keyring_not_found(self, mock_get_password):
@@ -212,7 +212,7 @@ class TestTokenManagement(unittest.TestCase):
         # Verify token was not set
         self.assertNotIn("SYNTHESIZE_API_KEY", os.environ)
     
-    @patch('synthbio.auth.KEYRING_AVAILABLE', False)
+    @patch('pysynthbio.key_handlers.KEYRING_AVAILABLE', False)
     def test_load_synthesize_token_keyring_not_available(self):
         """Test loading token when keyring is not available."""
         # Capture warnings
@@ -266,7 +266,7 @@ class TestTokenManagement(unittest.TestCase):
         self.assertNotIn("SYNTHESIZE_API_KEY", os.environ)
         
         # Verify keyring delete was called
-        mock_delete_password.assert_called_once_with("synthbio", "api_token")
+        mock_delete_password.assert_called_once_with("pysynthbio", "api_token")
     
     @patch('keyring.delete_password')
     def test_clear_synthesize_token_keyring_not_found(self, mock_delete_password):
@@ -283,7 +283,7 @@ class TestTokenManagement(unittest.TestCase):
         clear_synthesize_token(remove_from_keyring=True)
         
         # Verify delete was attempted
-        mock_delete_password.assert_called_once_with("synthbio", "api_token")
+        mock_delete_password.assert_called_once_with("pysynthbio", "api_token")
     
     @patch('keyring.delete_password')
     def test_clear_synthesize_token_keyring_exception(self, mock_delete_password):
@@ -299,9 +299,9 @@ class TestTokenManagement(unittest.TestCase):
         clear_synthesize_token(remove_from_keyring=True)
         
         # Verify delete was attempted
-        mock_delete_password.assert_called_once_with("synthbio", "api_token")
+        mock_delete_password.assert_called_once_with("pysynthbio", "api_token")
     
-    @patch('synthbio.auth.KEYRING_AVAILABLE', False)
+    @patch('pysynthbio.key_handlers.KEYRING_AVAILABLE', False)
     def test_clear_synthesize_token_keyring_not_available(self):
         """Test clearing token from keyring when package not available."""
         # Capture warnings
@@ -334,12 +334,12 @@ class TestApiWithAuthentication(unittest.TestCase):
             if "SYNTHESIZE_API_KEY" in os.environ:
                 del os.environ["SYNTHESIZE_API_KEY"]
     
-    @patch('synthbio.api.set_synthesize_token')
-    @patch('synthbio.api.requests.post')
+    @patch('pysynthbio.call_model_api.set_synthesize_token')
+    @patch('pysynthbio.call_model_api.requests.post')
     def test_predict_query_auto_authenticate(self, mock_post, mock_set_token):
         """Test auto authentication in predict_query."""
         # Import here to avoid circular imports in tests
-        from synthbio.api import predict_query, get_valid_query
+        from pysynthbio.call_model_api import predict_query, get_valid_query
         
         # Configure mocks
         mock_set_token.return_value = True
@@ -372,11 +372,11 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertIn("metadata", results)
         self.assertIn("expression", results)
     
-    @patch('synthbio.api.requests.post')
+    @patch('pysynthbio.call_model_api.requests.post')
     def test_predict_query_without_auto_authenticate(self, mock_post):
         """Test predict_query without auto authentication."""
         # Import here to avoid circular imports in tests
-        from synthbio.api import predict_query, get_valid_query
+        from pysynthbio.call_model_api import predict_query, get_valid_query
         
         # Call function without auto-authentication and no token
         query = get_valid_query()
@@ -386,11 +386,11 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Verify API was not called
         mock_post.assert_not_called()
     
-    @patch('synthbio.api.requests.post')
+    @patch('pysynthbio.call_model_api.requests.post')
     def test_predict_query_with_token(self, mock_post):
         """Test predict_query with token already set."""
         # Import here to avoid circular imports in tests
-        from synthbio.api import predict_query, get_valid_query
+        from pysynthbio.call_model_api import predict_query, get_valid_query
         
         # Set a token
         os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
@@ -428,4 +428,3 @@ class TestApiWithAuthentication(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    

@@ -51,7 +51,7 @@ def set_synthesize_token(use_keyring=False, token=None):
     if use_keyring:
         if KEYRING_AVAILABLE:
             try:
-                keyring.set_password("synthbio", "api_token", token)
+                keyring.set_password("pysynthbio", "api_token", token)
                 print("API token stored in system keyring.")
             except Exception as e:
                 warnings.warn(f"Failed to store token in keyring: {str(e)}")
@@ -81,7 +81,7 @@ def load_synthesize_token_from_keyring():
         return False
     
     try:
-        token = keyring.get_password("synthbio", "api_token")
+        token = keyring.get_password("pysynthbio", "api_token")
         if token is None:
             warnings.warn("No token found in keyring.")
             return False
@@ -125,7 +125,7 @@ def clear_synthesize_token(remove_from_keyring=False):
     if remove_from_keyring:
         if KEYRING_AVAILABLE:
             try:
-                keyring.delete_password("synthbio", "api_token")
+                keyring.delete_password("pysynthbio", "api_token")
                 print("API token removed from system keyring.")
             except keyring.errors.PasswordDeleteError:
                 print("No API token was found in the keyring.")

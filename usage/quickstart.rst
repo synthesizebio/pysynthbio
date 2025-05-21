@@ -15,10 +15,10 @@ There are multiple ways to set up your token:
 Interactive Setup
 -----------------
 .. code-block:: python
-    import synthbio
+    import pysynthbio
 
     # This will open a browser to the token creation page and prompt for input
-    synthbio.set_synthesize_token(use_keyring=True)
+    pysynthbio.set_synthesize_token(use_keyring=True)
 
 If `use_keyring=True` the token will persist after you close your session and you will be able to reload it. 
 If `use_keyring=False` the token will disappear after the session. 
@@ -38,10 +38,10 @@ Non-Interactive Setup
 For scripts running in non-interactive environments:
 
 .. code-block:: python
-    import synthbio
+    import pysynthbio
 
-    # Supply token directly
-    synthbio.set_synthesize_token(token="your_api_token_here")
+    # Supply token directly (but don't write it in scripts)
+    pysynthbio.set_synthesize_token(token="SECURE_SECRET_HERE")
 
 Using the System Keyring
 ------------------------
@@ -51,7 +51,7 @@ If you've previously stored your token in the system keyring:
     import synthbio
 
     # Attempt to load from keyring
-    synthbio.load_synthesize_token_from_keyring()
+    pysynthbio.load_synthesize_token_from_keyring()
 
 
 Basic Usage
@@ -120,7 +120,7 @@ When you're done using the API, you can clear the token from your environment:
 
 .. code-block:: python
     # Clear from current session
-    synthbio.clear_synthesize_token()
+    pysynthbio.clear_synthesize_token()
 
     # Clear from both session and system keyring
-    synthbio.clear_synthesize_token(remove_from_keyring=True)
+    pysynthbio.clear_synthesize_token(remove_from_keyring=True)

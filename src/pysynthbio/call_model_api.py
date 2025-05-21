@@ -7,7 +7,7 @@ import os
 import requests
 import json
 from typing import Set, Dict, Optional
-from .auth import has_synthesize_token, set_synthesize_token
+from .key_handlers import has_synthesize_token, set_synthesize_token
 
 API_BASE_URL = "https://app.synthesize.bio"
 
