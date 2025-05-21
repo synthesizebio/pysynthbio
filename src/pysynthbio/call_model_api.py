@@ -1,9 +1,13 @@
+"""
+Core API functionality for the Synthesize Bio API
+"""
 import pandas as pd
 import numpy as np
 import os
 import requests
 import json
-from typing import Set
+from typing import Set, Dict, Optional
+from .auth import has_synthesize_token, set_synthesize_token
 
 API_BASE_URL = "https://app.synthesize.bio"
 
@@ -75,7 +79,8 @@ def get_valid_query() -> dict:
 def predict_query(
     query: dict,
     as_counts: bool = True,
-) -> dict[str, pd.DataFrame]:
+    auto_authenticate: bool = True,
+) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API (combined/v1.0) for prediction and retrieves samples.
 
@@ -86,6 +91,8 @@ def predict_query(
         Use `get_valid_query()` to generate an example.
     as_counts : bool, optional
         If False, transforms the predicted expression counts into logCPM (default is True, returning counts).
+    auto_authenticate : bool, optional
+        If True and no API token is found, will prompt the user to input one (default is True).
 
     Returns
     -------
@@ -96,13 +103,20 @@ def predict_query(
     Raises
     -------
     KeyError
-        If the SYNTHESIZE_API_KEY environment variable is not set.
+        If the SYNTHESIZE_API_KEY environment variable is not set and auto_authenticate is False.
     ValueError
         If API fails or response is invalid.
     """
-
-    if "SYNTHESIZE_API_KEY" not in os.environ:
-        raise KeyError("Please set the SYNTHESIZE_API_KEY environment variable")
+    # Check if token is available and prompt if needed
+    if not has_synthesize_token():
+        if auto_authenticate:
+            print("API token not found. Please provide your Synthesize Bio API token.")
+            set_synthesize_token(use_keyring=True)
+        else:
+            raise KeyError(
+                "No API token found. Set the SYNTHESIZE_API_KEY environment variable or "
+                "call set_synthesize_token() before making API requests."
+            )
 
     api_url = f"{API_BASE_URL}/api/model/combined/v1.0"
 
@@ -213,7 +227,6 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-
     allowed_modalities = MODEL_MODALITIES["combined"]["v1.0"]
 
     modality_key = "output_modality"
