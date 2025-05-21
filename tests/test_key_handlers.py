@@ -106,7 +106,7 @@ class TestTokenManagement(unittest.TestCase):
         
         # Verify token was stored in keyring
         mock_set_password.assert_called_once_with(
-            "synthbio", "api_token", "test-keyring-token"
+            "pysynthbio", "api_token", "test-keyring-token"
         )
     
     @patch('keyring.set_password')
