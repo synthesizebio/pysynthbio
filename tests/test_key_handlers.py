@@ -7,12 +7,11 @@ from unittest.mock import patch, MagicMock
 import warnings
 import pytest
 
-try:
-    from pysynthbio.auth import (
-        set_synthesize_token,
-        has_synthesize_token,
-        KEYRING_AVAILABLE
-    )
+from pysynthbio.key_handlers import (
+    set_synthesize_token,
+    has_synthesize_token,
+    KEYRING_AVAILABLE
+)
 
 
 class TestTokenManagement(unittest.TestCase):
@@ -103,7 +102,7 @@ class TestTokenManagement(unittest.TestCase):
         
         # Verify token was stored in keyring
         mock_set_password.assert_called_once_with(
-            "synthbio", "api_token", "test-keyring-token"
+            "pysynthbio", "api_token", "test-keyring-token"
         )
 
 
@@ -135,7 +134,6 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import get_valid_query, predict_query
         
-        # Configure mocks - THIS IS THE CRITICAL FIX:
         # Make the mock set_synthesize_token function actually set the environment variable
         def mock_set_token_implementation(use_keyring=False):
             os.environ["SYNTHESIZE_API_KEY"] = "mock-token-for-test"
