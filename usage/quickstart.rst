@@ -6,7 +6,53 @@ This guide will help you get started with pysynthbio quickly.
 Get your API key
 ----------------
 
-Go to `<https://app.synthesize.bio/profile>`_ to generate an API key. Then set this key as an environment variable named ``SYNTHESIZE_API_KEY`` to authenticate your API requests.
+Go to `<https://app.synthesize.bio/profile>`_ to generate an API key. 
+Go to your profile, then click "+ Create Key" and then "Create Key". 
+Copy that key and keep that page handy until you get your token set up. 
+
+There are multiple ways to set up your token:
+
+Interactive Setup
+-----------------
+.. code-block:: python
+    import synthbio
+
+    # This will open a browser to the token creation page and prompt for input
+    synthbio.set_synthesize_token(use_keyring=True)
+
+If `use_keyring=True` the token will persist after you close your session and you will be able to reload it. 
+If `use_keyring=False` the token will disappear after the session. 
+
+Using Environment Variables
+---------------------------
+
+You can set the `SYNTHESIZE_API_KEY` environment variable directly:
+
+.. code-block:: bash
+    export SYNTHESIZE_API_KEY=your_api_token_here
+
+
+Non-Interactive Setup
+---------------------
+
+For scripts running in non-interactive environments:
+
+.. code-block:: python
+    import synthbio
+
+    # Supply token directly
+    synthbio.set_synthesize_token(token="your_api_token_here")
+
+Using the System Keyring
+------------------------
+If you've previously stored your token in the system keyring:
+
+.. code-block:: python
+    import synthbio
+
+    # Attempt to load from keyring
+    synthbio.load_synthesize_token_from_keyring()
+
 
 Basic Usage
 -----------
@@ -60,4 +106,21 @@ Use ``predict_query`` to send a query to the API and get expression predictions.
 
 This covers the basic workflow: understanding the required query structure and making predictions.
 
-For more examples, check the examples directory in the repository. 
+Security Notes
+--------------
+
+- The API token provides full access to your Synthesize Bio account
+- When using `use_keyring=True`, your token is stored securely in your system's credential manager
+- For production environments, consider using environment variables or secrets management tools
+
+Cleanup
+-------
+
+When you're done using the API, you can clear the token from your environment:
+
+.. code-block:: python
+    # Clear from current session
+    synthbio.clear_synthesize_token()
+
+    # Clear from both session and system keyring
+    synthbio.clear_synthesize_token(remove_from_keyring=True)
