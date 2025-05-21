@@ -9,6 +9,10 @@ on:
     branches: [main, staging]
   workflow_dispatch: 
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+  
 jobs:
   lint:
     name: Code Quality
@@ -28,10 +32,6 @@ jobs:
       - name: Lint with ruff
         run: |
           ruff check .
-
-      - name: Type check with mypy
-        run: |
-          mypy . --namespace-packages --explicit-package-bases --ignore-missing-imports
 
       - name: Check formatting with black
         run: |

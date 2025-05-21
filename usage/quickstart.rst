@@ -54,14 +54,13 @@ If you've previously stored your token in the system keyring:
     pysynthbio.load_synthesize_token_from_keyring()
 
 
-Basic Usage
------------
-
-First, import the necessary functions from the package:
+Import the package
+-------------------
 
 .. code-block:: python
 
     import pysynthbio
+
 
 Discover Valid Modalities
 -------------------------
@@ -124,3 +123,4 @@ When you're done using the API, you can clear the token from your environment:
 
     # Clear from both session and system keyring
     pysynthbio.clear_synthesize_token(remove_from_keyring=True)
+
