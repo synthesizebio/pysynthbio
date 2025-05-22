@@ -61,9 +61,7 @@ def test_predict_query_live_call_success():
     except ValueError as e:
         pytest.fail(f"predict_query for v1.0 raised ValueError: {e}")
     except KeyError as e:
-        pytest.fail(
-            f"predict_query for v1.0 raised KeyError (API key issue?): {e}"
-        )
+        pytest.fail(f"predict_query for v1.0 raised KeyError (API key issue?): {e}")
     except Exception as e:
         pytest.fail(f"predict_query for v1.0 raised unexpected Exception: {e}")
 
@@ -138,16 +136,12 @@ def test_predict_query_mocked_call_success(mock_post):
             )
             print("predict_query mocked call successful for v1.0.")
         except Exception as e:
-            pytest.fail(
-                f"predict_query for v1.0 raised unexpected Exception: {e}"
-            )
+            pytest.fail(f"predict_query for v1.0 raised unexpected Exception: {e}")
 
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(
-            results, dict
-        ), "Result for v1.0 should be a dictionary"
+        assert isinstance(results, dict), "Result for v1.0 should be a dictionary"
         assert (
             "metadata" in results
         ), "Result dictionary for v1.0 should contain 'metadata' key"
