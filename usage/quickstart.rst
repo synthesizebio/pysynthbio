@@ -76,7 +76,7 @@ To see which output modalities are supported by the current model, use ``get_val
 Generate Example Queries
 ------------------------
 
-The structure of the query required by the API is fixed for the current supported model (combined v1.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
+The structure of the query required by the API is fixed for the current supported model (v1.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
 
 .. code-block:: python
 
