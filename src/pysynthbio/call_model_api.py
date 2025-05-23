@@ -19,16 +19,14 @@ except ImportError:
 API_BASE_URL = "https://app.synthesize.bio"
 
 MODEL_MODALITIES = {
-    "combined": {
-        "v1.0": {
-            "bulk_rna-seq",
-            "lincs",
-            "sra",
-            "single_cell_rna-seq",
-            "microarray",
-            "pseudo_bulk",
-        }
-    },
+    "v1.0": {
+        "bulk_rna-seq",
+        "lincs",
+        "sra",
+        "single_cell_rna-seq",
+        "microarray",
+        "pseudo_bulk",
+    }
 }
 
 
@@ -41,7 +39,7 @@ def get_valid_modalities() -> Set[str]:
     Set[str]
         A set containing the valid modality strings.
     """
-    return MODEL_MODALITIES["combined"]["v1.0"]
+    return MODEL_MODALITIES["v1.0"]
 
 
 def get_valid_query() -> dict:
@@ -89,7 +87,7 @@ def predict_query(
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (combined/v1.0) for
+    Sends a query to the Synthesize Bio API (v1.0) for
     prediction and retrieves samples.
 
     Parameters
@@ -130,7 +128,7 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    api_url = f"{API_BASE_URL}/api/model/combined/v1.0"
+    api_url = f"{API_BASE_URL}/api/model/v1.0"
 
     validate_query(query)
     validate_modality(query)
@@ -243,7 +241,7 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-    allowed_modalities = MODEL_MODALITIES["combined"]["v1.0"]
+    allowed_modalities = MODEL_MODALITIES["v1.0"]
 
     modality_key = "output_modality"
     if modality_key not in query:
