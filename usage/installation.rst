@@ -28,7 +28,7 @@ Installing from a GitHub Release
 Alternatively, you can install a specific version directly from its GitHub Release page. This is useful for testing pre-releases or specific tagged versions.
 
 1. Go to the `Releases page <https://github.com/synthesizebio/pysynthbio/releases>`_ of the repository.
-2. Find the release tag you want to install (e.g., ``v0.1.0``).
+2. Find the release tag you want to install (e.g., ``v1.0.0``).
 3. Expand the "Assets" section for that release.
 4. Download the ``.whl`` (wheel) file or the ``.tar.gz`` (source distribution) file. The wheel file is generally preferred if available for your platform.
 5. Install the downloaded file using pip:
@@ -36,10 +36,10 @@ Alternatively, you can install a specific version directly from its GitHub Relea
 .. code-block:: bash
 
     # Example using a downloaded wheel file
-    pip install /path/to/pysynthbio-0.1.0-py3-none-any.whl
+    pip install /path/to/pysynthbio-1.0.0-py3-none-any.whl
 
     # Example using a downloaded source distribution
-    pip install /path/to/pysynthbio-0.1.0.tar.gz
+    pip install /path/to/pysynthbio-1.0.0.tar.gz
 
 Development Installation
 ------------------------
