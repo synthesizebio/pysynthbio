@@ -18,14 +18,10 @@ except ImportError:
 
 API_BASE_URL = "https://app.synthesize.bio"
 
+# KJ CHANGE - v2 models are modality-specific, so current v2 is bulk only, maybe we'll get single cell soon
 MODEL_MODALITIES = {
-    "v1.0": {
-        "bulk_rna-seq",
-        "lincs",
-        "sra",
-        "single_cell_rna-seq",
-        "microarray",
-        "pseudo_bulk",
+    "v2.0": {
+        "bulk"
     }
 }
 
@@ -39,28 +35,40 @@ def get_valid_modalities() -> Set[str]:
     Set[str]
         A set containing the valid modality strings.
     """
-    return MODEL_MODALITIES["v1.0"]
+    return MODEL_MODALITIES["v2.0"]
 
+# KJ CHANGE - valid modes for v2 - this type of function should maybe be added for v1.0 as well, but hopefully that is obsolete soon anyway
+def get_valid_modes() -> Set[str]:
+    """
+    Returns a set of possible output modes for the supported model.
 
+    Returns
+    -------
+    Set[str]
+        A set containing the valid modality strings.
+    """
+    return ["sample generation", "mean estimation", "metadata prediction"]
+
+# KJ CHANGE - I made the query valid for v2, but we should probably come up with a way to translate this for the user
 def get_valid_query() -> dict:
     """
-    Generates a sample query for prediction and validation for the v1.0 model.
+    Generates a sample query for prediction and validation for the v2.0 model.
 
     Returns
     -------
     dict
-        A dictionary representing a valid query structure for v1.0.
+        A dictionary representing a valid query structure for v2.0.
     """
     return {
-        "output_modality": "sra",
-        "mode": "mean estimation",
+        "modality": "bulk",
+        "mode": "sample generation",
         "return_classifier_probs": True,
         "seed": 11,
         "inputs": [
             {
                 "metadata": {
-                    "cell_line": "A-549",
-                    "perturbation": "ABL1",
+                    "cell_line_ontology_id": "CVCL_0023",
+                    "perturbation_ontology_id": "ENSG00000156127",
                     "perturbation_type": "crispr",
                     "perturbation_time": "96 hours",
                     "sample_type": "cell line",
@@ -69,11 +77,11 @@ def get_valid_query() -> dict:
             },
             {
                 "metadata": {
-                    "disease": "gastrointestinal stromal tumor",
-                    "age": "65 years",
+                    "disease_ontology_id": "MONDO:0011719",
+                    "age_years": "65",
                     "sex": "female",
                     "sample_type": "primary tissue",
-                    "tissue": "stomach",
+                    "tissue_ontology_id": "UBERON:0000945",
                 },
                 "num_samples": 5,
             },
@@ -83,11 +91,12 @@ def get_valid_query() -> dict:
 
 def predict_query(
     query: dict,
+    mode: str = "sample generation",
     as_counts: bool = True,
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (v1.0) for
+    Sends a query to the Synthesize Bio API (v2.0) for
     prediction and retrieves samples.
 
     Parameters
@@ -128,10 +137,9 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    api_url = f"{API_BASE_URL}/api/model/v1.0"
+    api_url = f"{API_BASE_URL}/api/model/v2.0"
 
     validate_query(query)
-    validate_modality(query)
 
     response = requests.post(
         url=api_url,
@@ -195,10 +203,10 @@ def predict_query(
 
     return {"metadata": metadata, "expression": expression}
 
-
+# KJ CHANGE - v2 api changed "output_modality" to "modality"
 def validate_query(query: dict) -> None:
     """
-    Validates the structure and contents of the query based on the v1.0 model.
+    Validates the structure and contents of the query based on the v2.0 model.
 
     Parameters
     ----------
@@ -210,14 +218,14 @@ def validate_query(query: dict) -> None:
     TypeError
         If the query is not a dictionary.
     ValueError
-        If the query is missing required keys for the v1.0 model.
+        If the query is missing required keys for the v2.0 model.
     """
     if not isinstance(query, dict):
         raise TypeError(
             f"Expected `query` to be a dictionary, but got {type(query).__name__}"
         )
 
-    required_keys = {"inputs", "mode", "output_modality"}
+    required_keys = {"inputs", "mode", "modality"}
 
     missing_keys = required_keys - query.keys()
     if missing_keys:
@@ -225,11 +233,11 @@ def validate_query(query: dict) -> None:
             f"Missing required keys in query: {missing_keys}. "
             f"Use `get_valid_query()` to get an example."
         )
-
-
+    
+# KJ CHANGE - v2 api changed "output_modality" to "modality"
 def validate_modality(query: dict) -> None:
     """
-    Validates the modality in the query is allowed for the v1.0 model.
+    Validates the modality in the query is allowed for the v2.0 model.
 
     Parameters
     ----------
@@ -241,9 +249,9 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-    allowed_modalities = MODEL_MODALITIES["v1.0"]
+    allowed_modalities = MODEL_MODALITIES["v2.0"]
 
-    modality_key = "output_modality"
+    modality_key = "modality"
     if modality_key not in query:
         raise ValueError(f"Query requires '{modality_key}' key.")
     selected_modality = query[modality_key]
