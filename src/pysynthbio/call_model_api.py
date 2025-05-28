@@ -177,16 +177,16 @@ def predict_query(
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(
             [
-                pd.DataFrame(output["expression"], columns=content["gene_order"])
+                pd.DataFrame([output["counts"]], columns=content["gene_order"])  
+                # Wrap in [] to make it a single row
                 for output in content["outputs"]
             ],
             ignore_index=True,
         )
-        metadata_rows = [
-            output["metadata"]
-            for output in content["outputs"]
-            for _ in range(len(output["expression"]))
-        ]
+        
+        # Since each output now produces exactly 1 row, simplify metadata collection:
+        metadata_rows = [output["metadata"] for output in content["outputs"]]
+        metadata = pd.DataFrame(metadata_rows)
         metadata = pd.DataFrame(metadata_rows)
     else:
         raise ValueError(

@@ -71,13 +71,13 @@ Import the package
 Discover Valid Modalities
 -------------------------
 
-To see which output modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``output_modality`` key in your query.
+To see which modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``modality`` key in your query.
 
 .. code-block:: python
 
     supported_modalities = pysynthbio.get_valid_modalities()
     print(supported_modalities)
-    # Output might look like: {'bulk_rna-seq', 'lincs', 'sra', ...}
+    # Output might look like: {'bulk', ...}
 
 Generate Example Queries
 ------------------------
