@@ -107,17 +107,50 @@ def test_predict_query_mocked_call_success(mock_post):
         # Ensure API key is set for this test
         os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
 
-        # Create mock response
+        # Create mock response matching the NEW data structure
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "outputs": [
                 {
-                    "metadata": {"sample_id": "test1", "cell_line_ontology_id": "A-549"},
-                    "expression": [[1, 2, 3], [4, 5, 6]],
+                    "counts": [100, 200, 300],  # Now 1D list instead of 2D
+                    "metadata": {
+                        "sample_id": "test1", 
+                        "cell_line_ontology_id": "CVCL_0023",
+                        "age_years": "25",
+                        "sex": "female"
+                    },
+                    "classifier_probs": {
+                        "sex": {"female": 0.8, "male": 0.2},
+                        "age_years": {"20-30": 0.7, "30-40": 0.3}
+                    },
+                    "latents": {
+                        "biological": [0.1, 0.2, 0.3],
+                        "technical": [0.4, 0.5],
+                        "perturbation": [0.6]
+                    }
+                },
+                {
+                    "counts": [150, 250, 350],  # Second sample
+                    "metadata": {
+                        "sample_id": "test2",
+                        "cell_line_ontology_id": "CVCL_0023", 
+                        "age_years": "30",
+                        "sex": "male"
+                    },
+                    "classifier_probs": {
+                        "sex": {"female": 0.3, "male": 0.7},
+                        "age_years": {"20-30": 0.4, "30-40": 0.6}
+                    },
+                    "latents": {
+                        "biological": [0.2, 0.3, 0.4],
+                        "technical": [0.5, 0.6],
+                        "perturbation": [0.7]
+                    }
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
+            "model_version": 2
         }
         mock_post.return_value = mock_response
 
@@ -158,6 +191,15 @@ def test_predict_query_mocked_call_success(mock_post):
         assert isinstance(
             expression_df, pd.DataFrame
         ), "'expression' for v2.0 should be a pandas DataFrame"
+        
+        # Check dimensions match new structure
+        assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
+        assert len(expression_df) == 2, "Should have 2 expression rows (one per output)"
+        assert len(expression_df.columns) == 3, "Should have 3 gene columns"
+        
+        # Check data values
+        assert list(expression_df.iloc[0]) == [100, 200, 300], "First row should match first counts"
+        assert list(expression_df.iloc[1]) == [150, 250, 350], "Second row should match second counts"
 
         print("Assertions passed for v2.0 mocked call.")
 
@@ -185,17 +227,29 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
         # Configure mocks
         mock_set_token.side_effect = mock_set_token_implementation
 
-        # Create mock response
+        # Create mock response with NEW structure
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "outputs": [
                 {
-                    "metadata": {"sample_id": "test1"},
-                    "expression": [[1, 2, 3], [4, 5, 6]],
+                    "counts": [1, 2, 3],  # 1D list
+                    "metadata": {
+                        "sample_id": "test1",
+                        "age_years": "25"
+                    },
+                    "classifier_probs": {
+                        "sex": {"female": 0.6, "male": 0.4}
+                    },
+                    "latents": {
+                        "biological": [0.1, 0.2],
+                        "technical": [0.3],
+                        "perturbation": [0.4]
+                    }
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
+            "model_version": 2
         }
         mock_post.return_value = mock_response
 
@@ -217,6 +271,10 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
         assert isinstance(results, dict)
         assert "metadata" in results
         assert "expression" in results
+        
+        # Verify dimensions
+        assert len(results["metadata"]) == 1, "Should have 1 metadata row"
+        assert len(results["expression"]) == 1, "Should have 1 expression row"
 
         print("Auto-authentication test passed.")
 
@@ -244,29 +302,21 @@ def test_get_valid_query_structure():
     assert isinstance(query["inputs"], list)
 
 
+# Updated VALID_QUERY to match new structure expectations
 VALID_QUERY = {
     "inputs": [
         {
             "metadata": {
-                "measurement": "measurement_1",
-                "cell_line_ontology_id": "A549",
-                "perturbation_ontology_id": "DMSO",
-                "perturbation_type": "chemical",
-                "perturbation_dose": "10 uM",
-                "perturbation_time": "24 hours",
-                "tissue_ontology_id": "lung",
-                "cancer": True,
-                "disease_ontology_id": "lung adenocarcinoma",
-                "sex": "male",
-                "age_years": "58 years",
-                "ethnicity": "Caucasian",
+                "cell_line_ontology_id": "CVCL_0023",
+                "perturbation_ontology_id": "ENSG00000156127",
+                "perturbation_type": "crispr",
+                "perturbation_time": "96 hours",
                 "sample_type": "cell line",
-                "source": "ATCC",
             },
             "num_samples": 1,
         }
     ],
-    "modality": "bulk_rna-seq",
+    "modality": "bulk",
     "mode": "sample generation",
 }
 
@@ -356,3 +406,64 @@ def test_log_cpm_zero_counts():
     pd.testing.assert_frame_equal(
         result_log_cpm, expected_log_cpm, check_dtype=False, rtol=1e-5
     )
+
+
+# Additional test to specifically verify the new data structure handling
+@patch("pysynthbio.call_model_api.requests.post")
+def test_new_api_structure_handling(mock_post):
+    """Test that the updated code handles the new API structure correctly."""
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    
+    try:
+        os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
+        
+        # Create mock response that exactly matches your real API structure
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "outputs": [
+                {
+                    "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,  # Simulate 44590 genes
+                    "classifier_probs": {
+                        "sex": {"female": 0.7, "male": 0.3},
+                        "age_years": {"60-70": 0.8, "70-80": 0.2},
+                        "tissue_ontology_id": {"UBERON:0000945": 0.9}
+                    },
+                    "latents": {
+                        "biological": [-0.89, 0.38, -0.08] * 100,
+                        "technical": [0.55, -0.38, -0.92] * 100,
+                        "perturbation": [1.84, 0.46, -1.39] * 100
+                    },
+                    "metadata": {
+                        "age_years": "65",
+                        "disease_ontology_id": "MONDO:0011719",
+                        "sex": "female",
+                        "sample_type": "primary tissue",
+                        "tissue_ontology_id": "UBERON:0000945"
+                    }
+                }
+            ],
+            "gene_order": [f"ENSG{i:011d}" for i in range(44590)],  # Simulate gene names
+            "model_version": 2
+        }
+        mock_post.return_value = mock_response
+        
+        # Test the predict_query function
+        query = get_valid_query()
+        results = predict_query(query, as_counts=True)
+        
+        # Verify the structure
+        assert "metadata" in results
+        assert "expression" in results
+        assert len(results["metadata"]) == 1  # One row per output
+        assert len(results["expression"]) == 1  # One row per output
+        assert len(results["expression"].columns) == 44590  # All genes as columns
+        
+        print("New API structure handling test passed!")
+        
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+            
