@@ -18,13 +18,11 @@ except ImportError:
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-# KJ CHANGE - v2 models are modality-specific, so current v2 is bulk only, maybe we'll get single cell soon
 MODEL_MODALITIES = {
     "v2.0": {
         "bulk"
     }
 }
-
 
 def get_valid_modalities() -> Set[str]:
     """
@@ -203,7 +201,6 @@ def predict_query(
 
     return {"metadata": metadata, "expression": expression}
 
-# KJ CHANGE - v2 api changed "output_modality" to "modality"
 def validate_query(query: dict) -> None:
     """
     Validates the structure and contents of the query based on the v2.0 model.
@@ -234,7 +231,6 @@ def validate_query(query: dict) -> None:
             f"Use `get_valid_query()` to get an example."
         )
     
-# KJ CHANGE - v2 api changed "output_modality" to "modality"
 def validate_modality(query: dict) -> None:
     """
     Validates the modality in the query is allowed for the v2.0 model.

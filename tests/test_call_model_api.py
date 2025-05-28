@@ -38,13 +38,13 @@ skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 def test_predict_query_live_call_success():
     """
-    Tests a live call to predict_query for the v1.0 model.
+    Tests a live call to predict_query for the v2.0 model.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
     Requires the API server to be running at API_BASE_URL.
     NOTE: This is more of an integration test as it makes a real network call.
           For true unit tests, `requests.post` should be mocked.
     """
-    print("\nTesting live predict_query call for v1.0...")
+    print("\nTesting live predict_query call for v2.0...")
 
     try:
         test_query = get_valid_query()
@@ -57,47 +57,47 @@ def test_predict_query_live_call_success():
             query=test_query,
             as_counts=True,
         )
-        print("predict_query call successful for v1.0.")
+        print("predict_query call successful for v2.0.")
     except ValueError as e:
-        pytest.fail(f"predict_query for v1.0 raised ValueError: {e}")
+        pytest.fail(f"predict_query for v2.0 raised ValueError: {e}")
     except KeyError as e:
-        pytest.fail(f"predict_query for v1.0 raised KeyError (API key issue?): {e}")
+        pytest.fail(f"predict_query for v2.0 raised KeyError (API key issue?): {e}")
     except Exception as e:
-        pytest.fail(f"predict_query for v1.0 raised unexpected Exception: {e}")
+        pytest.fail(f"predict_query for v2.0 raised unexpected Exception: {e}")
 
-    assert isinstance(results, dict), "Result for v1.0 should be a dictionary"
+    assert isinstance(results, dict), "Result for v2.0 should be a dictionary"
     assert (
         "metadata" in results
-    ), "Result dictionary for v1.0 should contain 'metadata' key"
+    ), "Result dictionary for v2.0 should contain 'metadata' key"
     assert (
         "expression" in results
-    ), "Result dictionary for v1.0 should contain 'expression' key"
+    ), "Result dictionary for v2.0 should contain 'expression' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
     assert isinstance(
         metadata_df, pd.DataFrame
-    ), "'metadata' for v1.0 should be a pandas DataFrame"
+    ), "'metadata' for v2.0 should be a pandas DataFrame"
     assert isinstance(
         expression_df, pd.DataFrame
-    ), "'expression' for v1.0 should be a pandas DataFrame"
+    ), "'expression' for v2.0 should be a pandas DataFrame"
 
     assert (
         not metadata_df.empty
-    ), "Metadata DataFrame for v1.0 should not be empty for a valid query"
+    ), "Metadata DataFrame for v2.0 should not be empty for a valid query"
     assert (
         not expression_df.empty
-    ), "Expression DataFrame for v1.0 should not be empty for a valid query"
+    ), "Expression DataFrame for v2.0 should not be empty for a valid query"
 
-    print("Assertions passed for v1.0.")
+    print("Assertions passed for v2.0.")
 
 
 # Add a mocked version of the API call test
 @patch("pysynthbio.call_model_api.requests.post")
 def test_predict_query_mocked_call_success(mock_post):
     """
-    Tests a mocked call to predict_query for the v1.0 model.
+    Tests a mocked call to predict_query for the v2.0 model.
     This test doesn't require an API key or actual API server.
     """
     # Save the original API key state
@@ -113,7 +113,7 @@ def test_predict_query_mocked_call_success(mock_post):
         mock_response.json.return_value = {
             "outputs": [
                 {
-                    "metadata": {"sample_id": "test1", "cell_line": "A-549"},
+                    "metadata": {"sample_id": "test1", "cell_line_ontology_id": "A-549"},
                     "expression": [[1, 2, 3], [4, 5, 6]],
                 }
             ],
@@ -121,7 +121,7 @@ def test_predict_query_mocked_call_success(mock_post):
         }
         mock_post.return_value = mock_response
 
-        print("\nTesting mocked predict_query call for v1.0...")
+        print("\nTesting mocked predict_query call for v2.0...")
 
         try:
             test_query = get_valid_query()
@@ -134,32 +134,32 @@ def test_predict_query_mocked_call_success(mock_post):
                 query=test_query,
                 as_counts=True,
             )
-            print("predict_query mocked call successful for v1.0.")
+            print("predict_query mocked call successful for v2.0.")
         except Exception as e:
-            pytest.fail(f"predict_query for v1.0 raised unexpected Exception: {e}")
+            pytest.fail(f"predict_query for v2.0 raised unexpected Exception: {e}")
 
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(results, dict), "Result for v1.0 should be a dictionary"
+        assert isinstance(results, dict), "Result for v2.0 should be a dictionary"
         assert (
             "metadata" in results
-        ), "Result dictionary for v1.0 should contain 'metadata' key"
+        ), "Result dictionary for v2.0 should contain 'metadata' key"
         assert (
             "expression" in results
-        ), "Result dictionary for v1.0 should contain 'expression' key"
+        ), "Result dictionary for v2.0 should contain 'expression' key"
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
         assert isinstance(
             metadata_df, pd.DataFrame
-        ), "'metadata' for v1.0 should be a pandas DataFrame"
+        ), "'metadata' for v2.0 should be a pandas DataFrame"
         assert isinstance(
             expression_df, pd.DataFrame
-        ), "'expression' for v1.0 should be a pandas DataFrame"
+        ), "'expression' for v2.0 should be a pandas DataFrame"
 
-        print("Assertions passed for v1.0 mocked call.")
+        print("Assertions passed for v2.0 mocked call.")
 
     finally:
         # Restore original API key state
@@ -232,13 +232,13 @@ def test_get_valid_modalities():
     """Tests if get_valid_modalities returns the expected structure (a set)."""
     modalities = get_valid_modalities()
     assert isinstance(modalities, set)
-    assert modalities == MODEL_MODALITIES["v1.0"]
+    assert modalities == MODEL_MODALITIES["v2.0"]
 
 
 def test_get_valid_query_structure():
-    """Tests get_valid_query returns the correct structure for the v1.0 model."""
+    """Tests get_valid_query returns the correct structure for the v2.0 model."""
     query = get_valid_query()
-    expected_keys = {"inputs", "mode", "output_modality"}
+    expected_keys = {"inputs", "mode", "modality"}
     assert isinstance(query, dict)
     assert expected_keys.issubset(query.keys())
     assert isinstance(query["inputs"], list)
@@ -249,16 +249,16 @@ VALID_QUERY = {
         {
             "metadata": {
                 "measurement": "measurement_1",
-                "cell_line": "A549",
-                "perturbation": "DMSO",
+                "cell_line_ontology_id": "A549",
+                "perturbation_ontology_id": "DMSO",
                 "perturbation_type": "chemical",
                 "perturbation_dose": "10 uM",
                 "perturbation_time": "24 hours",
-                "tissue": "lung",
+                "tissue_ontology_id": "lung",
                 "cancer": True,
-                "disease": "lung adenocarcinoma",
+                "disease_ontology_id": "lung adenocarcinoma",
                 "sex": "male",
-                "age": "58 years",
+                "age_years": "58 years",
                 "ethnicity": "Caucasian",
                 "sample_type": "cell line",
                 "source": "ATCC",
@@ -266,13 +266,13 @@ VALID_QUERY = {
             "num_samples": 1,
         }
     ],
-    "output_modality": "bulk_rna-seq",
-    "mode": "mean estimation",
+    "modality": "bulk_rna-seq",
+    "mode": "sample generation",
 }
 
 
 def test_validate_query_valid():
-    """Tests validate_query passes for a valid v1.0 query."""
+    """Tests validate_query passes for a valid v2.0 query."""
     try:
         validate_query(VALID_QUERY)
         print("validate_query passed as expected.")
@@ -283,9 +283,9 @@ def test_validate_query_valid():
 def test_validate_query_missing_keys():
     """Tests validate_query raises ValueError for missing keys."""
     invalid_query = VALID_QUERY.copy()
-    del invalid_query["output_modality"]
+    del invalid_query["modality"]
     with pytest.raises(
-        ValueError, match="Missing required keys in query: {'output_modality'}"
+        ValueError, match="Missing required keys in query: {'modality'}"
     ):
         validate_query(invalid_query)
     print("validate_query correctly failed for missing key.")
@@ -302,7 +302,7 @@ def test_validate_query_not_dict():
 
 def test_validate_modality_valid():
     """Tests validate_modality passes for a valid modality."""
-    query = {"output_modality": "sra", "mode": "x", "inputs": []}
+    query = {"modality": "bulk", "mode": "x", "inputs": []}
     try:
         validate_modality(query)
     except ValueError as e:
@@ -311,7 +311,7 @@ def test_validate_modality_valid():
 
 def test_validate_modality_invalid():
     """Tests validate_modality raises ValueError for invalid modality."""
-    query = {"output_modality": "invalid_modality", "mode": "x", "inputs": []}
+    query = {"modality": "invalid_modality", "mode": "x", "inputs": []}
     with pytest.raises(
         ValueError, match="Invalid modality 'invalid_modality'. Allowed modalities:"
     ):
@@ -321,7 +321,7 @@ def test_validate_modality_invalid():
 def test_validate_modality_missing_key():
     """Tests validate_modality raises ValueError for missing modality key."""
     query = {"mode": "x", "inputs": []}
-    with pytest.raises(ValueError, match="Query requires 'output_modality' key."):
+    with pytest.raises(ValueError, match="Query requires 'modality' key."):
         validate_modality(query)
 
 

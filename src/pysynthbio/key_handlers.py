@@ -4,12 +4,15 @@ import warnings
 import webbrowser
 
 try:
-    import keyring
-
-    KEYRING_AVAILABLE = True
-except ImportError:
-    KEYRING_AVAILABLE = False
-
+  import keyring
+  KEYRING_AVAILABLE = True
+except Exception:
+  KEYRING_AVAILABLE = False
+  warnings.warn(
+    f"Failed to import 'keyring' `use_keyring` will fail:"
+    "\n Do pip install keyring if you'd like this feature \n",
+    stacklevel=2
+ )
 
 def set_synthesize_token(use_keyring=False, token=None):
     """
@@ -37,6 +40,7 @@ def set_synthesize_token(use_keyring=False, token=None):
         # Store in system keyring for future sessions
         set_synthesize_token(use_keyring=True)
     """
+
     if token is None:
 
         webbrowser.open("https://app.synthesize.bio/profile")
@@ -54,8 +58,8 @@ def set_synthesize_token(use_keyring=False, token=None):
     if use_keyring:
         if KEYRING_AVAILABLE:
             try:
-                keyring.set_password("pysynthbio", "api_token", token)
-                print("API token stored in system keyring.")
+              keyring.set_password("pysynthbio", "api_token", token)
+              print("API token stored in system keyring.")
             except Exception as e:
                 warnings.warn(
                     f"Failed to store token in keyring: {str(e)}", stacklevel=2
