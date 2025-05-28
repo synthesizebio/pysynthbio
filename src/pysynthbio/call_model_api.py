@@ -4,8 +4,8 @@ Core API functionality for the Synthesize Bio API
 
 import json
 import os
-from typing import Dict, Set
-
+import random
+from typing import Set, Dict, List, Any, Literal
 import numpy as np
 import pandas as pd
 import requests
@@ -45,16 +45,44 @@ def get_valid_modes() -> Set[str]:
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
-def get_valid_query() -> dict:
+def get_valid_query(
+        type: Literal[
+            "sample_generation",
+            "metadata_prediction"
+            ] = "sample_generation") -> Dict[str, Any]:
     """
+    Get Valid Query Example
+    
     Generates a sample query for prediction and validation for the v2.0 model.
-
-    Returns
-    -------
-    dict
+    This function provides an example query structure that can be modified for specific needs.
+    The sample query contains two example inputs: one for a cell line with CRISPR perturbation
+    and another for a primary tissue sample with disease information.
+    
+    Args:
+        type: Specify for what mode you'd like a valid query. Valid options are 
+              "sample_generation" and "metadata_prediction"
+    
+    Returns:
         A dictionary representing a valid query structure for v2.0.
+    
+    Examples:
+        # Get a sample query
+        query = get_valid_query()
+        
+        # Modify the query for a different modality
+        query["modality"] = "bulk"
+        
+        # Adjust the number of samples to generate
+        query["inputs"][0]["num_samples"] = 10
+        
+        # Get a valid query for metadata prediction
+        query = get_valid_query("metadata_prediction")
     """
-    return {
+    
+    if type not in ["sample_generation", "metadata_prediction"]:
+        raise ValueError("type must be either 'sample_generation' or 'metadata_prediction'")
+    
+    sample_generation = {
         "modality": "bulk",
         "mode": "sample generation",
         "return_classifier_probs": True,
@@ -66,9 +94,9 @@ def get_valid_query() -> dict:
                     "perturbation_ontology_id": "ENSG00000156127",
                     "perturbation_type": "crispr",
                     "perturbation_time": "96 hours",
-                    "sample_type": "cell line",
+                    "sample_type": "cell line"
                 },
-                "num_samples": 5,
+                "num_samples": 5
             },
             {
                 "metadata": {
@@ -76,13 +104,26 @@ def get_valid_query() -> dict:
                     "age_years": "65",
                     "sex": "female",
                     "sample_type": "primary tissue",
-                    "tissue_ontology_id": "UBERON:0000945",
+                    "tissue_ontology_id": "UBERON:0000945"
                 },
-                "num_samples": 5,
-            },
-        ],
+                "num_samples": 5
+            }
+        ]
     }
-
+    
+    metadata_prediction = {
+        "inputs": [
+            {"counts": [random.uniform(0, 1) for _ in range(69573)]},
+            {"counts": [random.uniform(0, 1) for _ in range(69573)]}
+        ],
+        "modality": "bulk",
+        "mode": "predict metadata"
+    }
+    
+    if type == "metadata_prediction":
+        return metadata_prediction
+    else:
+        return sample_generation
 
 def predict_query(
     query: dict,
