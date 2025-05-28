@@ -155,22 +155,22 @@ class TestApiWithAuthentication(unittest.TestCase):
                         "cell_line_ontology_id": "CVCL_0023",
                         "perturbation_ontology_id": "ENSG00000156127",
                         "perturbation_type": "crispr",
-                        "sample_type": "cell line"
+                        "sample_type": "cell line",
                     },
                     "classifier_probs": {
                         "sex": {"female": 0.7, "male": 0.3},
                         "cell_line_ontology_id": {"CVCL_0023": 0.9, "other": 0.1},
-                        "sample_type": {"cell line": 1.0, "primary tissue": 0.0}
+                        "sample_type": {"cell line": 1.0, "primary tissue": 0.0},
                     },
                     "latents": {
                         "biological": [0.1, 0.2, 0.3],
                         "technical": [0.4, 0.5],
-                        "perturbation": [0.6]
-                    }
+                        "perturbation": [0.6],
+                    },
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response
 
@@ -230,18 +230,18 @@ class TestApiWithAuthentication(unittest.TestCase):
                         "cell_line_ontology_id": "CVCL_0023",
                         "perturbation_ontology_id": "ENSG00000156127",
                         "perturbation_type": "crispr",
-                        "sample_type": "cell line"
+                        "sample_type": "cell line",
                     },
                     "classifier_probs": {
                         "sex": {"female": 0.2, "male": 0.8},
                         "cell_line_ontology_id": {"CVCL_0023": 0.95, "other": 0.05},
-                        "sample_type": {"cell line": 1.0, "primary tissue": 0.0}
+                        "sample_type": {"cell line": 1.0, "primary tissue": 0.0},
                     },
                     "latents": {
                         "biological": [0.5, 0.6, 0.7],
                         "technical": [0.8, 0.9],
-                        "perturbation": [1.0]
-                    }
+                        "perturbation": [1.0],
+                    },
                 },
                 {
                     "counts": [150, 250, 350],  # Second sample
@@ -251,22 +251,22 @@ class TestApiWithAuthentication(unittest.TestCase):
                         "sex": "female",
                         "disease_ontology_id": "MONDO:0011719",
                         "tissue_ontology_id": "UBERON:0000945",
-                        "sample_type": "primary tissue"
+                        "sample_type": "primary tissue",
                     },
                     "classifier_probs": {
                         "sex": {"female": 0.9, "male": 0.1},
                         "disease_ontology_id": {"MONDO:0011719": 0.8, "normal": 0.2},
-                        "sample_type": {"primary tissue": 1.0, "cell line": 0.0}
+                        "sample_type": {"primary tissue": 1.0, "cell line": 0.0},
                     },
                     "latents": {
                         "biological": [0.3, 0.4, 0.5],
                         "technical": [0.6, 0.7],
-                        "perturbation": [0.8]
-                    }
-                }
+                        "perturbation": [0.8],
+                    },
+                },
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response
 
@@ -310,13 +310,15 @@ class TestApiWithAuthentication(unittest.TestCase):
                     "counts": [10, 20, 30, 40],
                     "metadata": {"sample_id": "single_test"},
                     "classifier_probs": {"sex": {"female": 0.5, "male": 0.5}},
-                    "latents": {"biological": [0.1],
-                                "technical": [0.2],
-                                "perturbation": [0.3]}
+                    "latents": {
+                        "biological": [0.1],
+                        "technical": [0.2],
+                        "perturbation": [0.3],
+                    },
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3", "gene4"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response_single
 
@@ -340,29 +342,35 @@ class TestApiWithAuthentication(unittest.TestCase):
                     "counts": [10, 20],
                     "metadata": {"sample_id": "multi_test_1"},
                     "classifier_probs": {"sex": {"female": 0.3, "male": 0.7}},
-                    "latents": {"biological": [0.1],
-                                 "technical": [0.2],
-                                 "perturbation": [0.3]}
+                    "latents": {
+                        "biological": [0.1],
+                        "technical": [0.2],
+                        "perturbation": [0.3],
+                    },
                 },
                 {
                     "counts": [30, 40],
                     "metadata": {"sample_id": "multi_test_2"},
                     "classifier_probs": {"sex": {"female": 0.8, "male": 0.2}},
-                    "latents": {"biological": [0.4],
-                                 "technical": [0.5],
-                                 "perturbation": [0.6]}
+                    "latents": {
+                        "biological": [0.4],
+                        "technical": [0.5],
+                        "perturbation": [0.6],
+                    },
                 },
                 {
                     "counts": [50, 60],
                     "metadata": {"sample_id": "multi_test_3"},
                     "classifier_probs": {"sex": {"female": 0.6, "male": 0.4}},
-                    "latents": {"biological": [0.7],
-                                 "technical": [0.8],
-                                   "perturbation": [0.9]}
-                }
+                    "latents": {
+                        "biological": [0.7],
+                        "technical": [0.8],
+                        "perturbation": [0.9],
+                    },
+                },
             ],
             "gene_order": ["gene1", "gene2"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response_multiple
 

@@ -18,11 +18,8 @@ except ImportError:
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {
-    "v2.0": {
-        "bulk"
-    }
-}
+MODEL_MODALITIES = {"v2.0": {"bulk"}}
+
 
 def get_valid_modalities() -> Set[str]:
     """
@@ -35,6 +32,7 @@ def get_valid_modalities() -> Set[str]:
     """
     return MODEL_MODALITIES["v2.0"]
 
+
 def get_valid_modes() -> Set[str]:
     """
     Returns a set of possible output modes for the supported model.
@@ -45,6 +43,7 @@ def get_valid_modes() -> Set[str]:
         A set containing the valid modality strings.
     """
     return ["sample generation", "mean estimation", "metadata prediction"]
+
 
 def get_valid_query() -> dict:
     """
@@ -199,6 +198,7 @@ def predict_query(
 
     return {"metadata": metadata, "expression": expression}
 
+
 def validate_query(query: dict) -> None:
     """
     Validates the structure and contents of the query based on the v2.0 model.
@@ -228,6 +228,7 @@ def validate_query(query: dict) -> None:
             f"Missing required keys in query: {missing_keys}. "
             f"Use `get_valid_query()` to get an example."
         )
+
 
 def validate_modality(query: dict) -> None:
     """

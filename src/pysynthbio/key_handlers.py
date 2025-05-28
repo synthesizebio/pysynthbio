@@ -4,15 +4,17 @@ import warnings
 import webbrowser
 
 try:
-  import keyring
-  KEYRING_AVAILABLE = True
+    import keyring
+
+    KEYRING_AVAILABLE = True
 except Exception:
-  KEYRING_AVAILABLE = False
-  warnings.warn(
-    "Failed to import 'keyring' `use_keyring` will fail:"
-    "\n Do pip install keyring if you'd like this feature \n",
-    stacklevel=2
- )
+    KEYRING_AVAILABLE = False
+    warnings.warn(
+        "Failed to import 'keyring' `use_keyring` will fail:"
+        "\n Do pip install keyring if you'd like this feature \n",
+        stacklevel=2,
+    )
+
 
 def set_synthesize_token(use_keyring=False, token=None):
     """
@@ -58,8 +60,8 @@ def set_synthesize_token(use_keyring=False, token=None):
     if use_keyring:
         if KEYRING_AVAILABLE:
             try:
-              keyring.set_password("pysynthbio", "api_token", token)
-              print("API token stored in system keyring.")
+                keyring.set_password("pysynthbio", "api_token", token)
+                print("API token stored in system keyring.")
             except Exception as e:
                 warnings.warn(
                     f"Failed to store token in keyring: {str(e)}", stacklevel=2

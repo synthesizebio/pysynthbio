@@ -118,17 +118,17 @@ def test_predict_query_mocked_call_success(mock_post):
                         "sample_id": "test1",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "25",
-                        "sex": "female"
+                        "sex": "female",
                     },
                     "classifier_probs": {
                         "sex": {"female": 0.8, "male": 0.2},
-                        "age_years": {"20-30": 0.7, "30-40": 0.3}
+                        "age_years": {"20-30": 0.7, "30-40": 0.3},
                     },
                     "latents": {
                         "biological": [0.1, 0.2, 0.3],
                         "technical": [0.4, 0.5],
-                        "perturbation": [0.6]
-                    }
+                        "perturbation": [0.6],
+                    },
                 },
                 {
                     "counts": [150, 250, 350],  # Second sample
@@ -136,21 +136,21 @@ def test_predict_query_mocked_call_success(mock_post):
                         "sample_id": "test2",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "30",
-                        "sex": "male"
+                        "sex": "male",
                     },
                     "classifier_probs": {
                         "sex": {"female": 0.3, "male": 0.7},
-                        "age_years": {"20-30": 0.4, "30-40": 0.6}
+                        "age_years": {"20-30": 0.4, "30-40": 0.6},
                     },
                     "latents": {
                         "biological": [0.2, 0.3, 0.4],
                         "technical": [0.5, 0.6],
-                        "perturbation": [0.7]
-                    }
-                }
+                        "perturbation": [0.7],
+                    },
+                },
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response
 
@@ -234,22 +234,17 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
             "outputs": [
                 {
                     "counts": [1, 2, 3],  # 1D list
-                    "metadata": {
-                        "sample_id": "test1",
-                        "age_years": "25"
-                    },
-                    "classifier_probs": {
-                        "sex": {"female": 0.6, "male": 0.4}
-                    },
+                    "metadata": {"sample_id": "test1", "age_years": "25"},
+                    "classifier_probs": {"sex": {"female": 0.6, "male": 0.4}},
                     "latents": {
                         "biological": [0.1, 0.2],
                         "technical": [0.3],
-                        "perturbation": [0.4]
-                    }
+                        "perturbation": [0.4],
+                    },
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response
 
@@ -427,24 +422,24 @@ def test_new_api_structure_handling(mock_post):
                     "classifier_probs": {
                         "sex": {"female": 0.7, "male": 0.3},
                         "age_years": {"60-70": 0.8, "70-80": 0.2},
-                        "tissue_ontology_id": {"UBERON:0000945": 0.9}
+                        "tissue_ontology_id": {"UBERON:0000945": 0.9},
                     },
                     "latents": {
                         "biological": [-0.89, 0.38, -0.08] * 100,
                         "technical": [0.55, -0.38, -0.92] * 100,
-                        "perturbation": [1.84, 0.46, -1.39] * 100
+                        "perturbation": [1.84, 0.46, -1.39] * 100,
                     },
                     "metadata": {
                         "age_years": "65",
                         "disease_ontology_id": "MONDO:0011719",
                         "sex": "female",
                         "sample_type": "primary tissue",
-                        "tissue_ontology_id": "UBERON:0000945"
-                    }
+                        "tissue_ontology_id": "UBERON:0000945",
+                    },
                 }
             ],
             "gene_order": [f"ENSG{i:011d}" for i in range(44590)],
-            "model_version": 2
+            "model_version": 2,
         }
         mock_post.return_value = mock_response
 
