@@ -1,7 +1,15 @@
-Version 1.0
+Version 2.0
 ===========
 
-The following sections are specific to Version 1.x.x of the pysynthbio API.
+The following sections are specific to Version 2.x.x of the pysynthbio API. 
+Note that the versioning for this package runs parallel to the versioning of the AI models from 
+Synthesize Bio. 
+
+The major releases indicate what model from the API is being used. So 2.x.x means v2.0 from the API is being used. 
+Whereas the .x.x part is related to the package releases/bug fixes, etc. 
+
+Note only version 2 models can be accessed with this version of the package. 
+If you would like to use v1 models return to 1.x.x versions of this package. 
 
 Discover Valid Modalities
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -12,12 +20,12 @@ To see which output modalities are supported by the current model, use ``get_val
 
     supported_modalities = pysynthbio.get_valid_modalities()
     print(supported_modalities)
-    # Output might look like: {'bulk_rna-seq', 'lincs', 'sra', ...}
+    # Output might look like: {'bulk', ...}
 
 Generate Example Queries
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-The structure of the query required by the API is fixed for the current supported model (v1.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
+The structure of the query required by the API is fixed for the current supported model (v2.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
 
 .. code-block:: python
 
@@ -44,6 +52,6 @@ Use ``predict_query`` to send a query to the API and get expression predictions.
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-This covers the basic workflow: understanding the required query structure and making predictions for Version 1.0.
+This covers the basic workflow: understanding the required query structure and making predictions for Version 2.0.
 
 For more examples, check the examples directory in the repository.
