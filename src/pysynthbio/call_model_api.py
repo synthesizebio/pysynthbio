@@ -35,7 +35,6 @@ def get_valid_modalities() -> Set[str]:
     """
     return MODEL_MODALITIES["v2.0"]
 
-# KJ CHANGE - valid modes for v2 - this type of function should maybe be added for v1.0 as well, but hopefully that is obsolete soon anyway
 def get_valid_modes() -> Set[str]:
     """
     Returns a set of possible output modes for the supported model.
@@ -47,7 +46,6 @@ def get_valid_modes() -> Set[str]:
     """
     return ["sample generation", "mean estimation", "metadata prediction"]
 
-# KJ CHANGE - I made the query valid for v2, but we should probably come up with a way to translate this for the user
 def get_valid_query() -> dict:
     """
     Generates a sample query for prediction and validation for the v2.0 model.
@@ -177,13 +175,13 @@ def predict_query(
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(
             [
-                pd.DataFrame([output["counts"]], columns=content["gene_order"])  
+                pd.DataFrame([output["counts"]], columns=content["gene_order"])
                 # Wrap in [] to make it a single row
                 for output in content["outputs"]
             ],
             ignore_index=True,
         )
-        
+
         # Since each output now produces exactly 1 row, simplify metadata collection:
         metadata_rows = [output["metadata"] for output in content["outputs"]]
         metadata = pd.DataFrame(metadata_rows)
@@ -230,7 +228,7 @@ def validate_query(query: dict) -> None:
             f"Missing required keys in query: {missing_keys}. "
             f"Use `get_valid_query()` to get an example."
         )
-    
+
 def validate_modality(query: dict) -> None:
     """
     Validates the modality in the query is allowed for the v2.0 model.

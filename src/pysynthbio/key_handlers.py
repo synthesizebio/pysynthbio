@@ -9,7 +9,7 @@ try:
 except Exception:
   KEYRING_AVAILABLE = False
   warnings.warn(
-    f"Failed to import 'keyring' `use_keyring` will fail:"
+    "Failed to import 'keyring' `use_keyring` will fail:"
     "\n Do pip install keyring if you'd like this feature \n",
     stacklevel=2
  )

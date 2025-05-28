@@ -115,7 +115,7 @@ def test_predict_query_mocked_call_success(mock_post):
                 {
                     "counts": [100, 200, 300],  # Now 1D list instead of 2D
                     "metadata": {
-                        "sample_id": "test1", 
+                        "sample_id": "test1",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "25",
                         "sex": "female"
@@ -134,7 +134,7 @@ def test_predict_query_mocked_call_success(mock_post):
                     "counts": [150, 250, 350],  # Second sample
                     "metadata": {
                         "sample_id": "test2",
-                        "cell_line_ontology_id": "CVCL_0023", 
+                        "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "30",
                         "sex": "male"
                     },
@@ -191,15 +191,15 @@ def test_predict_query_mocked_call_success(mock_post):
         assert isinstance(
             expression_df, pd.DataFrame
         ), "'expression' for v2.0 should be a pandas DataFrame"
-        
+
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
         assert len(expression_df) == 2, "Should have 2 expression rows (one per output)"
         assert len(expression_df.columns) == 3, "Should have 3 gene columns"
-        
+
         # Check data values
-        assert list(expression_df.iloc[0]) == [100, 200, 300], "First row should match first counts"
-        assert list(expression_df.iloc[1]) == [150, 250, 350], "Second row should match second counts"
+        assert list(expression_df.iloc[0]) == [100, 200, 300]
+        assert list(expression_df.iloc[1]) == [150, 250, 350]
 
         print("Assertions passed for v2.0 mocked call.")
 
@@ -271,7 +271,7 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
         assert isinstance(results, dict)
         assert "metadata" in results
         assert "expression" in results
-        
+
         # Verify dimensions
         assert len(results["metadata"]) == 1, "Should have 1 metadata row"
         assert len(results["expression"]) == 1, "Should have 1 expression row"
@@ -413,17 +413,17 @@ def test_log_cpm_zero_counts():
 def test_new_api_structure_handling(mock_post):
     """Test that the updated code handles the new API structure correctly."""
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
-    
+
     try:
         os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
-        
+
         # Create mock response that exactly matches your real API structure
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "outputs": [
                 {
-                    "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,  # Simulate 44590 genes
+                    "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,
                     "classifier_probs": {
                         "sex": {"female": 0.7, "male": 0.3},
                         "age_years": {"60-70": 0.8, "70-80": 0.2},
@@ -443,27 +443,26 @@ def test_new_api_structure_handling(mock_post):
                     }
                 }
             ],
-            "gene_order": [f"ENSG{i:011d}" for i in range(44590)],  # Simulate gene names
+            "gene_order": [f"ENSG{i:011d}" for i in range(44590)],
             "model_version": 2
         }
         mock_post.return_value = mock_response
-        
+
         # Test the predict_query function
         query = get_valid_query()
         results = predict_query(query, as_counts=True)
-        
+
         # Verify the structure
         assert "metadata" in results
         assert "expression" in results
         assert len(results["metadata"]) == 1  # One row per output
         assert len(results["expression"]) == 1  # One row per output
         assert len(results["expression"].columns) == 44590  # All genes as columns
-        
+
         print("New API structure handling test passed!")
-        
+
     finally:
         if original_api_key is not None:
             os.environ["SYNTHESIZE_API_KEY"] = original_api_key
         elif "SYNTHESIZE_API_KEY" in os.environ:
             del os.environ["SYNTHESIZE_API_KEY"]
-            

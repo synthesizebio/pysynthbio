@@ -187,7 +187,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Verify results structure
         self.assertIn("metadata", results)
         self.assertIn("expression", results)
-        
+
         # Verify data dimensions match new structure
         self.assertEqual(len(results["metadata"]), 1)  # One sample
         self.assertEqual(len(results["expression"]), 1)  # One row
@@ -228,7 +228,7 @@ class TestApiWithAuthentication(unittest.TestCase):
                         "age_years": "30",
                         "sex": "male",
                         "cell_line_ontology_id": "CVCL_0023",
-                        "perturbation_ontology_id": "ENSG00000156127", 
+                        "perturbation_ontology_id": "ENSG00000156127",
                         "perturbation_type": "crispr",
                         "sample_type": "cell line"
                     },
@@ -248,7 +248,7 @@ class TestApiWithAuthentication(unittest.TestCase):
                     "metadata": {
                         "sample_id": "test2",
                         "age_years": "65",
-                        "sex": "female", 
+                        "sex": "female",
                         "disease_ontology_id": "MONDO:0011719",
                         "tissue_ontology_id": "UBERON:0000945",
                         "sample_type": "primary tissue"
@@ -282,12 +282,12 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Verify results structure
         self.assertIn("metadata", results)
         self.assertIn("expression", results)
-        
+
         # Verify data dimensions for two samples
         self.assertEqual(len(results["metadata"]), 2)  # Two samples
         self.assertEqual(len(results["expression"]), 2)  # Two rows
         self.assertEqual(len(results["expression"].columns), 3)  # Three genes
-        
+
         # Verify actual data values match the mock
         self.assertEqual(list(results["expression"].iloc[0]), [100, 200, 300])
         self.assertEqual(list(results["expression"].iloc[1]), [150, 250, 350])
@@ -310,7 +310,9 @@ class TestApiWithAuthentication(unittest.TestCase):
                     "counts": [10, 20, 30, 40],
                     "metadata": {"sample_id": "single_test"},
                     "classifier_probs": {"sex": {"female": 0.5, "male": 0.5}},
-                    "latents": {"biological": [0.1], "technical": [0.2], "perturbation": [0.3]}
+                    "latents": {"biological": [0.1],
+                                "technical": [0.2],
+                                "perturbation": [0.3]}
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3", "gene4"],
@@ -338,19 +340,25 @@ class TestApiWithAuthentication(unittest.TestCase):
                     "counts": [10, 20],
                     "metadata": {"sample_id": "multi_test_1"},
                     "classifier_probs": {"sex": {"female": 0.3, "male": 0.7}},
-                    "latents": {"biological": [0.1], "technical": [0.2], "perturbation": [0.3]}
+                    "latents": {"biological": [0.1],
+                                 "technical": [0.2],
+                                 "perturbation": [0.3]}
                 },
                 {
                     "counts": [30, 40],
                     "metadata": {"sample_id": "multi_test_2"},
                     "classifier_probs": {"sex": {"female": 0.8, "male": 0.2}},
-                    "latents": {"biological": [0.4], "technical": [0.5], "perturbation": [0.6]}
+                    "latents": {"biological": [0.4],
+                                 "technical": [0.5],
+                                 "perturbation": [0.6]}
                 },
                 {
                     "counts": [50, 60],
                     "metadata": {"sample_id": "multi_test_3"},
                     "classifier_probs": {"sex": {"female": 0.6, "male": 0.4}},
-                    "latents": {"biological": [0.7], "technical": [0.8], "perturbation": [0.9]}
+                    "latents": {"biological": [0.7],
+                                 "technical": [0.8],
+                                   "perturbation": [0.9]}
                 }
             ],
             "gene_order": ["gene1", "gene2"],
@@ -364,7 +372,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertEqual(len(results_multiple["metadata"]), 3)
         self.assertEqual(len(results_multiple["expression"]), 3)
         self.assertEqual(len(results_multiple["expression"].columns), 2)
-        
+
         # Verify data content
         self.assertEqual(list(results_multiple["expression"].iloc[0]), [10, 20])
         self.assertEqual(list(results_multiple["expression"].iloc[1]), [30, 40])
@@ -373,4 +381,3 @@ class TestApiWithAuthentication(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    
