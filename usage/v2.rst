@@ -1,0 +1,57 @@
+Version 2.0
+===========
+
+The following sections are specific to Version 2.x.x of the pysynthbio API. 
+Note that the versioning for this package runs parallel to the versioning of the AI models from 
+Synthesize Bio. 
+
+The major releases indicate what model from the API is being used. So 2.x.x means v2.0 from the API is being used. 
+Whereas the .x.x part is related to the package releases/bug fixes, etc. 
+
+Note only version 2 models can be accessed with this version of the package. 
+If you would like to use v1 models return to 1.x.x versions of this package. 
+
+Discover Valid Modalities
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+To see which output modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``output_modality`` key in your query.
+
+.. code-block:: python
+
+    supported_modalities = pysynthbio.get_valid_modalities()
+    print(supported_modalities)
+    # Output might look like: {'bulk', ...}
+
+Generate Example Queries
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The structure of the query required by the API is fixed for the current supported model (v2.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
+
+.. code-block:: python
+
+    # Get the example query structure
+    example_query = pysynthbio.get_valid_query()
+
+Get Predictions
+^^^^^^^^^^^^^^^
+
+Use ``predict_query`` to send a query to the API and get expression predictions. You'll typically use ``get_valid_query`` to help structure your request. This function also requires the API key.
+
+.. code-block:: python
+
+    # You can modify the example_query or create your own following the structure
+    my_query = pysynthbio.get_valid_query() # Example: using the default valid query
+    # Modify my_query as needed...
+
+    results = pysynthbio.predict_query(
+        query=my_query,
+        as_counts=True # Get results as estimated counts (default). Set to False for logCPM.
+    )
+
+    # Access results:
+    metadata_df = results["metadata"]
+    expression_df = results["expression"]
+
+This covers the basic workflow: understanding the required query structure and making predictions for Version 2.0.
+
+For more examples, check the examples directory in the repository.

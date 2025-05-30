@@ -7,8 +7,13 @@ try:
     import keyring
 
     KEYRING_AVAILABLE = True
-except ImportError:
+except Exception:
     KEYRING_AVAILABLE = False
+    warnings.warn(
+        "Failed to import 'keyring' `use_keyring` will fail:"
+        "\n Do pip install keyring if you'd like this feature \n",
+        stacklevel=2,
+    )
 
 
 def set_synthesize_token(use_keyring=False, token=None):
@@ -37,6 +42,7 @@ def set_synthesize_token(use_keyring=False, token=None):
         # Store in system keyring for future sessions
         set_synthesize_token(use_keyring=True)
     """
+
     if token is None:
 
         webbrowser.open("https://app.synthesize.bio/profile")

@@ -14,11 +14,14 @@ There are multiple ways to set up your token:
 
 Interactive Setup
 -----------------
+
 .. code-block:: python
+    
     import pysynthbio
 
     # This will open a browser to the token creation page and prompt for input
     pysynthbio.set_synthesize_token(use_keyring=True)
+
 
 If `use_keyring=True` the token will persist after you close your session and you will be able to reload it. 
 If `use_keyring=False` the token will disappear after the session. 
@@ -29,6 +32,7 @@ Using Environment Variables
 You can set the `SYNTHESIZE_API_KEY` environment variable directly:
 
 .. code-block:: bash
+
     export SYNTHESIZE_API_KEY=your_api_token_here
 
 
@@ -38,6 +42,7 @@ Non-Interactive Setup
 For scripts running in non-interactive environments:
 
 .. code-block:: python
+
     import pysynthbio
 
     # Supply token directly (but don't write it in scripts)
@@ -48,6 +53,7 @@ Using the System Keyring
 If you've previously stored your token in the system keyring:
 
 .. code-block:: python
+
     import synthbio
 
     # Attempt to load from keyring
@@ -65,13 +71,13 @@ Import the package
 Discover Valid Modalities
 -------------------------
 
-To see which output modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``output_modality`` key in your query.
+To see which modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``modality`` key in your query.
 
 .. code-block:: python
 
     supported_modalities = pysynthbio.get_valid_modalities()
     print(supported_modalities)
-    # Output might look like: {'bulk_rna-seq', 'lincs', 'sra', ...}
+    # Output might look like: {'bulk', ...}
 
 Generate Example Queries
 ------------------------
@@ -124,3 +130,16 @@ When you're done using the API, you can clear the token from your environment:
     # Clear from both session and system keyring
     pysynthbio.clear_synthesize_token(remove_from_keyring=True)
 
+
+
+Troubleshooting Note
+--------------------
+
+If you get this error on a Mac when using `use_keyring=True`
+
+`<stdin>:1: UserWarning: Failed to store token in keyring:`
+`Can't store password on keychain: (-25244, 'Unknown Error')`
+
+It's because your IDE has not been given access to Keychain. 
+Go to System Preferences > Security & Privacy > Privacy > Full Disk Access
+Add the terminal or IDE you are working from (like VS Code, PyCharm). 
