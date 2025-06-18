@@ -38,6 +38,11 @@ Alternatively, you can install a specific version directly from its GitHub Relea
 ### Get your API key
 
 Go to https://app.synthesize.bio/profile to generate an API key. Then set this key as an environment variable named `SYNTHESIZE_API_KEY` to authenticate your API requests.
+```
+pysynthbio.set_synthesize_token(use_keyring=False)
+```
+
+Set `use_keyring=True` if you wish to be able to use this API key for future sessions. 
 
 ### Form a request
 
@@ -77,7 +82,8 @@ my_query = pysynthbio.get_valid_query() # Example: using the default valid query
 
 results = pysynthbio.predict_query(
     query=my_query,
-    as_counts=True # Get results as estimated counts (default). Set to False for logCPM.
+    as_counts=True, 
+    raw_response = True# Get results as estimated counts (default). Set to False for logCPM.
 )
 
 # Access results:

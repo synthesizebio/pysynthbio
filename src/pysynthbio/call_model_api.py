@@ -14,7 +14,11 @@ try:
     from .key_handlers import has_synthesize_token, set_synthesize_token
 except ImportError:
     # Fallback if relative import fails (e.g., in tests)
-    from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
+    from pysynthbio.key_handlers import (
+        has_synthesize_token, 
+        set_synthesize_token, 
+        load_synthesize_token_from_keyring
+    )
 
 API_BASE_URL = "https://app.synthesize.bio"
 
@@ -89,6 +93,7 @@ def predict_query(
     mode: str = "sample generation",
     as_counts: bool = True,
     auto_authenticate: bool = True,
+    raw_response: bool = False,
 ) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API (v2.0) for
@@ -105,12 +110,18 @@ def predict_query(
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
+    raw_response : bool, optional
+        If True, returns the raw API response instead of processed
+        DataFrames (default is False).
 
     Returns
     -------
     dict
-        metadata: pd.DataFrame containing metadata for each sample
-        expression: pd.DataFrame containing expression data for each sample
+        If raw_response is False:
+            metadata: pd.DataFrame containing metadata for each sample
+            expression: pd.DataFrame containing expression data for each sample
+        If raw_response is True:
+            Returns the raw JSON response from the API as a dictionary
 
     Raises
     -------
@@ -120,11 +131,14 @@ def predict_query(
     ValueError
         If API fails or response is invalid.
     """
-    # Check if token is available and prompt if needed
+    # Check if token is available and try to load from keyring first
     if not has_synthesize_token():
         if auto_authenticate:
-            print("API token not found. Please provide your Synthesize Bio API token.")
-            set_synthesize_token(use_keyring=True)
+            # Try to load from keyring first
+            if not load_synthesize_token_from_keyring():
+                # Only prompt if keyring loading fails
+                print("API token not found. Please provide your Synthesize Bio API token.")
+                set_synthesize_token(use_keyring=True)
         else:
             raise KeyError(
                 "No API token found. "
@@ -171,6 +185,10 @@ def predict_query(
         if key in content:
             raise ValueError(f"Error in response from API received: {content[key]}")
 
+    # Return raw response if requested
+    if raw_response:
+        return content
+
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(
             [
@@ -197,6 +215,7 @@ def predict_query(
         expression = log_cpm(expression)
 
     return {"metadata": metadata, "expression": expression}
+
 
 
 def validate_query(query: dict) -> None:
