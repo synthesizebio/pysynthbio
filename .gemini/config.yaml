@@ -1,0 +1,105 @@
+# .gemini/config.yaml
+
+# Configuration for Gemini Code Assist on a Python API wrapper repository.
+# This file governs how Gemini Code Assist interacts with pull requests,
+# aiming for less verbosity and focused feedback specific to Python code
+# for API interaction and data handling.
+
+# General settings
+# -----------------------------------------------------------------------------
+
+# have_fun:
+# Disables fun features such as a poem in the initial pull request summary.
+# Set to 'false' for a more professional and concise tone.
+have_fun: false
+
+# ignore_patterns:
+# A list of glob patterns for files and directories that Gemini Code Assist
+# should ignore during interactions (e.g., for code analysis or summarization).
+# Useful for excluding Python-specific temporary files, virtual environments,
+# documentation builds, or large data files.
+ignore_patterns:
+  # Python specific ignores
+  - "**/*.pyc"        # Compiled Python files
+  - "**/__pycache__/"  # Python cache directories
+  - ".venv/"          # Python virtual environment (uv or venv)
+  - "env/"            # Another common name for virtual environments
+  - "venv/"           # Another common name for virtual environments
+  - ".pytest_cache/"  # Pytest cache
+  - ".mypy_cache/"    # MyPy cache
+  - "dist/"           # Distribution packages (e.g., sdist, wheel)
+  - "build/"          # Build artifacts
+  - "*.egg-info/"     # Python package metadata
+  - ".ipynb_checkpoints/" # Jupyter notebook checkpoints
+  - "*.log"           # Log files
+
+  # API/Data related ignores (if applicable)
+  - "data/"           # Directory typically containing large data objects or fixtures
+  - "docs/"           # Sphinx/MkDocs documentation output
+  - "results/"        # Output directories
+  - "*.csv"           # Example: Ignore large CSV data files
+  - "*.parquet"       # Example: Ignore large Parquet data files
+  - "*.json"          # Large JSON data dumps
+  - "*.pkl"           # Python pickle files
+  - "*.sqlite"        # SQLite databases
+
+  # General development ignores
+  - ".git/"                 # Git metadata
+  - "tmp/"                  # Temporary directories
+  - "cache/"                # Cache directories
+  - "**/*.tmp"              # Temporary files
+  - "**/*.bak"              # Backup files
+  - "**/*.swp"              # Vim swap files
+  - "node_modules/"         # If you have any frontend components
+  - ".DS_Store"             # macOS specific
+  - "Thumbs.db"             # Windows specific
+  - "**/*.gz"               # Compressed archives (often large data)
+  - "**/*.zip"
+  - "**/*.tar"
+  - "**/*.tar.gz"
+  - "**/*.rar"
+  - "vendor/"               # Go/Ruby vendor directories if applicable
+
+# Code Review settings
+# -----------------------------------------------------------------------------
+
+code_review:
+  # disable:
+  # Disables Gemini from acting on pull requests entirely.
+  # Set to 'false' to keep code review functionality active.
+  disable: false
+
+  # comment_severity_threshold:
+  # The minimum severity of review comments to consider.
+  # Options: LOW, MEDIUM, HIGH, CRITICAL.
+  # Setting to 'HIGH' will reduce the number of comments to only the most
+  # critical and high-priority issues (e.g., security vulnerabilities in API calls,
+  # major performance anti-patterns, or non-idiomatic Python that causes issues),
+  # making feedback less verbose.
+  comment_severity_threshold: HIGH
+
+  # max_review_comments:
+  # The maximum number of individual review comments to post on a pull request.
+  # Use -1 for unlimited. Setting a positive integer (e.g., 5 or 10)
+  # will cap the number of comments, focusing on the most important ones.
+  max_review_comments: 5 # Limit to top 5 comments
+
+  # pull_request_opened:
+  # Configuration for events when a pull request is opened.
+  pull_request_opened:
+    # help:
+    # Posts a help message on pull request open. Defaults to 'false'.
+    # Keeping it 'false' reduces initial noise.
+    help: false
+
+    # summary:
+    # Posts a pull request summary on pull request open. Defaults to 'true'.
+    # Keeping 'true' can be useful for a quick overview of changes in Python code.
+    # Set to 'false' if you want to eliminate all automatic initial PR comments.
+    summary: true
+
+    # code_review:
+    # Posts a full code review on pull request open. Defaults to 'true'.
+    # Setting to 'false' will prevent automatic reviews on every PR,
+    # allowing reviews to be triggered manually with '/gemini review' if needed.
+    code_review: false
