@@ -32,6 +32,27 @@ The structure of the query required by the API is fixed for the current supporte
     # Get the example query structure
     example_query = pysynthbio.get_valid_query()
 
+This is the full list of valid metadata keys:  
+- age_years
+- cell_line_ontology_id
+- cell_type_ontology_id
+- developmental_stage
+- disease_ontology_id
+- ethnicity
+- genotype
+- perturbation_dose
+- perturbation_ontology_id
+- perturbation_time
+- perturbation_type
+- race
+- sample_type
+- sex
+- tissue_ontology_id
+- study
+- library_selection
+- library_layout
+- platform
+
 Get Predictions
 ^^^^^^^^^^^^^^^
 
