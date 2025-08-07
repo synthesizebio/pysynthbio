@@ -136,6 +136,9 @@ def predict_query(
 
     validate_query(query)
 
+    # Source field for reporting
+    query["source"] = "pysynthbio"
+
     response = requests.post(
         url=api_url,
         headers={
