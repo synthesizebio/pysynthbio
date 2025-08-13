@@ -16,9 +16,18 @@ except ImportError:
     # Fallback if relative import fails (e.g., in tests)
     from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 
+# Import package version and derive API version as v<major>.<minor>
+try:
+    from . import __version__ as _pkg_version
+except Exception:
+    _pkg_version = "0.0.0"
+
+_API_VERSION_PARTS = _pkg_version.split(".")
+API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
+
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {"v2.2": {"bulk"}}
+MODEL_MODALITIES = {API_VERSION: {"bulk"}}
 
 
 def get_valid_modalities() -> Set[str]:
@@ -28,9 +37,9 @@ def get_valid_modalities() -> Set[str]:
     Returns
     -------
     Set[str]
-        A set containing the valid modality strings.
+            A set containing the valid modality strings.
     """
-    return MODEL_MODALITIES["v2.2"]
+    return MODEL_MODALITIES[API_VERSION]
 
 
 def get_valid_modes() -> Set[str]:
@@ -40,20 +49,20 @@ def get_valid_modes() -> Set[str]:
     Returns
     -------
     Set[str]
-        A set containing the valid modality strings.
+            A set containing the valid modality strings.
     """
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
 def get_valid_query() -> dict:
-    """
-    Generates a sample query for prediction and validation for the v2.2 model.
+    f"""
+	Generates a sample query for prediction and validation for the {API_VERSION} model.
 
-    Returns
-    -------
-    dict
-        A dictionary representing a valid query structure for v2.2.
-    """
+	Returns
+	-------
+	dict
+		A dictionary representing a valid query structure for {API_VERSION}.
+	"""
     return {
         "modality": "bulk",
         "mode": "sample generation",
@@ -90,36 +99,36 @@ def predict_query(
     as_counts: bool = True,
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
-    """
-    Sends a query to the Synthesize Bio API (v2.2) for
-    prediction and retrieves samples.
+    f"""
+	Sends a query to the Synthesize Bio API ({API_VERSION}) for
+	prediction and retrieves samples.
 
-    Parameters
-    ----------
-    query : dict
-        A dictionary representing the query data to send to the API.
-        Use `get_valid_query()` to generate an example.
-    as_counts : bool, optional
-        If False, transforms the predicted expression counts into
-        logCPM (default is True, returning counts).
-    auto_authenticate : bool, optional
-        If True and no API token is found, will prompt the user to
-        input one (default is True).
+	Parameters
+	----------
+	query : dict
+		A dictionary representing the query data to send to the API.
+		Use `get_valid_query()` to generate an example.
+	as_counts : bool, optional
+		If False, transforms the predicted expression counts into
+		logCPM (default is True, returning counts).
+	auto_authenticate : bool, optional
+		If True and no API token is found, will prompt the user to
+		input one (default is True).
 
-    Returns
-    -------
-    dict
-        metadata: pd.DataFrame containing metadata for each sample
-        expression: pd.DataFrame containing expression data for each sample
+	Returns
+	-------
+	dict
+		metadata: pd.DataFrame containing metadata for each sample
+		expression: pd.DataFrame containing expression data for each sample
 
-    Raises
-    -------
-    KeyError
-        If the SYNTHESIZE_API_KEY environment variable is not set and
-        auto_authenticate is False.
-    ValueError
-        If API fails or response is invalid.
-    """
+	Raises
+	-------
+	KeyError
+		If the SYNTHESIZE_API_KEY environment variable is not set and
+		auto_authenticate is False.
+	ValueError
+		If API fails or response is invalid.
+	"""
     # Check if token is available and prompt if needed
     if not has_synthesize_token():
         if auto_authenticate:
@@ -132,7 +141,7 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    api_url = f"{API_BASE_URL}/api/model/v2.2"
+    api_url = f"{API_BASE_URL}/api/model/{API_VERSION}"
 
     validate_query(query)
 
@@ -203,21 +212,21 @@ def predict_query(
 
 
 def validate_query(query: dict) -> None:
-    """
-    Validates the structure and contents of the query based on the v2.2 model.
+    f"""
+	Validates the structure and contents of the query based on the {API_VERSION} model.
 
-    Parameters
-    ----------
-    query : dict
-        The query dictionary.
+	Parameters
+	----------
+	query : dict
+		The query dictionary.
 
-    Raises
-    -------
-    TypeError
-        If the query is not a dictionary.
-    ValueError
-        If the query is missing required keys for the v2.2 model.
-    """
+	Raises
+	-------
+	TypeError
+		If the query is not a dictionary.
+	ValueError
+		If the query is missing required keys for the {API_VERSION} model.
+	"""
     if not isinstance(query, dict):
         raise TypeError(
             f"Expected `query` to be a dictionary, but got {type(query).__name__}"
@@ -234,20 +243,20 @@ def validate_query(query: dict) -> None:
 
 
 def validate_modality(query: dict) -> None:
-    """
-    Validates the modality in the query is allowed for the v2.2 model.
+    f"""
+	Validates the modality in the query is allowed for the {API_VERSION} model.
 
-    Parameters
-    ----------
-    query : dict
-        A dictionary containing the query data.
+	Parameters
+	----------
+	query : dict
+		A dictionary containing the query data.
 
-    Raises
-    -------
-    ValueError
-        If the modality key is missing, or the selected modality is not allowed.
-    """
-    allowed_modalities = MODEL_MODALITIES["v2.2"]
+	Raises
+	-------
+	ValueError
+		If the modality key is missing, or the selected modality is not allowed.
+	"""
+    allowed_modalities = MODEL_MODALITIES[API_VERSION]
 
     modality_key = "modality"
     if modality_key not in query:
@@ -268,12 +277,12 @@ def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     expression : pd.DataFrame
-        A DataFrame containing raw counts expression data.
+            A DataFrame containing raw counts expression data.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing log1p(CPM) data.
+            A DataFrame containing log1p(CPM) data.
     """
     expression_numeric = (
         expression.apply(pd.to_numeric, errors="coerce").fillna(0).clip(lower=0)
