@@ -16,9 +16,18 @@ except ImportError:
     # Fallback if relative import fails (e.g., in tests)
     from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 
+# Import package version and derive API version as v<major>.<minor>
+try:
+    from . import __version__ as _pkg_version
+except Exception:
+    _pkg_version = "0.0.0"
+
+_API_VERSION_PARTS = _pkg_version.split(".")
+API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
+
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {"v2.0": {"bulk"}}
+MODEL_MODALITIES = {API_VERSION: {"bulk"}}
 
 
 def get_valid_modalities() -> Set[str]:
@@ -28,9 +37,9 @@ def get_valid_modalities() -> Set[str]:
     Returns
     -------
     Set[str]
-        A set containing the valid modality strings.
+            A set containing the valid modality strings.
     """
-    return MODEL_MODALITIES["v2.0"]
+    return MODEL_MODALITIES[API_VERSION]
 
 
 def get_valid_modes() -> Set[str]:
@@ -40,19 +49,19 @@ def get_valid_modes() -> Set[str]:
     Returns
     -------
     Set[str]
-        A set containing the valid modality strings.
+            A set containing the valid modality strings.
     """
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
 def get_valid_query() -> dict:
     """
-    Generates a sample query for prediction and validation for the v2.0 model.
+    Generates a sample query for prediction and validation for the current API model.
 
     Returns
     -------
     dict
-        A dictionary representing a valid query structure for v2.0.
+        A dictionary representing a valid query structure for the current API model.
     """
     return {
         "modality": "bulk",
@@ -91,8 +100,7 @@ def predict_query(
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (v2.0) for
-    prediction and retrieves samples.
+    Sends a query to the Synthesize Bio API for prediction and retrieves samples.
 
     Parameters
     ----------
@@ -132,7 +140,7 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    api_url = f"{API_BASE_URL}/api/model/v2.0"
+    api_url = f"{API_BASE_URL}/api/model/{API_VERSION}"
 
     validate_query(query)
 
@@ -204,7 +212,7 @@ def predict_query(
 
 def validate_query(query: dict) -> None:
     """
-    Validates the structure and contents of the query based on the v2.0 model.
+    Validates the structure and contents of the query based on the current API model.
 
     Parameters
     ----------
@@ -216,7 +224,7 @@ def validate_query(query: dict) -> None:
     TypeError
         If the query is not a dictionary.
     ValueError
-        If the query is missing required keys for the v2.0 model.
+        If the query is missing required keys for the current API model.
     """
     if not isinstance(query, dict):
         raise TypeError(
@@ -235,7 +243,7 @@ def validate_query(query: dict) -> None:
 
 def validate_modality(query: dict) -> None:
     """
-    Validates the modality in the query is allowed for the v2.0 model.
+    Validates the modality in the query is allowed for the current API model.
 
     Parameters
     ----------
@@ -247,7 +255,7 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-    allowed_modalities = MODEL_MODALITIES["v2.0"]
+    allowed_modalities = MODEL_MODALITIES[API_VERSION]
 
     modality_key = "modality"
     if modality_key not in query:
@@ -268,12 +276,12 @@ def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     expression : pd.DataFrame
-        A DataFrame containing raw counts expression data.
+            A DataFrame containing raw counts expression data.
 
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing log1p(CPM) data.
+            A DataFrame containing log1p(CPM) data.
     """
     expression_numeric = (
         expression.apply(pd.to_numeric, errors="coerce").fillna(0).clip(lower=0)
