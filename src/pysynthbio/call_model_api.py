@@ -18,7 +18,7 @@ except ImportError:
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {"v2.0": {"bulk"}}
+MODEL_MODALITIES = {"v2.2": {"bulk"}}
 
 
 def get_valid_modalities() -> Set[str]:
@@ -30,7 +30,7 @@ def get_valid_modalities() -> Set[str]:
     Set[str]
         A set containing the valid modality strings.
     """
-    return MODEL_MODALITIES["v2.0"]
+    return MODEL_MODALITIES["v2.2"]
 
 
 def get_valid_modes() -> Set[str]:
@@ -47,12 +47,12 @@ def get_valid_modes() -> Set[str]:
 
 def get_valid_query() -> dict:
     """
-    Generates a sample query for prediction and validation for the v2.0 model.
+    Generates a sample query for prediction and validation for the v2.2 model.
 
     Returns
     -------
     dict
-        A dictionary representing a valid query structure for v2.0.
+        A dictionary representing a valid query structure for v2.2.
     """
     return {
         "modality": "bulk",
@@ -91,7 +91,7 @@ def predict_query(
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
     """
-    Sends a query to the Synthesize Bio API (v2.0) for
+    Sends a query to the Synthesize Bio API (v2.2) for
     prediction and retrieves samples.
 
     Parameters
@@ -132,7 +132,7 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    api_url = f"{API_BASE_URL}/api/model/v2.0"
+    api_url = f"{API_BASE_URL}/api/model/v2.2"
 
     validate_query(query)
 
@@ -204,7 +204,7 @@ def predict_query(
 
 def validate_query(query: dict) -> None:
     """
-    Validates the structure and contents of the query based on the v2.0 model.
+    Validates the structure and contents of the query based on the v2.2 model.
 
     Parameters
     ----------
@@ -216,7 +216,7 @@ def validate_query(query: dict) -> None:
     TypeError
         If the query is not a dictionary.
     ValueError
-        If the query is missing required keys for the v2.0 model.
+        If the query is missing required keys for the v2.2 model.
     """
     if not isinstance(query, dict):
         raise TypeError(
@@ -235,7 +235,7 @@ def validate_query(query: dict) -> None:
 
 def validate_modality(query: dict) -> None:
     """
-    Validates the modality in the query is allowed for the v2.0 model.
+    Validates the modality in the query is allowed for the v2.2 model.
 
     Parameters
     ----------
@@ -247,7 +247,7 @@ def validate_modality(query: dict) -> None:
     ValueError
         If the modality key is missing, or the selected modality is not allowed.
     """
-    allowed_modalities = MODEL_MODALITIES["v2.0"]
+    allowed_modalities = MODEL_MODALITIES["v2.2"]
 
     modality_key = "modality"
     if modality_key not in query:

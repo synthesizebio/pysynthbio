@@ -38,13 +38,13 @@ skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 def test_predict_query_live_call_success():
     """
-    Tests a live call to predict_query for the v2.0 model.
+    Tests a live call to predict_query for the v2.2 model.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
     Requires the API server to be running at API_BASE_URL.
     NOTE: This is more of an integration test as it makes a real network call.
           For true unit tests, `requests.post` should be mocked.
     """
-    print("\nTesting live predict_query call for v2.0...")
+    print("\nTesting live predict_query call for v2.2...")
 
     try:
         test_query = get_valid_query()
@@ -57,47 +57,47 @@ def test_predict_query_live_call_success():
             query=test_query,
             as_counts=True,
         )
-        print("predict_query call successful for v2.0.")
+        print("predict_query call successful for v2.2.")
     except ValueError as e:
-        pytest.fail(f"predict_query for v2.0 raised ValueError: {e}")
+        pytest.fail(f"predict_query for v2.2 raised ValueError: {e}")
     except KeyError as e:
-        pytest.fail(f"predict_query for v2.0 raised KeyError (API key issue?): {e}")
+        pytest.fail(f"predict_query for v2.2 raised KeyError (API key issue?): {e}")
     except Exception as e:
-        pytest.fail(f"predict_query for v2.0 raised unexpected Exception: {e}")
+        pytest.fail(f"predict_query for v2.2 raised unexpected Exception: {e}")
 
-    assert isinstance(results, dict), "Result for v2.0 should be a dictionary"
-    assert (
-        "metadata" in results
-    ), "Result dictionary for v2.0 should contain 'metadata' key"
-    assert (
-        "expression" in results
-    ), "Result dictionary for v2.0 should contain 'expression' key"
+    assert isinstance(results, dict), "Result for v2.2 should be a dictionary"
+    assert "metadata" in results, (
+        "Result dictionary for v2.2 should contain 'metadata' key"
+    )
+    assert "expression" in results, (
+        "Result dictionary for v2.2 should contain 'expression' key"
+    )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(
-        metadata_df, pd.DataFrame
-    ), "'metadata' for v2.0 should be a pandas DataFrame"
-    assert isinstance(
-        expression_df, pd.DataFrame
-    ), "'expression' for v2.0 should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), (
+        "'metadata' for v2.2 should be a pandas DataFrame"
+    )
+    assert isinstance(expression_df, pd.DataFrame), (
+        "'expression' for v2.2 should be a pandas DataFrame"
+    )
 
-    assert (
-        not metadata_df.empty
-    ), "Metadata DataFrame for v2.0 should not be empty for a valid query"
-    assert (
-        not expression_df.empty
-    ), "Expression DataFrame for v2.0 should not be empty for a valid query"
+    assert not metadata_df.empty, (
+        "Metadata DataFrame for v2.2 should not be empty for a valid query"
+    )
+    assert not expression_df.empty, (
+        "Expression DataFrame for v2.2 should not be empty for a valid query"
+    )
 
-    print("Assertions passed for v2.0.")
+    print("Assertions passed for v2.2.")
 
 
 # Add a mocked version of the API call test
 @patch("pysynthbio.call_model_api.requests.post")
 def test_predict_query_mocked_call_success(mock_post):
     """
-    Tests a mocked call to predict_query for the v2.0 model.
+    Tests a mocked call to predict_query for the v2.2 model.
     This test doesn't require an API key or actual API server.
     """
     # Save the original API key state
@@ -154,7 +154,7 @@ def test_predict_query_mocked_call_success(mock_post):
         }
         mock_post.return_value = mock_response
 
-        print("\nTesting mocked predict_query call for v2.0...")
+        print("\nTesting mocked predict_query call for v2.2...")
 
         try:
             test_query = get_valid_query()
@@ -167,30 +167,30 @@ def test_predict_query_mocked_call_success(mock_post):
                 query=test_query,
                 as_counts=True,
             )
-            print("predict_query mocked call successful for v2.0.")
+            print("predict_query mocked call successful for v2.2.")
         except Exception as e:
-            pytest.fail(f"predict_query for v2.0 raised unexpected Exception: {e}")
+            pytest.fail(f"predict_query for v2.2 raised unexpected Exception: {e}")
 
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(results, dict), "Result for v2.0 should be a dictionary"
-        assert (
-            "metadata" in results
-        ), "Result dictionary for v2.0 should contain 'metadata' key"
-        assert (
-            "expression" in results
-        ), "Result dictionary for v2.0 should contain 'expression' key"
+        assert isinstance(results, dict), "Result for v2.2 should be a dictionary"
+        assert "metadata" in results, (
+            "Result dictionary for v2.2 should contain 'metadata' key"
+        )
+        assert "expression" in results, (
+            "Result dictionary for v2.2 should contain 'expression' key"
+        )
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(
-            metadata_df, pd.DataFrame
-        ), "'metadata' for v2.0 should be a pandas DataFrame"
-        assert isinstance(
-            expression_df, pd.DataFrame
-        ), "'expression' for v2.0 should be a pandas DataFrame"
+        assert isinstance(metadata_df, pd.DataFrame), (
+            "'metadata' for v2.2 should be a pandas DataFrame"
+        )
+        assert isinstance(expression_df, pd.DataFrame), (
+            "'expression' for v2.2 should be a pandas DataFrame"
+        )
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
@@ -201,7 +201,7 @@ def test_predict_query_mocked_call_success(mock_post):
         assert list(expression_df.iloc[0]) == [100, 200, 300]
         assert list(expression_df.iloc[1]) == [150, 250, 350]
 
-        print("Assertions passed for v2.0 mocked call.")
+        print("Assertions passed for v2.2 mocked call.")
 
     finally:
         # Restore original API key state
@@ -285,11 +285,11 @@ def test_get_valid_modalities():
     """Tests if get_valid_modalities returns the expected structure (a set)."""
     modalities = get_valid_modalities()
     assert isinstance(modalities, set)
-    assert modalities == MODEL_MODALITIES["v2.0"]
+    assert modalities == MODEL_MODALITIES["v2.2"]
 
 
 def test_get_valid_query_structure():
-    """Tests get_valid_query returns the correct structure for the v2.0 model."""
+    """Tests get_valid_query returns the correct structure for the v2.2 model."""
     query = get_valid_query()
     expected_keys = {"inputs", "mode", "modality"}
     assert isinstance(query, dict)
@@ -317,7 +317,7 @@ VALID_QUERY = {
 
 
 def test_validate_query_valid():
-    """Tests validate_query passes for a valid v2.0 query."""
+    """Tests validate_query passes for a valid v2.2 query."""
     try:
         validate_query(VALID_QUERY)
         print("validate_query passed as expected.")
