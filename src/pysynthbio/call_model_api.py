@@ -55,14 +55,14 @@ def get_valid_modes() -> Set[str]:
 
 
 def get_valid_query() -> dict:
-    f"""
-	Generates a sample query for prediction and validation for the {API_VERSION} model.
+    """
+    Generates a sample query for prediction and validation for the current API model.
 
-	Returns
-	-------
-	dict
-		A dictionary representing a valid query structure for {API_VERSION}.
-	"""
+    Returns
+    -------
+    dict
+        A dictionary representing a valid query structure for the current API model.
+    """
     return {
         "modality": "bulk",
         "mode": "sample generation",
@@ -99,36 +99,35 @@ def predict_query(
     as_counts: bool = True,
     auto_authenticate: bool = True,
 ) -> Dict[str, pd.DataFrame]:
-    f"""
-	Sends a query to the Synthesize Bio API ({API_VERSION}) for
-	prediction and retrieves samples.
+    """
+    Sends a query to the Synthesize Bio API for prediction and retrieves samples.
 
-	Parameters
-	----------
-	query : dict
-		A dictionary representing the query data to send to the API.
-		Use `get_valid_query()` to generate an example.
-	as_counts : bool, optional
-		If False, transforms the predicted expression counts into
-		logCPM (default is True, returning counts).
-	auto_authenticate : bool, optional
-		If True and no API token is found, will prompt the user to
-		input one (default is True).
+    Parameters
+    ----------
+    query : dict
+        A dictionary representing the query data to send to the API.
+        Use `get_valid_query()` to generate an example.
+    as_counts : bool, optional
+        If False, transforms the predicted expression counts into
+        logCPM (default is True, returning counts).
+    auto_authenticate : bool, optional
+        If True and no API token is found, will prompt the user to
+        input one (default is True).
 
-	Returns
-	-------
-	dict
-		metadata: pd.DataFrame containing metadata for each sample
-		expression: pd.DataFrame containing expression data for each sample
+    Returns
+    -------
+    dict
+        metadata: pd.DataFrame containing metadata for each sample
+        expression: pd.DataFrame containing expression data for each sample
 
-	Raises
-	-------
-	KeyError
-		If the SYNTHESIZE_API_KEY environment variable is not set and
-		auto_authenticate is False.
-	ValueError
-		If API fails or response is invalid.
-	"""
+    Raises
+    -------
+    KeyError
+        If the SYNTHESIZE_API_KEY environment variable is not set and
+        auto_authenticate is False.
+    ValueError
+        If API fails or response is invalid.
+    """
     # Check if token is available and prompt if needed
     if not has_synthesize_token():
         if auto_authenticate:
@@ -212,21 +211,21 @@ def predict_query(
 
 
 def validate_query(query: dict) -> None:
-    f"""
-	Validates the structure and contents of the query based on the {API_VERSION} model.
+    """
+    Validates the structure and contents of the query based on the current API model.
 
-	Parameters
-	----------
-	query : dict
-		The query dictionary.
+    Parameters
+    ----------
+    query : dict
+        The query dictionary.
 
-	Raises
-	-------
-	TypeError
-		If the query is not a dictionary.
-	ValueError
-		If the query is missing required keys for the {API_VERSION} model.
-	"""
+    Raises
+    -------
+    TypeError
+        If the query is not a dictionary.
+    ValueError
+        If the query is missing required keys for the current API model.
+    """
     if not isinstance(query, dict):
         raise TypeError(
             f"Expected `query` to be a dictionary, but got {type(query).__name__}"
@@ -243,19 +242,19 @@ def validate_query(query: dict) -> None:
 
 
 def validate_modality(query: dict) -> None:
-    f"""
-	Validates the modality in the query is allowed for the {API_VERSION} model.
+    """
+    Validates the modality in the query is allowed for the current API model.
 
-	Parameters
-	----------
-	query : dict
-		A dictionary containing the query data.
+    Parameters
+    ----------
+    query : dict
+        A dictionary containing the query data.
 
-	Raises
-	-------
-	ValueError
-		If the modality key is missing, or the selected modality is not allowed.
-	"""
+    Raises
+    -------
+    ValueError
+        If the modality key is missing, or the selected modality is not allowed.
+    """
     allowed_modalities = MODEL_MODALITIES[API_VERSION]
 
     modality_key = "modality"
