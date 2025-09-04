@@ -1,0 +1,14 @@
+{# Override the Alabaster sidebar logo to link externally #}
+{% if logo and theme_logo_only|tobool %}
+<p class="logo">
+  <a href="https://www.synthesize.bio/" target="_blank" rel="noopener">
+    <img class="logo" src="{{ pathto('_static/' ~ logo, 1) }}" alt="Logo of {{ project }}"/>
+  </a>
+</p>
+{% elif logo %}
+<p class="logo">
+  <a href="https://www.synthesize.bio/" target="_blank" rel="noopener">
+    <img class="logo" src="{{ pathto('_static/' ~ logo, 1) }}" alt="Logo of {{ project }}"/>
+  </a>
+</p>
+{% endif %}

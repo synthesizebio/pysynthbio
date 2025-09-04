@@ -16,7 +16,7 @@ release: str = "0.0.1"
 
 extensions: list[str] = []
 
-templates_path: list[str] = []
+templates_path: list[str] = ["_templates"]
 exclude_patterns: list[str] = ["_build", "Thumbs.db", ".DS_Store", ".venv", "venv"]
 
 # Optional: If you have other file types or want to be explicit
@@ -31,4 +31,12 @@ html_theme: str = "alabaster"
 html_static_path: list[str] = ["_static"]
 html_css_files: list[str] = ["custom.css"]
 html_logo: str = "_static/logo.png"
-html_favicon: str = "assets/logomark.png"
+
+# Ensure our about.html override is used
+html_sidebars: dict[str, list[str]] = {
+    "**": [
+        "about.html",
+        "navigation.html",
+        "searchbox.html",
+    ]
+}

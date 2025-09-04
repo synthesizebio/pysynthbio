@@ -75,3 +75,18 @@ div.sphinxsidebar input {
 div.sphinxsidebar ::placeholder {
   color: rgba(255, 255, 255, 0.85);
 }
+
+/* Hide the automatic "Navigation" header in the sidebar */
+.sphinxsidebarwrapper > h3:first-of-type {
+  display: none;
+}
+
+/* Add vertical spacing between sidebar menu items */
+div.sphinxsidebar ul li {
+  margin: 8px 0;
+}
+
+div.sphinxsidebar ul li a {
+  display: inline-block;
+  padding: 2px 0;
+}
