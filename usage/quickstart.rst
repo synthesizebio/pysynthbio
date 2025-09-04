@@ -140,7 +140,14 @@ When you're done using the API, you can clear the token from your environment:
 Troubleshooting Note
 --------------------
 
-If you get this error on a Mac when using `use_keyring=True`
+Free usage of Synthesize Bio is limited to 100 samples a week and 1000 cells a week. 
+If you exceed this limit you may recieve a message like: 
+
+.. code-block:: none 
+    The limit is 100 samples per week. You have 0 samples remaining this week. If you need to generate more samples, please contact us.'
+
+Please email contact us info@synthesize.bio for more information.
+
 
 If you get this error on a Mac when using ``use_keyring=True``:
 
