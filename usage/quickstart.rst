@@ -1,7 +1,11 @@
 Quickstart
 ==========
 
-This guide will help you get started with pysynthbio quickly.
+``pysynthbio`` is a Python package that provides a convenient interface to the `Synthesize Bio <https://www.synthesize.bio/>`_ API, allowing users to generate realistic gene expression data based on specified biological conditions.
+This package enables researchers to easily access AI-generated transcriptomic data for various modalities including bulk RNA-seq, single-cell RNA-seq, microarray data, and more.
+
+Alternatively, you can AI generate datasets from our `platform website <https://app.synthesize.bio/datasets/>`_.
+This guide will help you get started with ``pysynthbio`` quickly.
 
 Get your API key
 ----------------
@@ -23,8 +27,8 @@ Interactive Setup
     pysynthbio.set_synthesize_token(use_keyring=True)
 
 
-If `use_keyring=True` the token will persist after you close your session and you will be able to reload it. 
-If `use_keyring=False` the token will disappear after the session. 
+If ``use_keyring=True`` the token will persist after you close your session and you will be able to reload it.
+If ``use_keyring=False`` the token will disappear after the session.
 
 Using Environment Variables
 ---------------------------
@@ -54,7 +58,7 @@ If you've previously stored your token in the system keyring:
 
 .. code-block:: python
 
-    import synthbio
+    import pysynthbio
 
     # Attempt to load from keyring
     pysynthbio.load_synthesize_token_from_keyring()
@@ -124,6 +128,7 @@ Cleanup
 When you're done using the API, you can clear the token from your environment:
 
 .. code-block:: python
+
     # Clear from current session
     pysynthbio.clear_synthesize_token()
 
@@ -137,9 +142,13 @@ Troubleshooting Note
 
 If you get this error on a Mac when using `use_keyring=True`
 
-`<stdin>:1: UserWarning: Failed to store token in keyring:`
-`Can't store password on keychain: (-25244, 'Unknown Error')`
+If you get this error on a Mac when using ``use_keyring=True``:
 
-It's because your IDE has not been given access to Keychain. 
-Go to System Preferences > Security & Privacy > Privacy > Full Disk Access
-Add the terminal or IDE you are working from (like VS Code, PyCharm). 
+.. code-block:: none
+
+   <stdin>:1: UserWarning: Failed to store token in keyring:
+   Can't store password on keychain: (-25244, 'Unknown Error')
+
+It's because your IDE has not been given access to Keychain.
+Go to System Preferences > Security & Privacy > Privacy > Full Disk Access.
+Add the terminal or IDE you are working from (like VS Code, PyCharm).

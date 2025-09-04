@@ -1,0 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+/* Apply Inter as the default sans-serif font */
+html, body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+}
+
+/* Ensure headings inherit the body font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: inherit;
+}
+
+/* Add a bit more space between the sidebar logo and the project title */
+.sphinxsidebarwrapper p.logo {
+  margin-bottom: 12px;
+}
+
+/* Hide the sidebar text title (keep logo only) */
+.sphinxsidebarwrapper h1.logo {
+  display: none;
+}

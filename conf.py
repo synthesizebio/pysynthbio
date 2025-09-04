@@ -28,4 +28,6 @@ source_suffix: dict[str, str] = {
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme: str = "alabaster"
-html_static_path: list[str] = []
+html_static_path: list[str] = ["_static"]
+html_css_files: list[str] = ["custom.css"]
+html_logo: str = "_static/logo.png"
