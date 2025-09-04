@@ -137,17 +137,15 @@ When you're done using the API, you can clear the token from your environment:
 
 
 
+Rate Limits
+-----------
+
+Free usage of Synthesize Bio is limited. 
+If you exceed this limit you may receive a error from the API explainin the limit. 
+If you need to generate more samples, please contact us at info@synthesize.bio for more information.
+
 Troubleshooting Note
 --------------------
-
-Free usage of Synthesize Bio is limited on a per week basis. 
-If you exceed this limit you may recieve a message like: 
-
-.. code-block:: none 
-    The limit is 100 samples per week. You have 0 samples remaining this week. If you need to generate more samples, please contact us.'
-
-Please contact us atinfo@synthesize.bio for more information.
-
 
 If you get this error on a Mac when using ``use_keyring=True``:
 
