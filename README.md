@@ -4,6 +4,8 @@
 
 Alternatively, you can AI generate datasets from our [platform website](https://app.synthesize.bio/datasets/).
 
+[Go here for the full docs website](https://synthesizebio.github.io/pysynthbio/)
+
 ## Installation
 
 To start using pysynthbio, first you need to have an account with synthesize.bio.
