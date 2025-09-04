@@ -31,3 +31,4 @@ html_theme: str = "alabaster"
 html_static_path: list[str] = ["_static"]
 html_css_files: list[str] = ["custom.css"]
 html_logo: str = "_static/logo.png"
+html_favicon: str = "assets/logomark.png"
