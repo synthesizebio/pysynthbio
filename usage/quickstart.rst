@@ -2,17 +2,16 @@ Quickstart
 ==========
 
 ``pysynthbio`` is a Python package that provides a convenient interface to the `Synthesize Bio <https://www.synthesize.bio/>`_ API, allowing users to generate realistic gene expression data based on specified biological conditions.
-This package enables researchers to easily access AI-generated transcriptomic data for various modalities including bulk RNA-seq, single-cell RNA-seq, microarray data, and more.
+This package enables researchers to easily access AI-generated transcriptomic data for various modalities, including bulk RNA-seq and single-cell RNA-seq.
 
-Alternatively, you can AI generate datasets from our `platform website <https://app.synthesize.bio/datasets/>`_.
+To generate datasets without code, use our `web platform <https://app.synthesize.bio/datasets/>`_.
 This guide will help you get started with ``pysynthbio`` quickly.
 
 Get your API key
 ----------------
 
-Go to `<https://app.synthesize.bio/profile>`_ to generate an API key. 
-Go to your profile, then click "+ Create Key" and then "Create Key". 
-Copy that key and keep that page handy until you get your token set up. 
+Visit `<https://app.synthesize.bio/profile>`_ to generate an API key.
+Click "+ Create Key" then "Create Key", and copy your key.
 
 There are multiple ways to set up your token:
 
@@ -23,21 +22,22 @@ Interactive Setup
     
     import pysynthbio
 
-    # This will open a browser to the token creation page and prompt for input
+    # This opens a browser to the token creation page and prompts for input
     pysynthbio.set_synthesize_token(use_keyring=True)
 
-
-If ``use_keyring=True`` the token will persist after you close your session and you will be able to reload it.
-If ``use_keyring=False`` the token will disappear after the session.
+If ``use_keyring=True``, the token persists across sessions; if ``use_keyring=False``, it is only set for the current session.
+To enable keyring persistence, install ``keyring``: ``pip install keyring``.
 
 Using Environment Variables
 ---------------------------
 
-You can set the `SYNTHESIZE_API_KEY` environment variable directly:
+You can set the ``SYNTHESIZE_API_KEY`` environment variable directly:
 
 .. code-block:: bash
 
-    export SYNTHESIZE_API_KEY=your_api_token_here
+    export SYNTHESIZE_API_KEY=your_api_token_here  # macOS/Linux
+    # Windows PowerShell:
+    # $Env:SYNTHESIZE_API_KEY='your_api_token_here'
 
 
 Non-Interactive Setup
@@ -49,7 +49,7 @@ For scripts running in non-interactive environments:
 
     import pysynthbio
 
-    # Supply token directly (but don't write it in scripts)
+    # Supply token directly (avoid hardcoding secrets in source control)
     pysynthbio.set_synthesize_token(token="SECURE_SECRET_HERE")
 
 Using the System Keyring
@@ -86,7 +86,8 @@ To see which modalities are supported by the current model, use ``get_valid_moda
 Generate Example Queries
 ------------------------
 
-The structure of the query required by the API is fixed for the current supported model (v1.0). You can use ``get_valid_query`` to get a correctly structured example dictionary.
+The structure of the query required by the API is fixed for the current supported model.
+You can use ``get_valid_query`` to get a correctly structured example dictionary.
 
 .. code-block:: python
 
@@ -96,17 +97,18 @@ The structure of the query required by the API is fixed for the current supporte
 Get Predictions
 ----------------
 
-Use ``predict_query`` to send a query to the API and get expression predictions. You'll typically use ``get_valid_query`` to help structure your request. This function also requires the API key.
+Use ``predict_query`` to send a query to the API and get expression predictions.
+You'll typically use ``get_valid_query`` to help structure your request. This function also requires the API key.
 
 .. code-block:: python
 
     # You can modify the example_query or create your own following the structure
-    my_query = pysynthbio.get_valid_query() # Example: using the default valid query
+    my_query = pysynthbio.get_valid_query()  # Example: using the default valid query
     # Modify my_query as needed...
 
     results = pysynthbio.predict_query(
         query=my_query,
-        as_counts=True # Get results as estimated counts (default). Set to False for logCPM.
+        as_counts=True  # Get results as estimated counts (default); set to False for logCPM.
     )
 
     # Access results:
@@ -118,9 +120,9 @@ This covers the basic workflow: understanding the required query structure and m
 Security Notes
 --------------
 
-- The API token provides full access to your Synthesize Bio account
-- When using `use_keyring=True`, your token is stored securely in your system's credential manager
-- For production environments, consider using environment variables or secrets management tools
+- The API token provides full access to your Synthesize Bio account.
+- When using ``use_keyring=True``, your token is stored securely in your system's credential manager.
+- For production environments, consider using environment variables or secrets management tools.
 
 Cleanup
 -------
@@ -140,8 +142,8 @@ When you're done using the API, you can clear the token from your environment:
 Rate Limits
 -----------
 
-Free usage of Synthesize Bio is limited. 
-If you exceed this limit you may receive a error from the API explainin the limit. 
+Free usage of Synthesize Bio is limited.
+If you exceed this limit, you may receive an error from the API explaining the limit.
 If you need to generate more samples, please contact us at info@synthesize.bio for more information.
 
 Troubleshooting Note
@@ -154,6 +156,5 @@ If you get this error on a Mac when using ``use_keyring=True``:
    <stdin>:1: UserWarning: Failed to store token in keyring:
    Can't store password on keychain: (-25244, 'Unknown Error')
 
-It's because your IDE has not been given access to Keychain.
-Go to System Preferences > Security & Privacy > Privacy > Full Disk Access.
-Add the terminal or IDE you are working from (like VS Code, PyCharm).
+This occurs when your IDE or terminal does not have access to Keychain.
+Go to System Preferences > Security & Privacy > Privacy > Full Disk Access and add the terminal or IDE you are working from (for example, Terminal, iTerm, VS Code, or PyCharm).

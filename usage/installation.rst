@@ -10,7 +10,7 @@ To start using pysynthbio, first you need to have an account with synthesize.bio
 Standard Installation
 ---------------------
 
-Then on your machine you can install using pip:
+You can install the latest stable version using pip:
 
 .. code-block:: bash
 
@@ -44,7 +44,7 @@ Alternatively, you can install a specific version directly from its GitHub Relea
 Development Installation
 ------------------------
 
-For development purposes, you can install directly from the repository:
+Install the latest development version directly from the repository:
 
 .. code-block:: bash
 
