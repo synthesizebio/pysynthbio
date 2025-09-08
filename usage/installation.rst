@@ -5,7 +5,9 @@ Prerequisites
 -------------
 
 To start using pysynthbio, first you need to have an account with synthesize.bio.
-`Go here to create one <https://app.synthesize.bio/profile>`_.
+`Go here to create one <https://app.synthesize.bio/>`_.
+
+If you want to store your token in the system keyring, you need to install the ``keyring`` package.
 
 Standard Installation
 ---------------------
@@ -21,6 +23,17 @@ To ensure it installed correctly you can run:
 .. code-block:: bash
 
     pip show pysynthbio
+
+Development Installation
+------------------------
+
+Install the latest development version directly from the repository:
+
+.. code-block:: bash
+
+    git clone https://github.com/synthesizebio/pysynthbio.git
+    cd pysynthbio
+    pip install -e . 
 
 Installing from a GitHub Release
 ---------------------------------
@@ -40,14 +53,3 @@ Alternatively, you can install a specific version directly from its GitHub Relea
 
     # Example using a downloaded source distribution
     pip install /path/to/pysynthbio-2.2.0.tar.gz
-
-Development Installation
-------------------------
-
-Install the latest development version directly from the repository:
-
-.. code-block:: bash
-
-    git clone https://github.com/synthesizebio/pysynthbio.git
-    cd pysynthbio
-    pip install -e . 
