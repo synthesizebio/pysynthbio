@@ -50,3 +50,6 @@ The following are the valid values or expected formats for selected metadata key
 - ``tissue_ontology_id``: Requires a `UBERON ID <https://www.ebi.ac.uk/ols/ontologies/uberon>`_.
 
 We highly recommend using the `EMBL-EBI Ontology Lookup Service <https://www.ebi.ac.uk/ols4/>`_ to find valid IDs for your metadata.
+
+The GEM-1 model has a limited acceptable range of metadata input values. 
+If you provide a value that is not in the acceptable range, the API will return an error.
