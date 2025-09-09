@@ -144,7 +144,7 @@ Rate Limits
 
 Free usage of Synthesize Bio is limited.
 If you exceed this limit, you may receive an error from the API explaining the limit.
-If you need to generate more samples, please contact us at info@synthesize.bio for more information.
+If you need to generate more samples, please contact us at support@synthesize.bio for more information.
 
 Troubleshooting Note
 --------------------

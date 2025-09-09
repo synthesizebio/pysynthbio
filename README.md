@@ -6,6 +6,8 @@ To generate datasets without code, use our [web platform](https://app.synthesize
 
 [See the full documentation here](https://synthesizebio.github.io/pysynthbio/)
 
+For questions, suggestions, and support, email us at [support@synthesize.bio](mailto:support@synthesize.bio)
+
 ## Installation
 
 To start using pysynthbio, first you need to have an account with synthesize.bio.
