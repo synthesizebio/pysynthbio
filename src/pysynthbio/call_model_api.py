@@ -184,7 +184,10 @@ def predict_query(
 
     except requests.exceptions.HTTPError as err:
         raise ValueError(
-            f"API request to {api_url} failed with status {err.response.status_code}: {err.response.text}"
+            (
+                f"API request to {api_url} failed with status "
+                f"{err.response.status_code}: {err.response.text}"
+            )
         ) from err
     except requests.exceptions.RequestException as err:
         raise ValueError(f"API request failed due to a network issue: {err}") from err
