@@ -95,9 +95,9 @@ def get_valid_query() -> dict:
 
 def predict_query(
     query: dict,
-    mode: str = "sample generation",
     as_counts: bool = True,
     auto_authenticate: bool = True,
+    api_url: str = f"{API_BASE_URL}/api/model/{API_VERSION}",
 ) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API for prediction and retrieves samples.
@@ -113,6 +113,8 @@ def predict_query(
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
+    api_url : str, optional
+        The URL of the API to use. Defaults to the current API version.
 
     Returns
     -------
@@ -139,9 +141,11 @@ def predict_query(
                 "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
+    # Check the API URL is valid
+    if not api_url.startswith(API_BASE_URL):
+        raise ValueError(f"API URL must start with {API_BASE_URL}. " f"Got: {api_url}")
 
-    api_url = f"{API_BASE_URL}/api/model/{API_VERSION}"
-
+    # Validate the query
     validate_query(query)
 
     # Source field for reporting
