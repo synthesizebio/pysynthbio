@@ -163,8 +163,7 @@ def predict_query(
 
     if response.status_code != 200:
         raise ValueError(
-            f"API request to {api_url} failed with status",
-            f"{response.status_code}: {response.text}",
+            f"API request to {api_url} failed with status {response.status_code}: {response.text}"
         )
     try:
         content = response.json()
@@ -198,7 +197,6 @@ def predict_query(
 
         # Since each output now produces exactly 1 row, simplify metadata collection:
         metadata_rows = [output["metadata"] for output in content["outputs"]]
-        metadata = pd.DataFrame(metadata_rows)
         metadata = pd.DataFrame(metadata_rows)
     else:
         raise ValueError(
