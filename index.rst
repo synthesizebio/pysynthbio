@@ -11,9 +11,8 @@ pysynthbio documentation
 
    usage/installation
    usage/quickstart
+   usage/query_design
    Source Code <https://github.com/synthesizebio/pysynthbio>
    Report a bug <https://github.com/synthesizebio/pysynthbio/issues>
-   usage/v2
-   usage/v1
    usage/license
 
