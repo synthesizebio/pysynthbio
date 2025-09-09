@@ -1,7 +1,5 @@
-GEM-1 Model API
+Designing Queries for Models
 ===============
-
-The following sections are specific to the GEM-1 model API.
 
 
 Valid Metadata Keys
@@ -51,5 +49,5 @@ The following are the valid values or expected formats for selected metadata key
 
 We highly recommend using the `EMBL-EBI Ontology Lookup Service <https://www.ebi.ac.uk/ols4/>`_ to find valid IDs for your metadata.
 
-The GEM-1 model has a limited acceptable range of metadata input values. 
+Models have a limited acceptable range of metadata input values. 
 If you provide a value that is not in the acceptable range, the API will return an error.

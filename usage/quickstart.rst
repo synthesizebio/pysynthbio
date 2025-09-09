@@ -103,12 +103,12 @@ You'll typically use ``get_valid_query`` to help structure your request. This fu
 .. code-block:: python
 
     # You can modify the example_query or create your own following the structure
-    my_query = pysynthbio.get_valid_query()  # Example: using the default valid query
+    my_query = pysynthbio.get_valid_query() # Example: using the default valid query
     # Modify my_query as needed...
 
     results = pysynthbio.predict_query(
         query=my_query,
-        as_counts=True  # Get results as estimated counts (default); set to False for logCPM.
+        as_counts=True # Get results as estimated counts (default); set to False for logCPM.
     )
 
     # Access results:
