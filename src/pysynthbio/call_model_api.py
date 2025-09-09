@@ -29,6 +29,9 @@ API_BASE_URL = "https://app.synthesize.bio"
 
 MODEL_MODALITIES = {API_VERSION: {"bulk"}}
 
+# Default timeout (seconds) for outbound API requests
+DEFAULT_TIMEOUT = 30
+
 
 def get_valid_modalities() -> Set[str]:
     """
@@ -151,35 +154,40 @@ def predict_query(
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    response = requests.post(
-        url=api_url,
-        headers={
-            "Accept": "application/json",
-            "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-            "Content-Type": "application/json",
-        },
-        json=query,
-    )
-
-    if response.status_code != 200:
-        raise ValueError(
-            f"API request to {api_url} failed with status {response.status_code}: {response.text}"
-        )
     try:
-        content = response.json()
-        if (
-            isinstance(content, list)
-            and len(content) == 1
-            and isinstance(content[0], dict)
-        ):
-            content = content[0]
-        elif not isinstance(content, dict):
-            raise ValueError(f"API response is not a JSON object: {response.text}")
+        response = requests.post(
+            url=api_url,
+            headers={
+                "Accept": "application/json",
+                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
+                "Content-Type": "application/json",
+            },
+            json=query,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        response.raise_for_status()
 
-    except json.JSONDecodeError as err:
+        try:
+            content = response.json()
+            if (
+                isinstance(content, list)
+                and len(content) == 1
+                and isinstance(content[0], dict)
+            ):
+                content = content[0]
+            elif not isinstance(content, dict):
+                raise ValueError(f"API response is not a JSON object: {response.text}")
+        except json.JSONDecodeError as err:
+            raise ValueError(
+                f"Failed to decode JSON from API response: {response.text}"
+            ) from err
+
+    except requests.exceptions.HTTPError as err:
         raise ValueError(
-            f"Failed to decode JSON from API response: {response.text}"
+            f"API request to {api_url} failed with status {err.response.status_code}: {err.response.text}"
         ) from err
+    except requests.exceptions.RequestException as err:
+        raise ValueError(f"API request failed due to a network issue: {err}") from err
 
     for key in ("error", "errors"):
         if key in content:
