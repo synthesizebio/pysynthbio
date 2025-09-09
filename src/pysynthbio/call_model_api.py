@@ -146,7 +146,7 @@ def predict_query(
             )
     # Check the API URL is valid
     if not api_url.startswith(API_BASE_URL):
-        raise ValueError(f"API URL must start with {API_BASE_URL}. " f"Got: {api_url}")
+        raise ValueError(f"API URL must start with {API_BASE_URL}. Got: {api_url}")
 
     # Validate the query
     validate_query(query)

@@ -69,29 +69,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for {API_VERSION} raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), f"Result for {API_VERSION} should be a dictionary"
-    assert (
-        "metadata" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-    assert (
-        "expression" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    assert "metadata" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+    )
+    assert "expression" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(
-        metadata_df, pd.DataFrame
-    ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-    assert isinstance(
-        expression_df, pd.DataFrame
-    ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), (
+        f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+    )
+    assert isinstance(expression_df, pd.DataFrame), (
+        f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    )
 
-    assert (
-        not metadata_df.empty
-    ), f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
-    assert (
-        not expression_df.empty
-    ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert not metadata_df.empty, (
+        f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
+    assert not expression_df.empty, (
+        f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -179,25 +179,25 @@ def test_predict_query_mocked_call_success(mock_post):
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(
-            results, dict
-        ), f"Result for {API_VERSION} should be a dictionary"
-        assert (
-            "metadata" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-        assert (
-            "expression" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        assert isinstance(results, dict), (
+            f"Result for {API_VERSION} should be a dictionary"
+        )
+        assert "metadata" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+        )
+        assert "expression" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        )
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(
-            metadata_df, pd.DataFrame
-        ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-        assert isinstance(
-            expression_df, pd.DataFrame
-        ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(metadata_df, pd.DataFrame), (
+            f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+        )
+        assert isinstance(expression_df, pd.DataFrame), (
+            f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        )
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
