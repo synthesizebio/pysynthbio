@@ -29,6 +29,9 @@ API_BASE_URL = "https://app.synthesize.bio"
 
 MODEL_MODALITIES = {API_VERSION: {"bulk"}}
 
+# Default timeout (seconds) for outbound API requests
+DEFAULT_TIMEOUT = 30
+
 
 def get_valid_modalities() -> Set[str]:
     """
@@ -95,9 +98,9 @@ def get_valid_query() -> dict:
 
 def predict_query(
     query: dict,
-    mode: str = "sample generation",
     as_counts: bool = True,
     auto_authenticate: bool = True,
+    api_url: str = f"{API_BASE_URL}/api/model/{API_VERSION}",
 ) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API for prediction and retrieves samples.
@@ -113,6 +116,8 @@ def predict_query(
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
+    api_url : str, optional
+        The URL of the API to use. Defaults to the current API version.
 
     Returns
     -------
@@ -139,44 +144,53 @@ def predict_query(
                 "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
+    # Check the API URL is valid
+    if not api_url.startswith(API_BASE_URL):
+        raise ValueError(f"API URL must start with {API_BASE_URL}. Got: {api_url}")
 
-    api_url = f"{API_BASE_URL}/api/model/{API_VERSION}"
-
+    # Validate the query
     validate_query(query)
 
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    response = requests.post(
-        url=api_url,
-        headers={
-            "Accept": "application/json",
-            "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-            "Content-Type": "application/json",
-        },
-        json=query,
-    )
-
-    if response.status_code != 200:
-        raise ValueError(
-            f"API request to {api_url} failed with status",
-            f"{response.status_code}: {response.text}",
-        )
     try:
-        content = response.json()
-        if (
-            isinstance(content, list)
-            and len(content) == 1
-            and isinstance(content[0], dict)
-        ):
-            content = content[0]
-        elif not isinstance(content, dict):
-            raise ValueError(f"API response is not a JSON object: {response.text}")
+        response = requests.post(
+            url=api_url,
+            headers={
+                "Accept": "application/json",
+                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
+                "Content-Type": "application/json",
+            },
+            json=query,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        response.raise_for_status()
 
-    except json.JSONDecodeError as err:
+        try:
+            content = response.json()
+            if (
+                isinstance(content, list)
+                and len(content) == 1
+                and isinstance(content[0], dict)
+            ):
+                content = content[0]
+            elif not isinstance(content, dict):
+                raise ValueError(f"API response is not a JSON object: {response.text}")
+        except json.JSONDecodeError as err:
+            raise ValueError(
+                f"Failed to decode JSON from API response: {response.text}"
+            ) from err
+
+    except requests.exceptions.HTTPError as err:
         raise ValueError(
-            f"Failed to decode JSON from API response: {response.text}"
+            (
+                f"API request to {api_url} failed with status "
+                f"{err.response.status_code}: {err.response.text}"
+            )
         ) from err
+    except requests.exceptions.RequestException as err:
+        raise ValueError(f"API request failed due to a network issue: {err}") from err
 
     for key in ("error", "errors"):
         if key in content:
@@ -194,7 +208,6 @@ def predict_query(
 
         # Since each output now produces exactly 1 row, simplify metadata collection:
         metadata_rows = [output["metadata"] for output in content["outputs"]]
-        metadata = pd.DataFrame(metadata_rows)
         metadata = pd.DataFrame(metadata_rows)
     else:
         raise ValueError(
