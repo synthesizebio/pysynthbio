@@ -10,7 +10,7 @@ This guide will help you get started with ``pysynthbio`` quickly.
 Get your API key
 ----------------
 
-Visit `<https://app.synthesize.bio/profile>`_ to generate an API key.
+Visit `<https://app.synthesize.bio/account/api-keys>`_ to generate an API key.
 Click "+ Create Key" then "Create Key", and copy your key.
 
 There are multiple ways to set up your token:
@@ -19,7 +19,7 @@ Interactive Setup
 -----------------
 
 .. code-block:: python
-    
+
     import pysynthbio
 
     # This opens a browser to the token creation page and prompts for input
