@@ -44,11 +44,11 @@ def set_synthesize_token(use_keyring=False, token=None):
     """
 
     if token is None:
-        webbrowser.open("https://app.synthesize.bio/profile")
+        webbrowser.open("https://app.synthesize.bio/account/api-keys")
         token = getpass.getpass(
             prompt="Create an account at https://app.synthesize.bio/ \n"
-            "Go to your profile.\n"
-            "Click create token then copy it.\n"
+            "Go to your account page.\n"
+            "Click create API key then copy it.\n"
             "Paste token here and press enter: "
         )
 
