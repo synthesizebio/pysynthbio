@@ -26,7 +26,7 @@ Interactive Setup
     pysynthbio.set_synthesize_token(use_keyring=True)
 
 If ``use_keyring=True``, the token persists across sessions; if ``use_keyring=False``, it is only set for the current session.
-To enable keyring persistence, install ``keyring``: ``pip install keyring``.
+Keyring support is included by default in pysynthbio 2.2.1 and later.
 
 Using Environment Variables
 ---------------------------
