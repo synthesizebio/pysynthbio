@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=2.2.5",
     "pandas>=2.2.3",
     "requests",
+    "keyring>=23.0.0",
 ]
 
 [build-system]
