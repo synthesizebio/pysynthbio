@@ -67,8 +67,7 @@ def set_synthesize_token(use_keyring=False, token=None):
                 )
         else:
             warnings.warn(
-                "Package 'keyring' is not installed.",
-                "Token not stored in keyring.",
+                "Package 'keyring' is not installed. Token not stored in keyring.",
                 stacklevel=2,
             )
             print("To store token in keyring, install with: pip install keyring")
