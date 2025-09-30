@@ -96,9 +96,10 @@ def test_predict_query_live_call_success():
     print(f"Assertions passed for {API_VERSION}.")
 
 
-# Add a mocked version of the API call test
+# Add a mocked version of the API call test (bulk via async flow)
+@patch("pysynthbio.call_model_api.requests.get")
 @patch("pysynthbio.call_model_api.requests.post")
-def test_predict_query_mocked_call_success(mock_post):
+def test_predict_query_mocked_call_success(mock_post, mock_get):
     """
     Tests a mocked call to predict_query for the {API_VERSION} model.
     This test doesn't require an API key or actual API server.
@@ -110,52 +111,51 @@ def test_predict_query_mocked_call_success(mock_post):
         # Ensure API key is set for this test
         os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
 
-        # Create mock response matching the NEW data structure
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # POST /predict returns modelQueryId
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "bulk-xyz"}
+        mock_post.return_value = post_resp
+
+        # GETs: status running -> status ready -> download final JSON
+        get_status_running = MagicMock()
+        get_status_running.status_code = 200
+        get_status_running.json.return_value = {"status": "running"}
+
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/bulk.json",
+        }
+
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
             "outputs": [
                 {
-                    "counts": [100, 200, 300],  # Now 1D list instead of 2D
+                    "counts": [100, 200, 300],
                     "metadata": {
                         "sample_id": "test1",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "25",
                         "sex": "female",
                     },
-                    "classifier_probs": {
-                        "sex": {"female": 0.8, "male": 0.2},
-                        "age_years": {"20-30": 0.7, "30-40": 0.3},
-                    },
-                    "latents": {
-                        "biological": [0.1, 0.2, 0.3],
-                        "technical": [0.4, 0.5],
-                        "perturbation": [0.6],
-                    },
                 },
                 {
-                    "counts": [150, 250, 350],  # Second sample
+                    "counts": [150, 250, 350],
                     "metadata": {
                         "sample_id": "test2",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "30",
                         "sex": "male",
                     },
-                    "classifier_probs": {
-                        "sex": {"female": 0.3, "male": 0.7},
-                        "age_years": {"20-30": 0.4, "30-40": 0.6},
-                    },
-                    "latents": {
-                        "biological": [0.2, 0.3, 0.4],
-                        "technical": [0.5, 0.6],
-                        "perturbation": [0.7],
-                    },
                 },
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
-        mock_post.return_value = mock_response
+        mock_get.side_effect = [get_status_running, get_status_ready, get_download]
 
         print(f"\nTesting mocked predict_query call for {API_VERSION}...")
 
@@ -166,17 +166,14 @@ def test_predict_query_mocked_call_success(mock_post):
             pytest.fail(f"get_valid_query failed: {e}")
 
         try:
-            results = predict_query(
-                query=test_query,
-                as_counts=True,
-            )
+            results = predict_query(query=test_query, as_counts=True)
             print(f"predict_query mocked call successful for {API_VERSION}.")
         except Exception as e:
             pytest.fail(
                 f"predict_query for {API_VERSION} raised unexpected Exception: {e}"
             )
 
-        # Verify mock was called
+        # Verify mocks were called
         mock_post.assert_called_once()
 
         assert isinstance(results, dict), (
@@ -218,10 +215,11 @@ def test_predict_query_mocked_call_success(mock_post):
             del os.environ["SYNTHESIZE_API_KEY"]
 
 
-# Add test for auto-authentication
+# Add test for auto-authentication (bulk via async flow)
 @patch("pysynthbio.call_model_api.set_synthesize_token")
+@patch("pysynthbio.call_model_api.requests.get")
 @patch("pysynthbio.call_model_api.requests.post")
-def test_predict_query_auto_authenticate(mock_post, mock_set_token):
+def test_predict_query_auto_authenticate(mock_post, mock_get, mock_set_token):
     """Test auto authentication in predict_query."""
     # Save the original API key state
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
@@ -234,26 +232,32 @@ def test_predict_query_auto_authenticate(mock_post, mock_set_token):
         # Configure mocks
         mock_set_token.side_effect = mock_set_token_implementation
 
-        # Create mock response with NEW structure
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # POST /predict -> modelQueryId
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "bulk-abc"}
+        mock_post.return_value = post_resp
+
+        # Status ready -> then download
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/final.json",
+        }
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
             "outputs": [
                 {
-                    "counts": [1, 2, 3],  # 1D list
+                    "counts": [1, 2, 3],
                     "metadata": {"sample_id": "test1", "age_years": "25"},
-                    "classifier_probs": {"sex": {"female": 0.6, "male": 0.4}},
-                    "latents": {
-                        "biological": [0.1, 0.2],
-                        "technical": [0.3],
-                        "perturbation": [0.4],
-                    },
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
-        mock_post.return_value = mock_response
+        mock_get.side_effect = [get_status_ready, get_download]
 
         print("\nTesting auto-authentication in predict_query...")
 
@@ -410,19 +414,32 @@ def test_log_cpm_zero_counts():
     )
 
 
-# Additional test to specifically verify the new data structure handling
+# Additional test to specifically verify the new data structure handling (bulk async)
+@patch("pysynthbio.call_model_api.requests.get")
 @patch("pysynthbio.call_model_api.requests.post")
-def test_new_api_structure_handling(mock_post):
+def test_new_api_structure_handling(mock_post, mock_get):
     """Test that the updated code handles the new API structure correctly."""
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
 
     try:
         os.environ["SYNTHESIZE_API_KEY"] = "mock-api-key-for-test"
 
-        # Create mock response that exactly matches your real API structure
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
+        # POST returns modelQueryId
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "bulk-big"}
+        mock_post.return_value = post_resp
+
+        # Ready then huge download payload
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/big.json",
+        }
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
             "outputs": [
                 {
                     "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,
@@ -448,7 +465,7 @@ def test_new_api_structure_handling(mock_post):
             "gene_order": [f"ENSG{i:011d}" for i in range(44590)],
             "model_version": 2,
         }
-        mock_post.return_value = mock_response
+        mock_get.side_effect = [get_status_ready, get_download]
 
         # Test the predict_query function
         query = get_valid_query()
@@ -518,7 +535,6 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
         result = predict_query(
             q,
             modality="single_cell",
-            api_slug="gem-1-sc",
             api_base_url="http://localhost:3000",
         )
 
@@ -560,7 +576,6 @@ def test_predict_query_single_cell_failure(mock_post, mock_get):
             predict_query(
                 q,
                 modality="single_cell",
-                api_slug="gem-1-sc",
                 api_base_url="http://localhost:3000",
             )
     finally:
@@ -594,7 +609,6 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
             predict_query(
                 q,
                 modality="single_cell",
-                api_slug="gem-1-sc",
                 poll_interval_seconds=0,
                 poll_timeout_seconds=0,
                 api_base_url="http://localhost:3000",

@@ -106,7 +106,6 @@ def predict_query(
     modality: str = "bulk",
     as_counts: bool = True,
     auto_authenticate: bool = True,
-    api_slug: str = "gem-1-sc",
     api_base_url: str = API_BASE_URL,
     poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
     poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
@@ -129,8 +128,6 @@ def predict_query(
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
-    api_slug : str, optional
-        The API slug of the model to call (e.g., 'gem-1-sc'). Defaults to 'gem-1-sc'.
     api_base_url : str, optional
         Base URL for the API server. Defaults to the production host.
     poll_interval_seconds : int, optional
@@ -180,14 +177,9 @@ def predict_query(
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    if modality == "bulk":
-        return _predict_bulk(
-            query=query,
-            as_counts=as_counts,
-            api_base_url=api_base_url,
-        )
-
-    if modality == "single_cell":
+    if modality in ("bulk", "single_cell"):
+        # Resolve internal API slug based on modality
+        api_slug = _resolve_api_slug(modality)
         # Start async query
         model_query_id = _start_model_query(
             api_base_url=api_base_url,
@@ -253,61 +245,12 @@ def predict_query(
     )
 
 
-def _predict_bulk(
-    query: dict,
-    as_counts: bool,
-    api_base_url: str,
-) -> Dict[str, pd.DataFrame]:
-    """Legacy bulk pathway: synchronous POST that returns outputs + gene_order."""
-    api_url = f"{api_base_url}/api/model/{API_VERSION}"
-    try:
-        response = requests.post(
-            url=api_url,
-            headers={
-                "Accept": "application/json",
-                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-                "Content-Type": "application/json",
-            },
-            json=query,
-            timeout=DEFAULT_TIMEOUT,
-        )
-        response.raise_for_status()
-
-        try:
-            content = response.json()
-            if (
-                isinstance(content, list)
-                and len(content) == 1
-                and isinstance(content[0], dict)
-            ):
-                content = content[0]
-            elif not isinstance(content, dict):
-                raise ValueError(f"API response is not a JSON object: {response.text}")
-        except json.JSONDecodeError as err:
-            raise ValueError(
-                f"Failed to decode JSON from API response: {response.text}"
-            ) from err
-
-    except requests.exceptions.HTTPError as err:
-        raise ValueError(
-            (
-                f"API request to {api_url} failed with status "
-                f"{err.response.status_code}: {err.response.text}"
-            )
-        ) from err
-    except requests.exceptions.RequestException as err:
-        raise ValueError(f"API request failed due to a network issue: {err}") from err
-
-    for key in ("error", "errors"):
-        if key in content:
-            raise ValueError(f"Error in response from API received: {content[key]}")
-
-    expression, metadata = _transform_result_to_frames(content)
-
-    expression = expression.astype(int)
-    if not as_counts:
-        expression = log_cpm(expression)
-    return {"metadata": metadata, "expression": expression}
+def _resolve_api_slug(modality: str) -> str:
+    if modality == "single_cell":
+        return "gem-1-sc"
+    if modality == "bulk":
+        return "gem-1-bulk"
+    return ""
 
 
 def _start_model_query(api_base_url: str, api_slug: str, query: dict) -> str:
