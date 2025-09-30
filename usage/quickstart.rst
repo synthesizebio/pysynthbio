@@ -75,13 +75,13 @@ Import the package
 Discover Valid Modalities
 -------------------------
 
-To see which modalities are supported by the current model, use ``get_valid_modalities``. This function returns a set of strings representing the allowed values for the ``modality`` key in your query.
+The API supports multiple output modalities. Use ``get_valid_modalities`` to see what is available. The two primary modalities are ``'bulk'`` and ``'single_cell'``.
 
 .. code-block:: python
 
     supported_modalities = pysynthbio.get_valid_modalities()
     print(supported_modalities)
-    # Output might look like: {'bulk', ...}
+    # Example: {'bulk', 'single_cell'}
 
 Generate Example Queries
 ------------------------
@@ -97,23 +97,44 @@ You can use ``get_valid_query`` to get a correctly structured example dictionary
 Get Predictions
 ----------------
 
-Use ``predict_query`` to send a query to the API and get expression predictions.
-You'll typically use ``get_valid_query`` to help structure your request. This function also requires the API key.
+Use ``predict_query`` to send a query to the API and get expression predictions. You choose the data generation type with the ``modality`` parameter:
+
+- ``modality='bulk'`` generates bulk RNA-seq.
+- ``modality='single_cell'`` generates single-cell RNA-seq.
+
+The function handles authentication, request submission, and result retrieval. For single-cell, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
 
 .. code-block:: python
 
-    # You can modify the example_query or create your own following the structure
-    my_query = pysynthbio.get_valid_query() # Example: using the default valid query
-    # Modify my_query as needed...
+    # Start from a valid base query
+    my_query = pysynthbio.get_valid_query()
 
-    results = pysynthbio.predict_query(
+    # Example 1: Generate bulk counts (default)
+    bulk_results = pysynthbio.predict_query(
         query=my_query,
-        as_counts=True # Get results as estimated counts (default); set to False for logCPM.
+        modality="bulk",
+        as_counts=True,  # counts; set False for logCPM
     )
+    bulk_metadata = bulk_results["metadata"]
+    bulk_expression = bulk_results["expression"]
 
-    # Access results:
-    metadata_df = results["metadata"]
-    expression_df = results["expression"]
+    # Example 2: Generate single-cell counts (async under-the-hood)
+    sc_results = pysynthbio.predict_query(
+        query=my_query,
+        modality="single_cell",
+        as_counts=True,
+    )
+    sc_metadata = sc_results["metadata"]
+    sc_expression = sc_results["expression"]
+
+Advanced Options
+----------------
+
+``predict_query`` also exposes a few optional parameters you can use to tune behavior:
+
+- ``poll_interval_seconds``: Seconds between status checks for async jobs (default 2).
+- ``poll_timeout_seconds``: Maximum time to wait before raising a timeout error (default 15 minutes).
+- ``api_base_url``: Override the API host (useful for local testing or staging). Defaults to production.
 
 This covers the basic workflow: understanding the required query structure and making predictions.
 
