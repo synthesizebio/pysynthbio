@@ -69,29 +69,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for {API_VERSION} raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), f"Result for {API_VERSION} should be a dictionary"
-    assert (
-        "metadata" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-    assert (
-        "expression" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    assert "metadata" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+    )
+    assert "expression" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(
-        metadata_df, pd.DataFrame
-    ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-    assert isinstance(
-        expression_df, pd.DataFrame
-    ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), (
+        f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+    )
+    assert isinstance(expression_df, pd.DataFrame), (
+        f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    )
 
-    assert (
-        not metadata_df.empty
-    ), f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
-    assert (
-        not expression_df.empty
-    ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert not metadata_df.empty, (
+        f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
+    assert not expression_df.empty, (
+        f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -179,25 +179,25 @@ def test_predict_query_mocked_call_success(mock_post):
         # Verify mock was called
         mock_post.assert_called_once()
 
-        assert isinstance(
-            results, dict
-        ), f"Result for {API_VERSION} should be a dictionary"
-        assert (
-            "metadata" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-        assert (
-            "expression" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        assert isinstance(results, dict), (
+            f"Result for {API_VERSION} should be a dictionary"
+        )
+        assert "metadata" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+        )
+        assert "expression" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        )
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(
-            metadata_df, pd.DataFrame
-        ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-        assert isinstance(
-            expression_df, pd.DataFrame
-        ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(metadata_df, pd.DataFrame), (
+            f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+        )
+        assert isinstance(expression_df, pd.DataFrame), (
+            f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        )
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
@@ -463,6 +463,142 @@ def test_new_api_structure_handling(mock_post):
 
         print("New API structure handling test passed!")
 
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
+# -----------------------------
+# New tests for single-cell async flow
+# -----------------------------
+
+
+@patch("pysynthbio.call_model_api.requests.get")
+@patch("pysynthbio.call_model_api.requests.post")
+def test_predict_query_single_cell_success(mock_post, mock_get):
+    """Async single-cell happy path: running -> ready -> download JSON."""
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
+
+    try:
+        # POST /predict returns modelQueryId
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "abc123"}
+        mock_post.return_value = post_resp
+
+        # First GET status -> running; Second GET status -> ready with downloadUrl
+        get_status_running = MagicMock()
+        get_status_running.status_code = 200
+        get_status_running.json.return_value = {"status": "running"}
+
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/final.json",
+        }
+
+        # Third GET download -> final JSON with outputs + gene_order
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
+            "outputs": [
+                {"counts": [1, 2, 3], "metadata": {"sample_id": "s1"}},
+                {"counts": [4, 5, 6], "metadata": {"sample_id": "s2"}},
+            ],
+            "gene_order": ["gene1", "gene2", "gene3"],
+        }
+
+        mock_get.side_effect = [get_status_running, get_status_ready, get_download]
+
+        q = get_valid_query()
+        result = predict_query(
+            q,
+            modality="single_cell",
+            api_slug="gem-1-sc",
+            api_base_url="http://localhost:3000",
+        )
+
+        assert "metadata" in result and "expression" in result
+        assert len(result["metadata"]) == 2
+        assert list(result["expression"].columns) == ["gene1", "gene2", "gene3"]
+        assert list(result["expression"].iloc[0]) == [1, 2, 3]
+        assert list(result["expression"].iloc[1]) == [4, 5, 6]
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
+@patch("pysynthbio.call_model_api.requests.get")
+@patch("pysynthbio.call_model_api.requests.post")
+def test_predict_query_single_cell_failure(mock_post, mock_get):
+    """Async single-cell failure path: status -> failed with errorUrl."""
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
+
+    try:
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "abc123"}
+        mock_post.return_value = post_resp
+
+        get_status_failed = MagicMock()
+        get_status_failed.status_code = 200
+        get_status_failed.json.return_value = {
+            "status": "failed",
+            "errorUrl": "https://example.com/error.json",
+        }
+        mock_get.return_value = get_status_failed
+
+        q = get_valid_query()
+        with pytest.raises(ValueError, match="Model query failed"):
+            predict_query(
+                q,
+                modality="single_cell",
+                api_slug="gem-1-sc",
+                api_base_url="http://localhost:3000",
+            )
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
+@patch("pysynthbio.call_model_api.requests.get")
+@patch("pysynthbio.call_model_api.requests.post")
+def test_predict_query_single_cell_timeout(mock_post, mock_get):
+    """Async single-cell timeout path: status remains running and timeout expires."""
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
+
+    try:
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "abc123"}
+        mock_post.return_value = post_resp
+
+        # Always running; with timeout_seconds=0 we will exit immediately
+        get_status_running = MagicMock()
+        get_status_running.status_code = 200
+        get_status_running.json.return_value = {"status": "running"}
+        mock_get.return_value = get_status_running
+
+        q = get_valid_query()
+        with pytest.raises(ValueError, match="did not complete in time"):
+            predict_query(
+                q,
+                modality="single_cell",
+                api_slug="gem-1-sc",
+                poll_interval_seconds=0,
+                poll_timeout_seconds=0,
+                api_base_url="http://localhost:3000",
+            )
     finally:
         if original_api_key is not None:
             os.environ["SYNTHESIZE_API_KEY"] = original_api_key

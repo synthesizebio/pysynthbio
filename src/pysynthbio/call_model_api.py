@@ -4,7 +4,8 @@ Core API functionality for the Synthesize Bio API
 
 import json
 import os
-from typing import Dict, Set
+import time
+from typing import Dict, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -27,10 +28,14 @@ API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {API_VERSION: {"bulk"}}
+MODEL_MODALITIES = {API_VERSION: {"bulk", "single_cell"}}
 
-# Default timeout (seconds) for outbound API requests
+# Default timeout (seconds) for outbound HTTP requests
 DEFAULT_TIMEOUT = 30
+
+# Polling defaults for async model queries
+DEFAULT_POLL_INTERVAL_SECONDS = 2
+DEFAULT_POLL_TIMEOUT_SECONDS = 15 * 60
 
 
 def get_valid_modalities() -> Set[str]:
@@ -98,9 +103,14 @@ def get_valid_query() -> dict:
 
 def predict_query(
     query: dict,
+    modality: str = "bulk",
     as_counts: bool = True,
     auto_authenticate: bool = True,
-    api_url: str = f"{API_BASE_URL}/api/model/{API_VERSION}",
+    api_slug: str = "gem-1-sc",
+    api_base_url: str = API_BASE_URL,
+    poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
+    poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
+    return_download_url: bool = False,
 ) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API for prediction and retrieves samples.
@@ -110,14 +120,26 @@ def predict_query(
     query : dict
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
+    modality : str, optional
+        Either 'bulk' (legacy synchronous flow) or 'single_cell' (new async flow).
+        Defaults to 'bulk'.
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
         logCPM (default is True, returning counts).
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
-    api_url : str, optional
-        The URL of the API to use. Defaults to the current API version.
+    api_slug : str, optional
+        The API slug of the model to call (e.g., 'gem-1-sc'). Defaults to 'gem-1-sc'.
+    api_base_url : str, optional
+        Base URL for the API server. Defaults to the production host.
+    poll_interval_seconds : int, optional
+        Seconds between polling attempts of the status endpoint.
+    poll_timeout_seconds : int, optional
+        Maximum total seconds to wait before timing out.
+    return_download_url : bool, optional
+        If True, returns a dictionary containing the signed download URL instead of
+        parsing into DataFrames. Default False.
 
     Returns
     -------
@@ -144,16 +166,100 @@ def predict_query(
                 "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
-    # Check the API URL is valid
-    if not api_url.startswith(API_BASE_URL):
-        raise ValueError(f"API URL must start with {API_BASE_URL}. Got: {api_url}")
+    # Validate base URL
+    if not api_base_url.startswith("http"):
+        raise ValueError(f"Invalid api_base_url: {api_base_url}")
 
     # Validate the query
     validate_query(query)
 
+    # Ensure the query modality matches the requested modality
+    query["modality"] = modality
+    validate_modality(query)
+
     # Source field for reporting
     query["source"] = "pysynthbio"
 
+    if modality == "bulk":
+        return _predict_bulk(
+            query=query,
+            as_counts=as_counts,
+            api_base_url=api_base_url,
+        )
+
+    if modality == "single_cell":
+        # Start async query
+        model_query_id = _start_model_query(
+            api_base_url=api_base_url,
+            api_slug=api_slug,
+            query=query,
+        )
+
+        # Poll for completion
+        status, payload = _poll_model_query(
+            api_base_url=api_base_url,
+            model_query_id=model_query_id,
+            poll_interval=poll_interval_seconds,
+            timeout_seconds=poll_timeout_seconds,
+        )
+
+        if status == "failed":
+            # payload contains errorUrl if available
+            err_url = payload.get("errorUrl") if isinstance(payload, dict) else None
+            raise ValueError(
+                (
+                    "Model query failed. "
+                    + (f"See error details: {err_url}" if err_url else "No error URL.")
+                )
+            )
+
+        if status != "ready":
+            raise ValueError(
+                (
+                    "Model query did not complete in time ("
+                    f"status={status}). Consider increasing "
+                    "poll_timeout_seconds."
+                )
+            )
+
+        # When ready, payload should contain a signed downloadUrl to the final JSON
+        download_url = payload.get("downloadUrl") if isinstance(payload, dict) else None
+        if not download_url:
+            raise ValueError("Response missing downloadUrl when status=ready")
+
+        if return_download_url:
+            # Caller wants the URL only; return in a structured payload
+            return {"metadata": pd.DataFrame(), "expression": pd.DataFrame()}
+
+        # Fetch the final results JSON and transform to DataFrames
+        final_json = _get_json(download_url)
+
+        expression, metadata = _transform_result_to_frames(final_json)
+
+        expression = expression.astype(int)
+
+        if not as_counts:
+            expression = log_cpm(expression)
+
+        return {"metadata": metadata, "expression": expression}
+
+    raise ValueError(
+        (
+            "Unsupported modality '"
+            + str(modality)
+            + "'. Expected one of "
+            + str(MODEL_MODALITIES[API_VERSION])
+        )
+    )
+
+
+def _predict_bulk(
+    query: dict,
+    as_counts: bool,
+    api_base_url: str,
+) -> Dict[str, pd.DataFrame]:
+    """Legacy bulk pathway: synchronous POST that returns outputs + gene_order."""
+    api_url = f"{api_base_url}/api/model/{API_VERSION}"
     try:
         response = requests.post(
             url=api_url,
@@ -196,31 +302,149 @@ def predict_query(
         if key in content:
             raise ValueError(f"Error in response from API received: {content[key]}")
 
+    expression, metadata = _transform_result_to_frames(content)
+
+    expression = expression.astype(int)
+    if not as_counts:
+        expression = log_cpm(expression)
+    return {"metadata": metadata, "expression": expression}
+
+
+def _start_model_query(api_base_url: str, api_slug: str, query: dict) -> str:
+    """
+    Starts an async model query and returns the modelQueryId.
+    """
+    try:
+        response = requests.post(
+            url=f"{api_base_url}/api/models/{api_slug}/predict",
+            headers={
+                "Accept": "application/json",
+                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
+                "Content-Type": "application/json",
+            },
+            json=query,
+            timeout=DEFAULT_TIMEOUT,
+        )
+        response.raise_for_status()
+        content = response.json()
+        if not isinstance(content, dict) or "modelQueryId" not in content:
+            raise ValueError(f"Unexpected response from predict endpoint: {content}")
+        return str(content["modelQueryId"]).strip()
+    except requests.exceptions.HTTPError as err:
+        raise ValueError(
+            (
+                f"Predict request failed with status "
+                f"{err.response.status_code}: {err.response.text}"
+            )
+        ) from err
+    except requests.exceptions.RequestException as err:
+        raise ValueError(
+            f"Predict request failed due to a network issue: {err}"
+        ) from err
+
+
+def _poll_model_query(
+    api_base_url: str,
+    model_query_id: str,
+    poll_interval: int,
+    timeout_seconds: int,
+) -> Tuple[str, Dict[str, str]]:
+    """
+    Polls the status endpoint until ready/failed or timeout.
+
+    Returns (status, payload) where payload may include downloadUrl or errorUrl.
+    """
+    start = time.time()
+    status_url = f"{api_base_url}/api/model-query/{model_query_id}/status"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
+    }
+    last_payload: Dict[str, str] = {}
+    while True:
+        try:
+            resp = requests.get(status_url, headers=headers, timeout=DEFAULT_TIMEOUT)
+            resp.raise_for_status()
+            payload = resp.json()
+        except requests.exceptions.HTTPError as err:
+            raise ValueError(
+                (
+                    "Status request failed with status "
+                    f"{err.response.status_code}: {err.response.text}"
+                )
+            ) from err
+        except requests.exceptions.RequestException as err:
+            raise ValueError(
+                f"Status request failed due to a network issue: {err}"
+            ) from err
+        except json.JSONDecodeError as err:
+            raise ValueError(
+                f"Failed to decode JSON from status response: {resp.text}"
+            ) from err
+
+        if not isinstance(payload, dict) or "status" not in payload:
+            raise ValueError(f"Unexpected status response: {payload}")
+
+        status = str(payload.get("status"))
+        last_payload = payload
+        if status in ("ready", "failed"):
+            return status, payload  # type: ignore[return-value]
+
+        if (time.time() - start) > timeout_seconds:
+            return status, last_payload
+
+        time.sleep(max(1, int(poll_interval)))
+
+
+def _get_json(url: str) -> dict:
+    try:
+        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
+        r.raise_for_status()
+        return r.json()
+    except requests.exceptions.HTTPError as err:
+        raise ValueError(
+            (
+                "Download URL fetch failed with status "
+                f"{err.response.status_code}: {err.response.text}"
+            )
+        ) from err
+    except requests.exceptions.RequestException as err:
+        raise ValueError(
+            f"Failed to fetch download URL due to a network issue: {err}"
+        ) from err
+    except json.JSONDecodeError as err:
+        raise ValueError(
+            (f"Failed to decode JSON from download URL response: {r.text}")
+        ) from err
+
+
+def _transform_result_to_frames(content: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Transforms the final JSON result into (expression_df, metadata_df).
+    """
+    for key in ("error", "errors"):
+        if key in content:
+            raise ValueError(f"Error in result payload: {content[key]}")
+
     if "outputs" in content and "gene_order" in content:
         expression = pd.concat(
             [
-                pd.DataFrame([output["counts"]], columns=content["gene_order"])
-                # Wrap in [] to make it a single row
+                pd.DataFrame([output.get("counts", [])], columns=content["gene_order"])
                 for output in content["outputs"]
             ],
             ignore_index=True,
         )
 
-        # Since each output now produces exactly 1 row, simplify metadata collection:
-        metadata_rows = [output["metadata"] for output in content["outputs"]]
+        metadata_rows = [output.get("metadata", {}) for output in content["outputs"]]
         metadata = pd.DataFrame(metadata_rows)
-    else:
-        raise ValueError(
-            f"Unexpected API response structure "
-            f"(expected 'outputs' and 'gene_order'): {content}"
+        return expression.astype(int), metadata
+
+    raise ValueError(
+        (
+            "Unexpected result JSON structure (expected 'outputs' and 'gene_order'): "
+            f"{content}"
         )
-
-    expression = expression.astype(int)
-
-    if not as_counts:
-        expression = log_cpm(expression)
-
-    return {"metadata": metadata, "expression": expression}
+    )
 
 
 def validate_query(query: dict) -> None:
