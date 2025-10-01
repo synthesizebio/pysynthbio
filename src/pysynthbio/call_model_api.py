@@ -225,14 +225,14 @@ def predict_query(
         )
 
         if status == "failed":
-            # payload contains errorUrl if available
-            err_url = payload.get("errorUrl") if isinstance(payload, dict) else None
-            raise ValueError(
-                (
-                    "Model query failed. "
-                    + (f"See error details: {err_url}" if err_url else "No error URL.")
-                )
+            # payload contains message with error details
+            error_message = (
+                payload.get("message") if isinstance(payload, dict) else None
             )
+            if not error_message:
+                raise ValueError("Model query failed. No error message in payload.")
+
+            raise ValueError(f"Model query failed: {error_message}")
 
         if status != "ready":
             raise ValueError(
@@ -327,7 +327,7 @@ def _poll_model_query(
     Returns (status, payload) where payload may include downloadUrl or errorUrl.
     """
     start = time.time()
-    status_url = f"{api_base_url}/api/model-query/{model_query_id}/status"
+    status_url = f"{api_base_url}/api/model-queries/{model_query_id}/status"
     headers = {
         "Accept": "application/json",
         "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],

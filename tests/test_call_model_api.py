@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pandas as pd
 import pytest
+import re
+import requests
 
 try:
     from pysynthbio.call_model_api import (
@@ -69,29 +71,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for {API_VERSION} raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), f"Result for {API_VERSION} should be a dictionary"
-    assert "metadata" in results, (
-        f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-    )
-    assert "expression" in results, (
-        f"Result dictionary for {API_VERSION} should contain 'expression' key"
-    )
+    assert (
+        "metadata" in results
+    ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+    assert (
+        "expression" in results
+    ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(metadata_df, pd.DataFrame), (
-        f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-    )
-    assert isinstance(expression_df, pd.DataFrame), (
-        f"'expression' for {API_VERSION} should be a pandas DataFrame"
-    )
+    assert isinstance(
+        metadata_df, pd.DataFrame
+    ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(
+        expression_df, pd.DataFrame
+    ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
 
-    assert not metadata_df.empty, (
-        f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
-    )
-    assert not expression_df.empty, (
-        f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
-    )
+    assert (
+        not metadata_df.empty
+    ), f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert (
+        not expression_df.empty
+    ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -135,11 +137,110 @@ def test_predict_query_live_call_success_single_cell():
     assert isinstance(expression_df, pd.DataFrame), "'expression' should be a DataFrame"
 
     assert not metadata_df.empty, "Single-cell metadata DataFrame should not be empty"
-    assert not expression_df.empty, (
-        "Single-cell expression DataFrame should not be empty"
-    )
+    assert (
+        not expression_df.empty
+    ), "Single-cell expression DataFrame should not be empty"
 
     print("Assertions passed for single-cell live call.")
+
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_live_call_invalid_uberon():
+    """
+    Tests that the API properly rejects invalid UBERON IDs.
+    Requires SYNTHESIZE_API_KEY to be set in the environment.
+    """
+
+    print(f"\nTesting live predict_query with invalid UBERON ID for {API_VERSION}...")
+
+    # Create a query with an invalid UBERON ID
+    invalid_query = {
+        "inputs": [
+            {
+                "metadata": {
+                    "tissue_ontology_id": "UBERON:9999999",  # Invalid ID
+                    "age_years": "65",
+                    "sex": "female",
+                    "sample_type": "primary tissue",
+                },
+                "num_samples": 1,
+            }
+        ],
+        "modality": "bulk",
+        "mode": "sample generation",
+    }
+
+    # The API should reject this with a ValueError
+    with pytest.raises(ValueError) as exc_info:
+        predict_query(
+            query=invalid_query,
+            as_counts=True,
+        )
+
+    error_message = str(exc_info.value)
+    print(f"API correctly rejected invalid UBERON ID with error: {error_message}")
+
+    # The error message should now contain the validation details directly
+    assert (
+        "UBERON:9999999" in error_message
+    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert (
+        "bad values" in error_message.lower() or "invalid" in error_message.lower()
+    ), f"Error message should indicate validation failure. Got: {error_message}"
+    print("Successfully validated error message contains UBERON validation details")
+
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_live_call_invalid_uberon_single_cell():
+    """
+    Tests that the API properly rejects invalid UBERON IDs for single-cell modality.
+    Requires SYNTHESIZE_API_KEY to be set in the environment.
+    """
+
+    print(
+        f"\nTesting live predict_query (single-cell) with invalid UBERON ID for {API_VERSION}..."
+    )
+
+    # Create a single-cell query with an invalid UBERON ID
+    invalid_query = {
+        "inputs": [
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000786",
+                    "tissue_ontology_id": "UBERON:9999999",  # Invalid ID
+                    "sex": "male",
+                },
+                "num_samples": 1,
+            }
+        ],
+        "modality": "czi",
+        "mode": "sample generation",
+        "return_classifier_probs": True,
+        "seed": 42,
+    }
+
+    # The API should reject this with a ValueError
+    with pytest.raises(ValueError) as exc_info:
+        predict_query(
+            query=invalid_query,
+            as_counts=True,
+        )
+
+    error_message = str(exc_info.value)
+    print(
+        f"API correctly rejected invalid UBERON ID (single-cell) with error: {error_message}"
+    )
+
+    # The error message should now contain the validation details directly
+    assert (
+        "UBERON:9999999" in error_message
+    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert (
+        "bad values" in error_message.lower() or "invalid" in error_message.lower()
+    ), f"Error message should indicate validation failure. Got: {error_message}"
+    print(
+        "Successfully validated error message contains UBERON validation details (single-cell)"
+    )
 
 
 # Add a mocked version of the API call test (bulk via async flow)
@@ -222,25 +323,25 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         # Verify mocks were called
         mock_post.assert_called_once()
 
-        assert isinstance(results, dict), (
-            f"Result for {API_VERSION} should be a dictionary"
-        )
-        assert "metadata" in results, (
-            f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-        )
-        assert "expression" in results, (
-            f"Result dictionary for {API_VERSION} should contain 'expression' key"
-        )
+        assert isinstance(
+            results, dict
+        ), f"Result for {API_VERSION} should be a dictionary"
+        assert (
+            "metadata" in results
+        ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+        assert (
+            "expression" in results
+        ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(metadata_df, pd.DataFrame), (
-            f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-        )
-        assert isinstance(expression_df, pd.DataFrame), (
-            f"'expression' for {API_VERSION} should be a pandas DataFrame"
-        )
+        assert isinstance(
+            metadata_df, pd.DataFrame
+        ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(
+            expression_df, pd.DataFrame
+        ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
@@ -595,7 +696,7 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
 @patch("pysynthbio.call_model_api.requests.get")
 @patch("pysynthbio.call_model_api.requests.post")
 def test_predict_query_single_cell_failure(mock_post, mock_get):
-    """Async single-cell failure path: status -> failed with errorUrl."""
+    """Async single-cell failure path: status -> failed with error message."""
     original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
     os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
 
@@ -609,7 +710,7 @@ def test_predict_query_single_cell_failure(mock_post, mock_get):
         get_status_failed.status_code = 200
         get_status_failed.json.return_value = {
             "status": "failed",
-            "errorUrl": "https://example.com/error.json",
+            "message": "Query validation failed: Invalid tissue_ontology_id",
         }
         mock_get.return_value = get_status_failed
 
