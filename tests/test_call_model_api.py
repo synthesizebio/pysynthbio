@@ -57,7 +57,6 @@ def test_predict_query_live_call_success():
         results = predict_query(
             query=test_query,
             as_counts=True,
-            api_base_url="http://localhost",
         )
         print(f"predict_query call successful for {API_VERSION}.")
     except ValueError as e:
@@ -116,7 +115,6 @@ def test_predict_query_live_call_success_single_cell():
         results = predict_query(
             query=test_query,
             as_counts=True,
-            api_base_url="http://localhost",
         )
         print("predict_query single-cell call successful.")
     except ValueError as e:
@@ -214,9 +212,7 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
             pytest.fail(f"get_valid_query failed: {e}")
 
         try:
-            results = predict_query(
-                query=test_query, as_counts=True, api_base_url="http://localhost"
-            )
+            results = predict_query(query=test_query, as_counts=True)
             print(f"predict_query mocked call successful for {API_VERSION}.")
         except Exception as e:
             pytest.fail(
