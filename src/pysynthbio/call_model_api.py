@@ -62,15 +62,48 @@ def get_valid_modes() -> Set[str]:
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
-def get_valid_query() -> dict:
+def get_valid_query(modality: str = "bulk") -> dict:
     """
-    Generates a sample query for prediction and validation for the current API model.
+    Generates a sample query for prediction and validation.
+
+    Parameters
+    ----------
+    modality : str
+        'bulk' or 'single_cell'. Defaults to 'bulk'.
 
     Returns
     -------
     dict
-        A dictionary representing a valid query structure for the current API model.
+        A dictionary representing a valid query structure for the chosen
+        modality.
     """
+    if modality == "single_cell":
+        return {
+            "modality": "single_cell",
+            "mode": "sample generation",
+            "return_classifier_probs": True,
+            "seed": 11,
+            "inputs": [
+                {
+                    "metadata": {
+                        "cell_type_ontology_id": "CL:0000786",
+                        "tissue_ontology_id": "UBERON:0001155",
+                        "sex": "male",
+                    },
+                    "num_samples": 1,
+                },
+                {
+                    "metadata": {
+                        "cell_type_ontology_id": "CL:0000763",
+                        "tissue_ontology_id": "UBERON:0001155",
+                        "sex": "male",
+                    },
+                    "num_samples": 1,
+                },
+            ],
+        }
+
+    # Default: bulk
     return {
         "modality": "bulk",
         "mode": "sample generation",
@@ -103,7 +136,6 @@ def get_valid_query() -> dict:
 
 def predict_query(
     query: dict,
-    modality: str = "bulk",
     as_counts: bool = True,
     auto_authenticate: bool = True,
     api_base_url: str = API_BASE_URL,
@@ -119,9 +151,6 @@ def predict_query(
     query : dict
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
-    modality : str, optional
-        Either 'bulk' (legacy synchronous flow) or 'single_cell' (new async flow).
-        Defaults to 'bulk'.
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
         logCPM (default is True, returning counts).
@@ -170,9 +199,9 @@ def predict_query(
     # Validate the query
     validate_query(query)
 
-    # Ensure the query modality matches the requested modality
-    query["modality"] = modality
+    # Ensure the query modality is valid
     validate_modality(query)
+    modality = query["modality"]
 
     # Source field for reporting
     query["source"] = "pysynthbio"
@@ -180,11 +209,16 @@ def predict_query(
     if modality in ("bulk", "single_cell"):
         # Resolve internal API slug based on modality
         api_slug = _resolve_api_slug(modality)
+        # Transform modality value in query for API compatibility
+        # The API expects 'czi' for single_cell modality
+        query_copy = query.copy()
+        if modality == "single_cell":
+            query_copy["modality"] = "czi"
         # Start async query
         model_query_id = _start_model_query(
             api_base_url=api_base_url,
             api_slug=api_slug,
-            query=query,
+            query=query_copy,
         )
 
         # Poll for completion
@@ -370,14 +404,24 @@ def _transform_result_to_frames(content: dict) -> Tuple[pd.DataFrame, pd.DataFra
             raise ValueError(f"Error in result payload: {content[key]}")
 
     if "outputs" in content and "gene_order" in content:
-        expression = pd.concat(
-            [
-                pd.DataFrame([output.get("counts", [])], columns=content["gene_order"])
-                for output in content["outputs"]
-            ],
-            ignore_index=True,
-        )
+        gene_order = content["gene_order"]
 
+        # Build expression dataframe, handling both list and dict counts formats
+        expression_rows = []
+        for output in content["outputs"]:
+            counts = output.get("counts", [])
+
+            # Single-cell returns dict {gene_id: count}, bulk returns list
+            if isinstance(counts, dict):
+                # Convert dict to list aligned with gene_order
+                counts_list = [counts.get(gene, 0) for gene in gene_order]
+            else:
+                # Already a list
+                counts_list = counts
+
+            expression_rows.append(counts_list)
+
+        expression = pd.DataFrame(expression_rows, columns=gene_order)
         metadata_rows = [output.get("metadata", {}) for output in content["outputs"]]
         metadata = pd.DataFrame(metadata_rows)
         return expression.astype(int), metadata

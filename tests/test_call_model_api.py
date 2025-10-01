@@ -57,6 +57,7 @@ def test_predict_query_live_call_success():
         results = predict_query(
             query=test_query,
             as_counts=True,
+            api_base_url="http://localhost",
         )
         print(f"predict_query call successful for {API_VERSION}.")
     except ValueError as e:
@@ -94,6 +95,53 @@ def test_predict_query_live_call_success():
     )
 
     print(f"Assertions passed for {API_VERSION}.")
+
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_live_call_success_single_cell():
+    """
+    Tests a live call to predict_query for single-cell modality.
+    Requires SYNTHESIZE_API_KEY to be set in the environment and the
+    API server to support the single-cell async flow.
+    """
+    print(f"\nTesting live predict_query single-cell call for {API_VERSION}...")
+
+    try:
+        test_query = get_valid_query(modality="single_cell")
+        print("Generated single-cell query:", test_query)
+    except Exception as e:
+        pytest.fail(f"get_valid_query(modality='single_cell') failed: {e}")
+
+    try:
+        results = predict_query(
+            query=test_query,
+            as_counts=True,
+            api_base_url="http://localhost",
+        )
+        print("predict_query single-cell call successful.")
+    except ValueError as e:
+        pytest.fail(f"predict_query single-cell raised ValueError: {e}")
+    except KeyError as e:
+        pytest.fail(f"predict_query single-cell raised KeyError (API key issue?): {e}")
+    except Exception as e:
+        pytest.fail(f"predict_query single-cell raised unexpected Exception: {e}")
+
+    assert isinstance(results, dict), "Single-cell result should be a dictionary"
+    assert "metadata" in results, "Single-cell result should contain 'metadata' key"
+    assert "expression" in results, "Single-cell result should contain 'expression' key"
+
+    metadata_df = results["metadata"]
+    expression_df = results["expression"]
+
+    assert isinstance(metadata_df, pd.DataFrame), "'metadata' should be a DataFrame"
+    assert isinstance(expression_df, pd.DataFrame), "'expression' should be a DataFrame"
+
+    assert not metadata_df.empty, "Single-cell metadata DataFrame should not be empty"
+    assert not expression_df.empty, (
+        "Single-cell expression DataFrame should not be empty"
+    )
+
+    print("Assertions passed for single-cell live call.")
 
 
 # Add a mocked version of the API call test (bulk via async flow)
@@ -166,7 +214,9 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
             pytest.fail(f"get_valid_query failed: {e}")
 
         try:
-            results = predict_query(query=test_query, as_counts=True)
+            results = predict_query(
+                query=test_query, as_counts=True, api_base_url="http://localhost"
+            )
             print(f"predict_query mocked call successful for {API_VERSION}.")
         except Exception as e:
             pytest.fail(
@@ -531,12 +581,8 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
 
         mock_get.side_effect = [get_status_running, get_status_ready, get_download]
 
-        q = get_valid_query()
-        result = predict_query(
-            q,
-            modality="single_cell",
-            api_base_url="http://localhost:3000",
-        )
+        q = get_valid_query(modality="single_cell")
+        result = predict_query(q)
 
         assert "metadata" in result and "expression" in result
         assert len(result["metadata"]) == 2
@@ -571,13 +617,9 @@ def test_predict_query_single_cell_failure(mock_post, mock_get):
         }
         mock_get.return_value = get_status_failed
 
-        q = get_valid_query()
+        q = get_valid_query(modality="single_cell")
         with pytest.raises(ValueError, match="Model query failed"):
-            predict_query(
-                q,
-                modality="single_cell",
-                api_base_url="http://localhost:3000",
-            )
+            predict_query(q)
     finally:
         if original_api_key is not None:
             os.environ["SYNTHESIZE_API_KEY"] = original_api_key
@@ -604,14 +646,12 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
         get_status_running.json.return_value = {"status": "running"}
         mock_get.return_value = get_status_running
 
-        q = get_valid_query()
+        q = get_valid_query(modality="single_cell")
         with pytest.raises(ValueError, match="did not complete in time"):
             predict_query(
                 q,
-                modality="single_cell",
                 poll_interval_seconds=0,
                 poll_timeout_seconds=0,
-                api_base_url="http://localhost:3000",
             )
     finally:
         if original_api_key is not None:
