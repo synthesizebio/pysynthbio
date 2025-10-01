@@ -107,10 +107,10 @@ def test_predict_query_live_call_success_single_cell():
     print(f"\nTesting live predict_query single-cell call for {API_VERSION}...")
 
     try:
-        test_query = get_valid_query(modality="single_cell")
+        test_query = get_valid_query(modality="czi")
         print("Generated single-cell query:", test_query)
     except Exception as e:
-        pytest.fail(f"get_valid_query(modality='single_cell') failed: {e}")
+        pytest.fail(f"get_valid_query(modality='czi') failed: {e}")
 
     try:
         results = predict_query(
@@ -581,7 +581,7 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
 
         mock_get.side_effect = [get_status_running, get_status_ready, get_download]
 
-        q = get_valid_query(modality="single_cell")
+        q = get_valid_query(modality="czi")
         result = predict_query(q)
 
         assert "metadata" in result and "expression" in result
@@ -617,7 +617,7 @@ def test_predict_query_single_cell_failure(mock_post, mock_get):
         }
         mock_get.return_value = get_status_failed
 
-        q = get_valid_query(modality="single_cell")
+        q = get_valid_query(modality="czi")
         with pytest.raises(ValueError, match="Model query failed"):
             predict_query(q)
     finally:
@@ -646,7 +646,7 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
         get_status_running.json.return_value = {"status": "running"}
         mock_get.return_value = get_status_running
 
-        q = get_valid_query(modality="single_cell")
+        q = get_valid_query(modality="czi")
         with pytest.raises(ValueError, match="did not complete in time"):
             predict_query(
                 q,

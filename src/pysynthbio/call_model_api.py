@@ -28,7 +28,7 @@ API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {API_VERSION: {"bulk", "single_cell"}}
+MODEL_MODALITIES = {API_VERSION: {"bulk", "czi"}}
 
 # Default timeout (seconds) for outbound HTTP requests
 DEFAULT_TIMEOUT = 30
@@ -69,7 +69,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
     Parameters
     ----------
     modality : str
-        'bulk' or 'single_cell'. Defaults to 'bulk'.
+        'bulk' or 'czi'. Defaults to 'bulk'.
 
     Returns
     -------
@@ -77,9 +77,9 @@ def get_valid_query(modality: str = "bulk") -> dict:
         A dictionary representing a valid query structure for the chosen
         modality.
     """
-    if modality == "single_cell":
+    if modality == "czi":
         return {
-            "modality": "single_cell",
+            "modality": "czi",
             "mode": "sample generation",
             "return_classifier_probs": True,
             "seed": 11,
@@ -206,19 +206,14 @@ def predict_query(
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    if modality in ("bulk", "single_cell"):
+    if modality in ("bulk", "czi"):
         # Resolve internal API slug based on modality
         api_slug = _resolve_api_slug(modality)
-        # Transform modality value in query for API compatibility
-        # The API expects 'czi' for single_cell modality
-        query_copy = query.copy()
-        if modality == "single_cell":
-            query_copy["modality"] = "czi"
         # Start async query
         model_query_id = _start_model_query(
             api_base_url=api_base_url,
             api_slug=api_slug,
-            query=query_copy,
+            query=query,
         )
 
         # Poll for completion
@@ -280,7 +275,7 @@ def predict_query(
 
 
 def _resolve_api_slug(modality: str) -> str:
-    if modality == "single_cell":
+    if modality == "czi":
         return "gem-1-sc"
     if modality == "bulk":
         return "gem-1-bulk"
