@@ -170,8 +170,8 @@ def predict_query(
     Returns
     -------
     dict
-        metadata: pd.DataFrame containing metadata for each sample (empty if return_download_url=True)
-        expression: pd.DataFrame containing expression data for each sample (empty if return_download_url=True)
+        metadata: pd.DataFrame (metadata, empty if return_download_url=True)
+        expression: pd.DataFrame (expression, empty if return_download_url=True)
 
     Raises
     -------
@@ -280,7 +280,6 @@ def _resolve_api_slug(modality: str) -> str:
     if modality == "bulk":
         return "gem-1-bulk"
     raise ValueError(f"Unknown modality: '{modality}'")
-
 
 
 def _start_model_query(api_base_url: str, api_slug: str, query: dict) -> str:
