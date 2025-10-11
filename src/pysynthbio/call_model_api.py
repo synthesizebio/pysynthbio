@@ -164,14 +164,14 @@ def predict_query(
     poll_timeout_seconds : int, optional
         Maximum total seconds to wait before timing out.
     return_download_url : bool, optional
-        If True, returns a dictionary containing the signed download URL instead of
-        parsing into DataFrames. Default False.
+        If True, returns a dictionary with empty DataFrames without downloading
+        or parsing the results. Default False.
 
     Returns
     -------
     dict
-        metadata: pd.DataFrame containing metadata for each sample
-        expression: pd.DataFrame containing expression data for each sample
+        metadata: pd.DataFrame containing metadata for each sample (empty if return_download_url=True)
+        expression: pd.DataFrame containing expression data for each sample (empty if return_download_url=True)
 
     Raises
     -------
@@ -206,7 +206,7 @@ def predict_query(
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    if modality in ("bulk", "czi"):
+    if modality in MODEL_MODALITIES[API_VERSION]:
         # Resolve internal API slug based on modality
         api_slug = _resolve_api_slug(modality)
         # Start async query
