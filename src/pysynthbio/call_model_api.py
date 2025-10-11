@@ -279,7 +279,8 @@ def _resolve_api_slug(modality: str) -> str:
         return "gem-1-sc"
     if modality == "bulk":
         return "gem-1-bulk"
-    return ""
+    raise ValueError(f"Unknown modality: '{modality}'")
+
 
 
 def _start_model_query(api_base_url: str, api_slug: str, query: dict) -> str:
