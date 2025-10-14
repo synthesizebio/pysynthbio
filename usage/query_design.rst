@@ -6,7 +6,7 @@ Choosing a Modality
 ``predict_query`` accepts a ``modality`` argument to select the data type to generate:
 
 - ``bulk``: bulk RNA-seq (asynchronous under the hood, returned as DataFrames)
-- ``czi``: single-cell RNA-seq (asynchronous under the hood, returned as DataFrames)
+- ``single-cell``: single-cell RNA-seq (asynchronous under the hood, returned as DataFrames)
 
 You do not need to specify any internal API slugs. The library maps modalities to the appropriate model endpoints automatically.
 
@@ -20,7 +20,7 @@ You do not need to specify any internal API slugs. The library maps modalities t
     bulk = pysynthbio.predict_query(q, modality="bulk", as_counts=True)
 
     # Single-cell generation
-    sc = pysynthbio.predict_query(q, modality="czi", as_counts=True)
+    sc = pysynthbio.predict_query(q, modality="single-cell", as_counts=True)
 
 
 

@@ -75,13 +75,13 @@ Import the package
 Discover Valid Modalities
 -------------------------
 
-The API supports multiple output modalities. Use ``get_valid_modalities`` to see what is available. The two primary modalities are ``'bulk'`` and ``'czi'``.
+The API supports multiple output modalities. Use ``get_valid_modalities`` to see what is available. The two primary modalities are ``'bulk'`` and ``'single-cell'``.
 
 .. code-block:: python
 
     supported_modalities = pysynthbio.get_valid_modalities()
     print(supported_modalities)
-    # Example: {'bulk', 'czi'}
+    # Example: {'bulk', 'single-cell'}
 
 Generate Example Queries
 ------------------------
@@ -100,7 +100,7 @@ Get Predictions
 Use ``predict_query`` to send a query to the API and get expression predictions. You choose the data generation type with the ``modality`` parameter:
 
 - ``modality='bulk'`` generates bulk RNA-seq.
-- ``modality='czi'`` generates single-cell RNA-seq.
+- ``modality='single-cell'`` generates single-cell RNA-seq.
 
 The function handles authentication, request submission, and result retrieval. For single-cell, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
 
@@ -121,7 +121,7 @@ The function handles authentication, request submission, and result retrieval. F
     # Example 2: Generate single-cell counts (async under-the-hood)
     sc_results = pysynthbio.predict_query(
         query=my_query,
-        modality="czi",
+        modality="single-cell",
         as_counts=True,
     )
     sc_metadata = sc_results["metadata"]

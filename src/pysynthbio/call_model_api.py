@@ -28,7 +28,7 @@ API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
 
 API_BASE_URL = "https://app.synthesize.bio"
 
-MODEL_MODALITIES = {API_VERSION: {"bulk", "czi"}}
+MODEL_MODALITIES = {API_VERSION: {"bulk", "single-cell"}}
 
 # Default timeout (seconds) for outbound HTTP requests
 DEFAULT_TIMEOUT = 30
@@ -69,7 +69,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
     Parameters
     ----------
     modality : str
-        'bulk' or 'czi'. Defaults to 'bulk'.
+        'bulk' or 'single-cell'. Defaults to 'bulk'.
 
     Returns
     -------
@@ -77,9 +77,9 @@ def get_valid_query(modality: str = "bulk") -> dict:
         A dictionary representing a valid query structure for the chosen
         modality.
     """
-    if modality == "czi":
+    if modality == "single-cell":
         return {
-            "modality": "czi",
+            "modality": "single-cell",
             "mode": "sample generation",
             "return_classifier_probs": True,
             "seed": 11,
@@ -275,7 +275,7 @@ def predict_query(
 
 
 def _resolve_api_slug(modality: str) -> str:
-    if modality == "czi":
+    if modality == "single-cell":
         return "gem-1-sc"
     if modality == "bulk":
         return "gem-1-bulk"
