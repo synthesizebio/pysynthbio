@@ -445,9 +445,10 @@ wheels = [
 
 [[package]]
 name = "pysynthbio"
-version = "2.2.0"
+version = "3.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "keyring" },
     { name = "numpy" },
     { name = "pandas" },
     { name = "requests" },
@@ -473,6 +474,7 @@ secure = [
 requires-dist = [
     { name = "black", marker = "extra == 'dev'" },
     { name = "build", marker = "extra == 'dev'" },
+    { name = "keyring", specifier = ">=23.0.0" },
     { name = "keyring", marker = "extra == 'all'", specifier = ">=23.0.0" },
     { name = "keyring", marker = "extra == 'secure'", specifier = ">=23.0.0" },
     { name = "mypy", marker = "extra == 'dev'" },
