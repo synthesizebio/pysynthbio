@@ -143,7 +143,7 @@ def test_predict_query_live_call_success_single_cell():
 
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
-def test_predict_query_live_call_invalid_sbio_NhLOJhFsaNDMLEDYx3u92WAKmeHPeXqguG1OzCUGq5c():
+def test_predict_query_live_call_invalid_sbio_key():
     """
     Tests that the API properly rejects invalid UBERON IDs.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
@@ -701,9 +701,10 @@ def test_latents_extraction(mock_post, mock_get):
         assert isinstance(results["latents"], pd.DataFrame), (
             "'latents' should be a pandas DataFrame"
         )
-        assert results["latents"].shape == (2, 5), (
-            f"Expected latents shape (2, 5), got {results['latents'].shape}"
-        )
+        assert results["latents"].shape == (
+            2,
+            5,
+        ), f"Expected latents shape (2, 5), got {results['latents'].shape}"
 
         # Verify latents values
         expected_latents = pd.DataFrame(
@@ -874,7 +875,8 @@ def test_predict_query_biological_validity_differential_expression_bulk():
             # Condition 1: Plasmacytoid dendritic cell
             {
                 "metadata": {
-                    "cell_type_ontology_id": "CL:0000784",  # Plasmacytoid dendritic cell
+                    # Plasmacytoid dendritic cell
+                    "cell_type_ontology_id": "CL:0000784",
                     "tissue_ontology_id": "UBERON:0002371",  # bone marrow
                     "sex": "female",
                     "sample_type": "primary tissue",
@@ -933,7 +935,8 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     # 1. Check that we have valid p-values
     valid_pvals = ~np.isnan(p_values)
     assert np.sum(valid_pvals) > n_genes * 0.9, (
-        f"At least 90% of genes should have valid p-values (got {np.sum(valid_pvals)}/{n_genes})"
+        f"At least 90% of genes should have valid p-values "
+        f"(got {np.sum(valid_pvals)}/{n_genes})"
     )
 
     # 2. P-values should be distributed between 0 and 1
@@ -960,7 +963,8 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     de_genes = np.where(p_values < 0.05)[0]
     assert len(de_genes) > 0, "Should detect some differentially expressed genes"
     assert len(de_genes) < n_genes * 0.5, (
-        f"Not all genes should be differentially expressed (got {len(de_genes)}/{n_genes})"
+        f"Not all genes should be differentially expressed "
+        f"(got {len(de_genes)}/{n_genes})"
     )
 
     # 6. Variance should exist within groups (biological variation)
@@ -981,11 +985,13 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     )
 
     print(
-        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) out of {np.sum(valid_pvals)} tested"
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "
+        f"out of {np.sum(valid_pvals)} tested"
     )
     print(f"Median fold change: {fc_median:.3f} (log2)")
     print(
-        f"Expression range: {results['expression'].values.min():.1f} to {results['expression'].values.max():.1f}"
+        f"Expression range: {results['expression'].values.min():.1f} "
+        f"to {results['expression'].values.max():.1f}"
     )
 
     print("Biological validity tests passed!")
@@ -998,7 +1004,8 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
     by performing differential expression analysis.
     """
     print(
-        "\nTesting single-cell biological validity with differential expression analysis..."
+        "\nTesting single-cell biological validity with "
+        "differential expression analysis..."
     )
 
     # Import scipy for statistical tests
@@ -1058,14 +1065,17 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
     )
 
     assert sparsity_group1 > 0.3, (
-        f"Single-cell data should show sparsity (>30% zeros, got {sparsity_group1 * 100:.1f}%)"
+        f"Single-cell data should show sparsity "
+        f"(>30% zeros, got {sparsity_group1 * 100:.1f}%)"
     )
     assert sparsity_group1 < 0.95, (
-        f"Single-cell data should not be too sparse (<95% zeros, got {sparsity_group1 * 100:.1f}%)"
+        f"Single-cell data should not be too sparse "
+        f"(<95% zeros, got {sparsity_group1 * 100:.1f}%)"
     )
 
     print(
-        f"Sparsity: Group1 = {sparsity_group1 * 100:.1f}%, Group2 = {sparsity_group2 * 100:.1f}%"
+        f"Sparsity: Group1 = {sparsity_group1 * 100:.1f}%, "
+        f"Group2 = {sparsity_group2 * 100:.1f}%"
     )
 
     # 2. Calculate mean expression for each gene
@@ -1121,14 +1131,16 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
     de_genes = np.where(p_values < 0.05)[0]
     assert len(de_genes) > 0, "Should detect some differentially expressed genes"
     assert len(de_genes) < n_genes * 0.6, (
-        f"Not all genes should be differentially expressed (got {len(de_genes)}/{n_genes})"
+        f"Not all genes should be differentially expressed "
+        f"(got {len(de_genes)}/{n_genes})"
     )
 
     # 6. Check for genes with expression in at least some cells
     genes_expressed = (results["expression"] > 0).sum(axis=0)
     pct_expressed_genes = (genes_expressed > 0).mean() * 100
     assert pct_expressed_genes > 5, (
-        f"At least 5% of genes should be expressed in some cells (got {pct_expressed_genes:.1f}%)"
+        f"At least 5% of genes should be expressed in some cells "
+        f"(got {pct_expressed_genes:.1f}%)"
     )
 
     # 7. Single-cell specific: check for variance in expressed genes
@@ -1143,14 +1155,16 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
         # For expressed genes, some should show variation
         high_cv = (cv_group1 > 0.1).sum()
         assert high_cv > 10, (
-            f"Expressed genes should show variation (got {high_cv} with CV>0.1 out of {n_expressed})"
+            f"Expressed genes should show variation "
+            f"(got {high_cv} with CV>0.1 out of {n_expressed})"
         )
 
     # 8. Expression levels should be reasonable for single-cell count data
     overall_mean = results["expression"].values.mean()
     assert overall_mean > 0, "Mean expression should be positive"
     assert overall_mean < 1e5, (
-        f"Mean expression should be in reasonable single-cell range (got {overall_mean})"
+        f"Mean expression should be in reasonable single-cell range "
+        f"(got {overall_mean})"
     )
 
     # 9. Check that cell type markers might be differential
@@ -1160,15 +1174,18 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
     )
 
     print(
-        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) out of {n_valid} tested"
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "
+        f"out of {n_valid} tested"
     )
     print(f"Strongly DE genes (|log2FC|>2, p<0.01): {strong_de}")
     print(f"Median fold change: {fc_median:.3f} (log2)")
     print(
-        f"Sparsity: {sparsity_group1 * 100:.1f}% (Group1), {sparsity_group2 * 100:.1f}% (Group2)"
+        f"Sparsity: {sparsity_group1 * 100:.1f}% (Group1), "
+        f"{sparsity_group2 * 100:.1f}% (Group2)"
     )
     print(
-        f"Expression range: {results['expression'].values.min():.1f} to {results['expression'].values.max():.1f}"
+        f"Expression range: {results['expression'].values.min():.1f} "
+        f"to {results['expression'].values.max():.1f}"
     )
 
     print("Single-cell biological validity tests passed!")

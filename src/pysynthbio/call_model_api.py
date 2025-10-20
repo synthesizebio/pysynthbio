@@ -417,7 +417,7 @@ def _transform_result_to_frames(
 
         # Handle two different API response structures:
         # 1. New format: outputs is a dict with keys "counts", "metadata", "latents"
-        # 2. Old format: outputs is a list of dicts, each with "counts", "metadata", etc.
+        # 2. Old format: outputs is a list of dicts, each with "counts", etc.
 
         if isinstance(outputs, dict) and "counts" in outputs:
             # New API format: outputs is a dict
