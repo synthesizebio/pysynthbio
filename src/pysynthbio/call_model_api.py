@@ -81,7 +81,6 @@ def get_valid_query(modality: str = "bulk") -> dict:
         return {
             "modality": "single-cell",
             "mode": "sample generation",
-            "return_classifier_probs": True,
             "seed": 11,
             "inputs": [
                 {
@@ -107,7 +106,6 @@ def get_valid_query(modality: str = "bulk") -> dict:
     return {
         "modality": "bulk",
         "mode": "sample generation",
-        "return_classifier_probs": True,
         "seed": 11,
         "inputs": [
             {
@@ -406,17 +404,25 @@ def _transform_result_to_frames(content: dict) -> Tuple[pd.DataFrame, pd.DataFra
         for output in content["outputs"]:
             counts = output.get("counts", [])
 
-            # Single-cell returns dict {gene_id: count}, bulk returns list
+            # Handle different response formats:
+            # - New format: dict with "counts" key containing the list
+            # - Single-cell: dict mapping gene IDs to count values
+            # - Old bulk format: list directly
             if isinstance(counts, dict):
-                # Convert dict to list aligned with gene_order
-                counts_list = [counts.get(gene, 0) for gene in gene_order]
+                if "counts" in counts:
+                    # New API format: {"counts": [actual_counts_list]}
+                    counts_list = counts["counts"]
+                else:
+                    # Single-cell format: {gene_id: count, ...}
+                    counts_list = [counts.get(gene, 0) for gene in gene_order]
             else:
-                # Already a list
+                # Already a list (old format)
                 counts_list = counts
 
             expression_rows.append(counts_list)
 
         expression = pd.DataFrame(expression_rows, columns=gene_order)
+
         metadata_rows = [output.get("metadata", {}) for output in content["outputs"]]
         metadata = pd.DataFrame(metadata_rows)
         return expression.astype(int), metadata

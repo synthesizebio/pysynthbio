@@ -69,29 +69,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for {API_VERSION} raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), f"Result for {API_VERSION} should be a dictionary"
-    assert (
-        "metadata" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-    assert (
-        "expression" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    assert "metadata" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+    )
+    assert "expression" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(
-        metadata_df, pd.DataFrame
-    ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-    assert isinstance(
-        expression_df, pd.DataFrame
-    ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), (
+        f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+    )
+    assert isinstance(expression_df, pd.DataFrame), (
+        f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    )
 
-    assert (
-        not metadata_df.empty
-    ), f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
-    assert (
-        not expression_df.empty
-    ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert not metadata_df.empty, (
+        f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
+    assert not expression_df.empty, (
+        f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -135,15 +135,15 @@ def test_predict_query_live_call_success_single_cell():
     assert isinstance(expression_df, pd.DataFrame), "'expression' should be a DataFrame"
 
     assert not metadata_df.empty, "Single-cell metadata DataFrame should not be empty"
-    assert (
-        not expression_df.empty
-    ), "Single-cell expression DataFrame should not be empty"
+    assert not expression_df.empty, (
+        "Single-cell expression DataFrame should not be empty"
+    )
 
     print("Assertions passed for single-cell live call.")
 
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
-def test_predict_query_live_call_invalid_uberon():
+def test_predict_query_live_call_invalid_sbio_NhLOJhFsaNDMLEDYx3u92WAKmeHPeXqguG1OzCUGq5c():
     """
     Tests that the API properly rejects invalid UBERON IDs.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
@@ -179,9 +179,9 @@ def test_predict_query_live_call_invalid_uberon():
     print(f"API correctly rejected invalid UBERON ID with error: {error_message}")
 
     # The error message should now contain the validation details directly
-    assert (
-        "UBERON:9999999" in error_message
-    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert "UBERON:9999999" in error_message, (
+        f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    )
     assert (
         "bad values" in error_message.lower() or "invalid" in error_message.lower()
     ), f"Error message should indicate validation failure. Got: {error_message}"
@@ -216,7 +216,6 @@ def test_predict_query_live_call_invalid_uberon_single_cell():
         ],
         "modality": "single-cell",
         "mode": "sample generation",
-        "return_classifier_probs": True,
         "seed": 42,
     }
 
@@ -236,9 +235,9 @@ def test_predict_query_live_call_invalid_uberon_single_cell():
     )
 
     # The error message should now contain the validation details directly
-    assert (
-        "UBERON:9999999" in error_message
-    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert "UBERON:9999999" in error_message, (
+        f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    )
     assert (
         "bad values" in error_message.lower() or "invalid" in error_message.lower()
     ), f"Error message should indicate validation failure. Got: {error_message}"
@@ -330,25 +329,25 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         # Verify mocks were called
         mock_post.assert_called_once()
 
-        assert isinstance(
-            results, dict
-        ), f"Result for {API_VERSION} should be a dictionary"
-        assert (
-            "metadata" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-        assert (
-            "expression" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        assert isinstance(results, dict), (
+            f"Result for {API_VERSION} should be a dictionary"
+        )
+        assert "metadata" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+        )
+        assert "expression" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        )
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(
-            metadata_df, pd.DataFrame
-        ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-        assert isinstance(
-            expression_df, pd.DataFrame
-        ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(metadata_df, pd.DataFrame), (
+            f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+        )
+        assert isinstance(expression_df, pd.DataFrame), (
+            f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        )
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
