@@ -36,6 +36,7 @@ all = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
+    "scipy>=1.10.0",  # For statistical tests in validation
     "ruff",
     "mypy",
     "black",

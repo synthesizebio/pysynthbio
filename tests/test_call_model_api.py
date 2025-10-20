@@ -847,3 +847,328 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
             os.environ["SYNTHESIZE_API_KEY"] = original_api_key
         elif "SYNTHESIZE_API_KEY" in os.environ:
             del os.environ["SYNTHESIZE_API_KEY"]
+
+
+# -----------------------------
+# Biological validation tests with differential expression analysis
+# -----------------------------
+
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_biological_validity_differential_expression_bulk():
+    """
+    Test that bulk RNA-seq data returns biologically valid expression data
+    by performing simple differential expression analysis.
+    """
+    print("\nTesting biological validity with differential expression analysis...")
+
+    # Import scipy for statistical tests
+    try:
+        from scipy import stats
+    except ImportError:
+        pytest.skip("scipy not available for statistical tests")
+
+    # Create query with two distinct conditions
+    de_query = {
+        "inputs": [
+            # Condition 1: Plasmacytoid dendritic cell
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000784",  # Plasmacytoid dendritic cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                    "sample_type": "primary tissue",
+                },
+                "num_samples": 5,
+            },
+            # Condition 2: Myeloid cell
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000763",  # Myeloid cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                    "sample_type": "primary tissue",
+                },
+                "num_samples": 5,
+            },
+        ],
+        "modality": "bulk",
+        "mode": "sample generation",
+        "seed": 42,
+    }
+
+    results = predict_query(query=de_query, as_counts=True)
+
+    # Split samples by condition
+    group1_idx = list(range(5))
+    group2_idx = list(range(5, 10))
+
+    expr_group1 = results["expression"].iloc[group1_idx]
+    expr_group2 = results["expression"].iloc[group2_idx]
+
+    n_genes = results["expression"].shape[1]
+
+    # Calculate mean expression for each group
+    mean_group1 = expr_group1.mean(axis=0)
+    mean_group2 = expr_group2.mean(axis=0)
+
+    # Calculate fold changes (using pseudocount to avoid division by zero)
+    pseudocount = 1
+    fold_changes = np.log2((mean_group2 + pseudocount) / (mean_group1 + pseudocount))
+
+    # Perform t-tests for each gene
+    p_values = []
+    for i in range(n_genes):
+        try:
+            _, p_val = stats.ttest_ind(expr_group1.iloc[:, i], expr_group2.iloc[:, i])
+            p_values.append(p_val)
+        except Exception:
+            p_values.append(np.nan)
+
+    p_values = np.array(p_values)
+
+    # Basic validation of differential expression results
+    print("Validating differential expression statistics...")
+
+    # 1. Check that we have valid p-values
+    valid_pvals = ~np.isnan(p_values)
+    assert np.sum(valid_pvals) > n_genes * 0.9, (
+        f"At least 90% of genes should have valid p-values (got {np.sum(valid_pvals)}/{n_genes})"
+    )
+
+    # 2. P-values should be distributed between 0 and 1
+    assert np.all((p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)), (
+        "All p-values should be between 0 and 1"
+    )
+
+    # 3. Not all p-values should be identical (showing variation)
+    unique_pvals = len(np.unique(p_values[valid_pvals]))
+    assert unique_pvals > 100, (
+        f"P-values should show variation (got {unique_pvals} unique values)"
+    )
+
+    # 4. Fold changes should be reasonable (not all zero, not all extreme)
+    fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
+    assert fc_std > 0, "Fold changes should show variation"
+
+    fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
+    assert abs(fc_median) < 10, (
+        f"Median fold change should be reasonable (|log2FC| < 10, got {fc_median})"
+    )
+
+    # 5. Check for differentially expressed genes (p < 0.05)
+    de_genes = np.where(p_values < 0.05)[0]
+    assert len(de_genes) > 0, "Should detect some differentially expressed genes"
+    assert len(de_genes) < n_genes * 0.5, (
+        f"Not all genes should be differentially expressed (got {len(de_genes)}/{n_genes})"
+    )
+
+    # 6. Variance should exist within groups (biological variation)
+    var_group1 = expr_group1.var(axis=0)
+    var_group2 = expr_group2.var(axis=0)
+    assert np.median(var_group1[~np.isnan(var_group1)]) > 0, (
+        "Group 1 should show within-group variance"
+    )
+    assert np.median(var_group2[~np.isnan(var_group2)]) > 0, (
+        "Group 2 should show within-group variance"
+    )
+
+    # 7. Expression levels should be reasonable for count data
+    overall_mean = results["expression"].values.mean()
+    assert overall_mean > 0, "Mean expression should be positive"
+    assert overall_mean < 1e6, (
+        f"Mean expression should be in reasonable range (got {overall_mean})"
+    )
+
+    print(
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) out of {np.sum(valid_pvals)} tested"
+    )
+    print(f"Median fold change: {fc_median:.3f} (log2)")
+    print(
+        f"Expression range: {results['expression'].values.min():.1f} to {results['expression'].values.max():.1f}"
+    )
+
+    print("Biological validity tests passed!")
+
+
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_biological_validity_differential_expression_single_cell():
+    """
+    Test that single-cell data returns biologically valid expression data
+    by performing differential expression analysis.
+    """
+    print(
+        "\nTesting single-cell biological validity with differential expression analysis..."
+    )
+
+    # Import scipy for statistical tests
+    try:
+        from scipy import stats
+    except ImportError:
+        pytest.skip("scipy not available for statistical tests")
+
+    # Create query with two distinct cell types
+    sc_de_query = {
+        "inputs": [
+            # Condition 1: T cells
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000084",  # T cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                },
+                "num_samples": 10,
+            },
+            # Condition 2: B cells
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000236",  # B cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                },
+                "num_samples": 10,
+            },
+        ],
+        "modality": "single-cell",
+        "mode": "mean estimation",
+        "seed": 123,
+    }
+
+    results = predict_query(query=sc_de_query, as_counts=True)
+
+    # Split samples by condition
+    group1_idx = list(range(10))
+    group2_idx = list(range(10, 20))
+
+    expr_group1 = results["expression"].iloc[group1_idx]
+    expr_group2 = results["expression"].iloc[group2_idx]
+
+    n_genes = results["expression"].shape[1]
+    n_cells = results["expression"].shape[0]
+
+    print(f"Analyzing {n_cells} cells across {n_genes} genes...")
+
+    # Single-cell specific metrics
+    # 1. Calculate sparsity (proportion of zeros)
+    sparsity_group1 = (expr_group1 == 0).values.sum() / (
+        expr_group1.shape[0] * expr_group1.shape[1]
+    )
+    sparsity_group2 = (expr_group2 == 0).values.sum() / (
+        expr_group2.shape[0] * expr_group2.shape[1]
+    )
+
+    assert sparsity_group1 > 0.3, (
+        f"Single-cell data should show sparsity (>30% zeros, got {sparsity_group1 * 100:.1f}%)"
+    )
+    assert sparsity_group1 < 0.95, (
+        f"Single-cell data should not be too sparse (<95% zeros, got {sparsity_group1 * 100:.1f}%)"
+    )
+
+    print(
+        f"Sparsity: Group1 = {sparsity_group1 * 100:.1f}%, Group2 = {sparsity_group2 * 100:.1f}%"
+    )
+
+    # 2. Calculate mean expression for each gene
+    mean_group1 = expr_group1.mean(axis=0)
+    mean_group2 = expr_group2.mean(axis=0)
+
+    # 3. Calculate fold changes (using pseudocount for sparse data)
+    pseudocount = 0.1
+    fold_changes = np.log2((mean_group2 + pseudocount) / (mean_group1 + pseudocount))
+
+    # 4. Perform Wilcoxon rank-sum tests (better for sparse/non-normal single-cell data)
+    p_values = []
+    for i in range(n_genes):
+        try:
+            _, p_val = stats.mannwhitneyu(
+                expr_group1.iloc[:, i], expr_group2.iloc[:, i], alternative="two-sided"
+            )
+            p_values.append(p_val)
+        except Exception:
+            p_values.append(np.nan)
+
+    p_values = np.array(p_values)
+
+    # Validation of single-cell differential expression results
+    print("Validating single-cell differential expression statistics...")
+
+    # 1. Check that we have valid p-values
+    valid_pvals = ~np.isnan(p_values)
+    n_valid = np.sum(valid_pvals)
+    assert n_valid > 100, f"Should have at least 100 testable genes (got {n_valid})"
+
+    # 2. P-values should be distributed between 0 and 1
+    assert np.all((p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)), (
+        "All p-values should be between 0 and 1"
+    )
+
+    # 3. P-values should show variation (not all the same)
+    unique_pvals = len(np.unique(p_values[valid_pvals]))
+    assert unique_pvals > 100, (
+        f"P-values should show variation (got {unique_pvals} unique values)"
+    )
+
+    # 4. Fold changes should show variation
+    fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
+    assert fc_std > 0, "Fold changes should show variation"
+
+    fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
+    assert abs(fc_median) < 15, (
+        f"Median fold change should be reasonable for single-cell (got {fc_median})"
+    )
+
+    # 5. Check for differentially expressed genes
+    de_genes = np.where(p_values < 0.05)[0]
+    assert len(de_genes) > 0, "Should detect some differentially expressed genes"
+    assert len(de_genes) < n_genes * 0.6, (
+        f"Not all genes should be differentially expressed (got {len(de_genes)}/{n_genes})"
+    )
+
+    # 6. Check for genes with expression in at least some cells
+    genes_expressed = (results["expression"] > 0).sum(axis=0)
+    pct_expressed_genes = (genes_expressed > 0).mean() * 100
+    assert pct_expressed_genes > 5, (
+        f"At least 5% of genes should be expressed in some cells (got {pct_expressed_genes:.1f}%)"
+    )
+
+    # 7. Single-cell specific: check for variance in expressed genes
+    expressed_genes = (mean_group1 > 0) | (mean_group2 > 0)
+    n_expressed = expressed_genes.sum()
+
+    if n_expressed > 10:
+        var_group1 = expr_group1.loc[:, expressed_genes].var(axis=0)
+        mean_expressed = expr_group1.loc[:, expressed_genes].mean(axis=0)
+        cv_group1 = np.sqrt(var_group1) / (mean_expressed + 1e-6)
+
+        # For expressed genes, some should show variation
+        high_cv = (cv_group1 > 0.1).sum()
+        assert high_cv > 10, (
+            f"Expressed genes should show variation (got {high_cv} with CV>0.1 out of {n_expressed})"
+        )
+
+    # 8. Expression levels should be reasonable for single-cell count data
+    overall_mean = results["expression"].values.mean()
+    assert overall_mean > 0, "Mean expression should be positive"
+    assert overall_mean < 1e5, (
+        f"Mean expression should be in reasonable single-cell range (got {overall_mean})"
+    )
+
+    # 9. Check that cell type markers might be differential
+    strong_de = np.sum((np.abs(fold_changes) > 2) & (p_values < 0.01))
+    assert strong_de > 10, (
+        f"Should detect some strongly DE genes between T and B cells (got {strong_de})"
+    )
+
+    print(
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) out of {n_valid} tested"
+    )
+    print(f"Strongly DE genes (|log2FC|>2, p<0.01): {strong_de}")
+    print(f"Median fold change: {fc_median:.3f} (log2)")
+    print(
+        f"Sparsity: {sparsity_group1 * 100:.1f}% (Group1), {sparsity_group2 * 100:.1f}% (Group2)"
+    )
+    print(
+        f"Expression range: {results['expression'].values.min():.1f} to {results['expression'].values.max():.1f}"
+    )
+
+    print("Single-cell biological validity tests passed!")
