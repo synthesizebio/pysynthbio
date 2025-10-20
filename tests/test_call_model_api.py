@@ -69,29 +69,29 @@ def test_predict_query_live_call_success():
         pytest.fail(f"predict_query for {API_VERSION} raised unexpected Exception: {e}")
 
     assert isinstance(results, dict), f"Result for {API_VERSION} should be a dictionary"
-    assert (
-        "metadata" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-    assert (
-        "expression" in results
-    ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    assert "metadata" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+    )
+    assert "expression" in results, (
+        f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    )
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
 
-    assert isinstance(
-        metadata_df, pd.DataFrame
-    ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-    assert isinstance(
-        expression_df, pd.DataFrame
-    ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(metadata_df, pd.DataFrame), (
+        f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+    )
+    assert isinstance(expression_df, pd.DataFrame), (
+        f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    )
 
-    assert (
-        not metadata_df.empty
-    ), f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
-    assert (
-        not expression_df.empty
-    ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert not metadata_df.empty, (
+        f"Metadata DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
+    assert not expression_df.empty, (
+        f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    )
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -135,15 +135,15 @@ def test_predict_query_live_call_success_single_cell():
     assert isinstance(expression_df, pd.DataFrame), "'expression' should be a DataFrame"
 
     assert not metadata_df.empty, "Single-cell metadata DataFrame should not be empty"
-    assert (
-        not expression_df.empty
-    ), "Single-cell expression DataFrame should not be empty"
+    assert not expression_df.empty, (
+        "Single-cell expression DataFrame should not be empty"
+    )
 
     print("Assertions passed for single-cell live call.")
 
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
-def test_predict_query_live_call_invalid_sbio_key():
+def test_predict_query_live_call_invalid_uberon_id():
     """
     Tests that the API properly rejects invalid UBERON IDs.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
@@ -179,9 +179,9 @@ def test_predict_query_live_call_invalid_sbio_key():
     print(f"API correctly rejected invalid UBERON ID with error: {error_message}")
 
     # The error message should now contain the validation details directly
-    assert (
-        "UBERON:9999999" in error_message
-    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert "UBERON:9999999" in error_message, (
+        f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    )
     assert (
         "bad values" in error_message.lower() or "invalid" in error_message.lower()
     ), f"Error message should indicate validation failure. Got: {error_message}"
@@ -235,9 +235,9 @@ def test_predict_query_live_call_invalid_uberon_single_cell():
     )
 
     # The error message should now contain the validation details directly
-    assert (
-        "UBERON:9999999" in error_message
-    ), f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    assert "UBERON:9999999" in error_message, (
+        f"Error message should mention the invalid UBERON ID. Got: {error_message}"
+    )
     assert (
         "bad values" in error_message.lower() or "invalid" in error_message.lower()
     ), f"Error message should indicate validation failure. Got: {error_message}"
@@ -285,26 +285,23 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
-            "outputs": [
-                {
-                    "counts": [100, 200, 300],
-                    "metadata": {
+            "outputs": {
+                "counts": {"counts": [[100, 200, 300], [150, 250, 350]]},
+                "metadata": [
+                    {
                         "sample_id": "test1",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "25",
                         "sex": "female",
                     },
-                },
-                {
-                    "counts": [150, 250, 350],
-                    "metadata": {
+                    {
                         "sample_id": "test2",
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "30",
                         "sex": "male",
                     },
-                },
-            ],
+                ],
+            },
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
@@ -329,25 +326,25 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         # Verify mocks were called
         mock_post.assert_called_once()
 
-        assert isinstance(
-            results, dict
-        ), f"Result for {API_VERSION} should be a dictionary"
-        assert (
-            "metadata" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'metadata' key"
-        assert (
-            "expression" in results
-        ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        assert isinstance(results, dict), (
+            f"Result for {API_VERSION} should be a dictionary"
+        )
+        assert "metadata" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'metadata' key"
+        )
+        assert "expression" in results, (
+            f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        )
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
 
-        assert isinstance(
-            metadata_df, pd.DataFrame
-        ), f"'metadata' for {API_VERSION} should be a pandas DataFrame"
-        assert isinstance(
-            expression_df, pd.DataFrame
-        ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(metadata_df, pd.DataFrame), (
+            f"'metadata' for {API_VERSION} should be a pandas DataFrame"
+        )
+        assert isinstance(expression_df, pd.DataFrame), (
+            f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        )
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
@@ -401,12 +398,10 @@ def test_predict_query_auto_authenticate(mock_post, mock_get, mock_set_token):
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
-            "outputs": [
-                {
-                    "counts": [1, 2, 3],
-                    "metadata": {"sample_id": "test1", "age_years": "25"},
-                }
-            ],
+            "outputs": {
+                "counts": {"counts": [[1, 2, 3]]},
+                "metadata": [{"sample_id": "test1", "age_years": "25"}],
+            },
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
@@ -593,28 +588,19 @@ def test_new_api_structure_handling(mock_post, mock_get):
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
-            "outputs": [
-                {
-                    "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,
-                    "classifier_probs": {
-                        "sex": {"female": 0.7, "male": 0.3},
-                        "age_years": {"60-70": 0.8, "70-80": 0.2},
-                        "tissue_ontology_id": {"UBERON:0000945": 0.9},
-                    },
-                    "latents": {
-                        "biological": [-0.89, 0.38, -0.08] * 100,
-                        "technical": [0.55, -0.38, -0.92] * 100,
-                        "perturbation": [1.84, 0.46, -1.39] * 100,
-                    },
-                    "metadata": {
+            "outputs": {
+                "counts": {"counts": [[0.1, 0.2, 0.3, 0.4, 0.5] * 8918]},
+                "metadata": [
+                    {
                         "age_years": "65",
                         "disease_ontology_id": "MONDO:0011719",
                         "sex": "female",
                         "sample_type": "primary tissue",
                         "tissue_ontology_id": "UBERON:0000945",
-                    },
-                }
-            ],
+                    }
+                ],
+                "latents": [[1.0, 2.0, 3.0]],  # Simplified latents
+            },
             "gene_order": [f"ENSG{i:011d}" for i in range(44590)],
             "model_version": 2,
         }
@@ -695,12 +681,12 @@ def test_latents_extraction(mock_post, mock_get):
         results = predict_query(query, as_counts=True)
 
         # Verify latents are present and correctly extracted
-        assert (
-            "latents" in results
-        ), "Results should contain 'latents' key when present in API response"
-        assert isinstance(
-            results["latents"], pd.DataFrame
-        ), "'latents' should be a pandas DataFrame"
+        assert "latents" in results, (
+            "Results should contain 'latents' key when present in API response"
+        )
+        assert isinstance(results["latents"], pd.DataFrame), (
+            "'latents' should be a pandas DataFrame"
+        )
         assert results["latents"].shape == (
             2,
             5,
@@ -762,10 +748,10 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
-            "outputs": [
-                {"counts": [1, 2, 3], "metadata": {"sample_id": "s1"}},
-                {"counts": [4, 5, 6], "metadata": {"sample_id": "s2"}},
-            ],
+            "outputs": {
+                "counts": {"counts": [[1, 2, 3], [4, 5, 6]]},
+                "metadata": [{"sample_id": "s1"}, {"sample_id": "s2"}],
+            },
             "gene_order": ["gene1", "gene2", "gene3"],
         }
 
@@ -855,6 +841,7 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
 # -----------------------------
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 def test_predict_query_biological_validity_differential_expression_bulk():
     """
@@ -940,24 +927,24 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     )
 
     # 2. P-values should be distributed between 0 and 1
-    assert np.all(
-        (p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)
-    ), "All p-values should be between 0 and 1"
+    assert np.all((p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)), (
+        "All p-values should be between 0 and 1"
+    )
 
     # 3. Not all p-values should be identical (showing variation)
     unique_pvals = len(np.unique(p_values[valid_pvals]))
-    assert (
-        unique_pvals > 100
-    ), f"P-values should show variation (got {unique_pvals} unique values)"
+    assert unique_pvals > 100, (
+        f"P-values should show variation (got {unique_pvals} unique values)"
+    )
 
     # 4. Fold changes should be reasonable (not all zero, not all extreme)
     fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
     assert fc_std > 0, "Fold changes should show variation"
 
     fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
-    assert (
-        abs(fc_median) < 10
-    ), f"Median fold change should be reasonable (|log2FC| < 10, got {fc_median})"
+    assert abs(fc_median) < 10, (
+        f"Median fold change should be reasonable (|log2FC| < 10, got {fc_median})"
+    )
 
     # 5. Check for differentially expressed genes (p < 0.05)
     de_genes = np.where(p_values < 0.05)[0]
@@ -970,19 +957,19 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     # 6. Variance should exist within groups (biological variation)
     var_group1 = expr_group1.var(axis=0)
     var_group2 = expr_group2.var(axis=0)
-    assert (
-        np.median(var_group1[~np.isnan(var_group1)]) > 0
-    ), "Group 1 should show within-group variance"
-    assert (
-        np.median(var_group2[~np.isnan(var_group2)]) > 0
-    ), "Group 2 should show within-group variance"
+    assert np.median(var_group1[~np.isnan(var_group1)]) > 0, (
+        "Group 1 should show within-group variance"
+    )
+    assert np.median(var_group2[~np.isnan(var_group2)]) > 0, (
+        "Group 2 should show within-group variance"
+    )
 
     # 7. Expression levels should be reasonable for count data
     overall_mean = results["expression"].values.mean()
     assert overall_mean > 0, "Mean expression should be positive"
-    assert (
-        overall_mean < 1e6
-    ), f"Mean expression should be in reasonable range (got {overall_mean})"
+    assert overall_mean < 1e6, (
+        f"Mean expression should be in reasonable range (got {overall_mean})"
+    )
 
     print(
         f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "
@@ -997,6 +984,7 @@ def test_predict_query_biological_validity_differential_expression_bulk():
     print("Biological validity tests passed!")
 
 
+@pytest.mark.integration
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 def test_predict_query_biological_validity_differential_expression_single_cell():
     """
@@ -1108,24 +1096,24 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
     assert n_valid > 100, f"Should have at least 100 testable genes (got {n_valid})"
 
     # 2. P-values should be distributed between 0 and 1
-    assert np.all(
-        (p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)
-    ), "All p-values should be between 0 and 1"
+    assert np.all((p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)), (
+        "All p-values should be between 0 and 1"
+    )
 
     # 3. P-values should show variation (not all the same)
     unique_pvals = len(np.unique(p_values[valid_pvals]))
-    assert (
-        unique_pvals > 100
-    ), f"P-values should show variation (got {unique_pvals} unique values)"
+    assert unique_pvals > 100, (
+        f"P-values should show variation (got {unique_pvals} unique values)"
+    )
 
     # 4. Fold changes should show variation
     fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
     assert fc_std > 0, "Fold changes should show variation"
 
     fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
-    assert (
-        abs(fc_median) < 15
-    ), f"Median fold change should be reasonable for single-cell (got {fc_median})"
+    assert abs(fc_median) < 15, (
+        f"Median fold change should be reasonable for single-cell (got {fc_median})"
+    )
 
     # 5. Check for differentially expressed genes
     de_genes = np.where(p_values < 0.05)[0]
@@ -1169,9 +1157,9 @@ def test_predict_query_biological_validity_differential_expression_single_cell()
 
     # 9. Check that cell type markers might be differential
     strong_de = np.sum((np.abs(fold_changes) > 2) & (p_values < 0.01))
-    assert (
-        strong_de > 10
-    ), f"Should detect some strongly DE genes between T and B cells (got {strong_de})"
+    assert strong_de > 10, (
+        f"Should detect some strongly DE genes between T and B cells (got {strong_de})"
+    )
 
     print(
         f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "

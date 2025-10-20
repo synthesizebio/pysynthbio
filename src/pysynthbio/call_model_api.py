@@ -401,11 +401,12 @@ def _transform_result_to_frames(
     """
     Transforms the final JSON result into (expression_df, metadata_df, latents_df).
 
-    Returns
-    -------
-    tuple
-        A tuple of (expression_df, metadata_df, latents_df) where latents_df
-        may be an empty DataFrame if latents are not present in the response.
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing:
+            - expression_df (pd.DataFrame): DataFrame of expression counts.
+            - metadata_df (pd.DataFrame): DataFrame of sample metadata.
+            - latents_df (pd.DataFrame): DataFrame of latents, which may be empty
+              if not present in the response.
     """
     for key in ("error", "errors"):
         if key in content:
@@ -415,59 +416,32 @@ def _transform_result_to_frames(
         gene_order = content["gene_order"]
         outputs = content["outputs"]
 
-        # Handle two different API response structures:
-        # 1. New format: outputs is a dict with keys "counts", "metadata", "latents"
-        # 2. Old format: outputs is a list of dicts, each with "counts", etc.
+        # API format: outputs is a dict with keys "counts", "metadata", "latents"
+        if not isinstance(outputs, dict):
+            raise ValueError(
+                f"Unexpected outputs format: expected dict, got {type(outputs)}"
+            )
 
-        if isinstance(outputs, dict) and "counts" in outputs:
-            # New API format: outputs is a dict
-            counts_data = outputs["counts"]
+        counts_data = outputs.get("counts")
+        if counts_data is None:
+            raise ValueError("Missing 'counts' key in outputs")
 
-            # Handle nested counts structure
-            if isinstance(counts_data, dict) and "counts" in counts_data:
-                counts_list = counts_data["counts"]
-            else:
-                counts_list = counts_data
-
-            # Build expression dataframe
-            expression = pd.DataFrame(counts_list, columns=gene_order)
-
-            # Build metadata dataframe
-            metadata = pd.DataFrame(outputs.get("metadata", []))
-
-            # Extract latents if present
-            latents = pd.DataFrame()
-            if "latents" in outputs:
-                latents = pd.DataFrame(outputs["latents"])
-
+        # Handle nested counts structure
+        if isinstance(counts_data, dict) and "counts" in counts_data:
+            counts_list = counts_data["counts"]
         else:
-            # Old API format: outputs is a list of output dicts
-            expression_rows = []
-            for output in outputs:
-                counts = output.get("counts", [])
+            counts_list = counts_data
 
-                # Handle different response formats:
-                # - Dict with "counts" key containing the list
-                # - Single-cell: dict mapping gene IDs to count values
-                # - Direct list
-                if isinstance(counts, dict):
-                    if "counts" in counts:
-                        counts_list = counts["counts"]
-                    else:
-                        # Single-cell format: {gene_id: count, ...}
-                        counts_list = [counts.get(gene, 0) for gene in gene_order]
-                else:
-                    # Already a list
-                    counts_list = counts
+        # Build expression dataframe
+        expression = pd.DataFrame(counts_list, columns=gene_order)
 
-                expression_rows.append(counts_list)
+        # Build metadata dataframe
+        metadata = pd.DataFrame(outputs.get("metadata", []))
 
-            expression = pd.DataFrame(expression_rows, columns=gene_order)
-            metadata_rows = [output.get("metadata", {}) for output in outputs]
-            metadata = pd.DataFrame(metadata_rows)
-
-            # For old format, latents not supported in this structure
-            latents = pd.DataFrame()
+        # Extract latents if present
+        latents = pd.DataFrame()
+        if "latents" in outputs:
+            latents = pd.DataFrame(outputs["latents"])
 
         return expression.astype(int), metadata, latents
 
