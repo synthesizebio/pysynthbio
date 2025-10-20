@@ -640,6 +640,92 @@ def test_new_api_structure_handling(mock_post, mock_get):
             del os.environ["SYNTHESIZE_API_KEY"]
 
 
+@patch("pysynthbio.call_model_api.requests.get")
+@patch("pysynthbio.call_model_api.requests.post")
+def test_latents_extraction(mock_post, mock_get):
+    """
+    Test that latents are properly extracted and returned when present in API response.
+    """
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
+
+    try:
+        # Mock the POST request to start the query
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "test-query-id"}
+        mock_post.return_value = post_resp
+
+        # Mock the GET requests for polling and download
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/results.json",
+        }
+
+        # Mock response with latents included
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
+            "outputs": {
+                "counts": {"counts": [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]},
+                "metadata": [
+                    {"sample_type": "cell line", "cell_line_ontology_id": "CVCL_0023"},
+                    {
+                        "sample_type": "primary tissue",
+                        "tissue_ontology_id": "UBERON:0000945",
+                    },
+                ],
+                "latents": [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]],
+            },
+            "gene_order": [
+                "ENSG00000000001",
+                "ENSG00000000002",
+                "ENSG00000000003",
+                "ENSG00000000004",
+                "ENSG00000000005",
+            ],
+            "model_version": 3,
+        }
+        mock_get.side_effect = [get_status_ready, get_download]
+
+        # Test the predict_query function
+        query = get_valid_query()
+        results = predict_query(query, as_counts=True)
+
+        # Verify latents are present and correctly extracted
+        assert "latents" in results, (
+            "Results should contain 'latents' key when present in API response"
+        )
+        assert isinstance(results["latents"], pd.DataFrame), (
+            "'latents' should be a pandas DataFrame"
+        )
+        assert results["latents"].shape == (2, 5), (
+            f"Expected latents shape (2, 5), got {results['latents'].shape}"
+        )
+
+        # Verify latents values
+        expected_latents = pd.DataFrame(
+            [[0.1, 0.2, 0.3, 0.4, 0.5], [0.6, 0.7, 0.8, 0.9, 1.0]]
+        )
+        pd.testing.assert_frame_equal(results["latents"], expected_latents)
+
+        # Verify metadata and expression are still present
+        assert "metadata" in results
+        assert "expression" in results
+        assert results["metadata"].shape[0] == 2
+        assert results["expression"].shape == (2, 5)
+
+        print("Latents extraction test passed!")
+
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
 # -----------------------------
 # New tests for single-cell async flow
 # -----------------------------
