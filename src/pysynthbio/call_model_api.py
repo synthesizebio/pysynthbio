@@ -80,7 +80,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
     if modality == "single-cell":
         return {
             "modality": "single-cell",
-            "mode": "sample generation",
+            "mode": "mean estimation",
             "seed": 11,
             "inputs": [
                 {
@@ -170,6 +170,8 @@ def predict_query(
     dict
         metadata: pd.DataFrame (metadata, empty if return_download_url=True)
         expression: pd.DataFrame (expression, empty if return_download_url=True)
+        latents: pd.DataFrame (latents from the model, empty if
+            return_download_url=True)
 
     Raises
     -------
@@ -248,7 +250,11 @@ def predict_query(
 
         if return_download_url:
             # Caller wants the URL only; return in a structured payload
-            return {"metadata": pd.DataFrame(), "expression": pd.DataFrame()}
+            return {
+                "metadata": pd.DataFrame(),
+                "expression": pd.DataFrame(),
+                "latents": pd.DataFrame(),
+            }
 
         # Fetch the final results JSON and transform to DataFrames
         final_json = _get_json(download_url)
@@ -260,12 +266,8 @@ def predict_query(
         if not as_counts:
             expression = log_cpm(expression)
 
-        # Build result dictionary
-        result = {"metadata": metadata, "expression": expression}
-
-        # Add latents if present
-        if not latents.empty:
-            result["latents"] = latents
+        # Build result dictionary - always include latents
+        result = {"metadata": metadata, "expression": expression, "latents": latents}
 
         return result
 
@@ -481,6 +483,17 @@ def validate_query(query: dict) -> None:
         raise ValueError(
             f"Missing required keys in query: {missing_keys}. "
             f"Use `get_valid_query()` to get an example."
+        )
+
+    # Validate single-cell modality only supports "mean estimation"
+    if (
+        query.get("modality") == "single-cell"
+        and query.get("mode") == "sample generation"
+    ):
+        raise ValueError(
+            "Single-cell modality only supports 'mean estimation' mode, "
+            "not 'sample generation'. "
+            "Please set mode='mean estimation' in your query."
         )
 
 
