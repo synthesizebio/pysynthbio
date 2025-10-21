@@ -254,6 +254,7 @@ def predict_query(
                 "metadata": pd.DataFrame(),
                 "expression": pd.DataFrame(),
                 "latents": pd.DataFrame(),
+                "download_url": download_url,
             }
 
         # Fetch the final results JSON and transform to DataFrames
