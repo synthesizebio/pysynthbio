@@ -75,9 +75,13 @@ def test_predict_query_live_call_success():
     assert (
         "expression" in results
     ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+    assert (
+        "latents" in results
+    ), f"Result dictionary for {API_VERSION} should contain 'latents' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
+    latents_df = results["latents"]
 
     assert isinstance(
         metadata_df, pd.DataFrame
@@ -85,6 +89,9 @@ def test_predict_query_live_call_success():
     assert isinstance(
         expression_df, pd.DataFrame
     ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+    assert isinstance(
+        latents_df, pd.DataFrame
+    ), f"'latents' for {API_VERSION} should be a pandas DataFrame"
 
     assert (
         not metadata_df.empty
@@ -92,6 +99,43 @@ def test_predict_query_live_call_success():
     assert (
         not expression_df.empty
     ), f"Expression DataFrame for {API_VERSION} should not be empty for a valid query"
+    assert (
+        not latents_df.empty
+    ), f"Latents DataFrame for {API_VERSION} should not be empty for a valid query"
+
+    # Verify latents dimensions match the number of samples
+    assert len(latents_df) == len(metadata_df), (
+        f"Latents should have same number of rows as metadata "
+        f"(got {len(latents_df)} vs {len(metadata_df)})"
+    )
+
+    # Verify latents contain actual data (not all zeros)
+    # Latents is a DataFrame with columns like 'biological', 'technical', 'perturbation'
+    # where each cell contains a list of floats
+    assert len(latents_df.columns) > 0, "Latents should have at least one column"
+
+    # Check that each latent type has non-zero values
+    for col in latents_df.columns:
+        # Each cell contains a list, so we need to flatten to check values
+        all_values = []
+        for cell_value in latents_df[col]:
+            if isinstance(cell_value, list):
+                all_values.extend(cell_value)
+
+        values_sum = sum(all_values)
+        latents_col_msg = (
+            f"Latents column '{col}' should contain non-zero values, "
+            f"but sum is {values_sum}"
+        )
+        assert values_sum != 0, latents_col_msg
+
+        # Check for variation
+        import numpy as np
+
+        values_std = np.std(all_values)
+        assert (
+            values_std > 0
+        ), f"Latents column '{col}' should have variation, but std is {values_std}"
 
     print(f"Assertions passed for {API_VERSION}.")
 
@@ -127,23 +171,61 @@ def test_predict_query_live_call_success_single_cell():
     assert isinstance(results, dict), "Single-cell result should be a dictionary"
     assert "metadata" in results, "Single-cell result should contain 'metadata' key"
     assert "expression" in results, "Single-cell result should contain 'expression' key"
+    assert "latents" in results, "Single-cell result should contain 'latents' key"
 
     metadata_df = results["metadata"]
     expression_df = results["expression"]
+    latents_df = results["latents"]
 
     assert isinstance(metadata_df, pd.DataFrame), "'metadata' should be a DataFrame"
     assert isinstance(expression_df, pd.DataFrame), "'expression' should be a DataFrame"
+    assert isinstance(latents_df, pd.DataFrame), "'latents' should be a DataFrame"
 
     assert not metadata_df.empty, "Single-cell metadata DataFrame should not be empty"
     assert (
         not expression_df.empty
     ), "Single-cell expression DataFrame should not be empty"
+    assert not latents_df.empty, "Single-cell latents DataFrame should not be empty"
+
+    # Verify latents dimensions match the number of samples
+    assert len(latents_df) == len(metadata_df), (
+        f"Latents should have same number of rows as metadata "
+        f"(got {len(latents_df)} vs {len(metadata_df)})"
+    )
+
+    # Verify latents contain actual data (not all zeros)
+    # Latents is a DataFrame with columns like 'biological', 'technical', 'perturbation'
+    # where each cell contains a list of floats
+    assert len(latents_df.columns) > 0, "Latents should have at least one column"
+
+    # Check that each latent type has non-zero values
+    for col in latents_df.columns:
+        # Each cell contains a list, so we need to flatten to check values
+        all_values = []
+        for cell_value in latents_df[col]:
+            if isinstance(cell_value, list):
+                all_values.extend(cell_value)
+
+        values_sum = sum(all_values)
+        latents_col_msg = (
+            f"Latents column '{col}' should contain non-zero values, "
+            f"but sum is {values_sum}"
+        )
+        assert values_sum != 0, latents_col_msg
+
+        # Check for variation
+        import numpy as np
+
+        values_std = np.std(all_values)
+        assert (
+            values_std > 0
+        ), f"Latents column '{col}' should have variation, but std is {values_std}"
 
     print("Assertions passed for single-cell live call.")
 
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
-def test_predict_query_live_call_invalid_uberon():
+def test_predict_query_live_call_invalid_uberon_id():
     """
     Tests that the API properly rejects invalid UBERON IDs.
     Requires SYNTHESIZE_API_KEY to be set in the environment.
@@ -215,8 +297,7 @@ def test_predict_query_live_call_invalid_uberon_single_cell():
             }
         ],
         "modality": "single-cell",
-        "mode": "sample generation",
-        "return_classifier_probs": True,
+        "mode": "mean estimation",  # Correct mode for single-cell
         "seed": 42,
     }
 
@@ -295,6 +376,11 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
                         "age_years": "25",
                         "sex": "female",
                     },
+                    "latents": {
+                        "biological": [0.5] * 1024,
+                        "technical": [0.6] * 32,
+                        "perturbation": [0.7] * 512,
+                    },
                 },
                 {
                     "counts": [150, 250, 350],
@@ -303,6 +389,11 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
                         "cell_line_ontology_id": "CVCL_0023",
                         "age_years": "30",
                         "sex": "male",
+                    },
+                    "latents": {
+                        "biological": [0.8] * 1024,
+                        "technical": [0.9] * 32,
+                        "perturbation": [1.0] * 512,
                     },
                 },
             ],
@@ -339,9 +430,13 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         assert (
             "expression" in results
         ), f"Result dictionary for {API_VERSION} should contain 'expression' key"
+        assert (
+            "latents" in results
+        ), f"Result dictionary for {API_VERSION} should contain 'latents' key"
 
         metadata_df = results["metadata"]
         expression_df = results["expression"]
+        latents_df = results["latents"]
 
         assert isinstance(
             metadata_df, pd.DataFrame
@@ -349,15 +444,34 @@ def test_predict_query_mocked_call_success(mock_post, mock_get):
         assert isinstance(
             expression_df, pd.DataFrame
         ), f"'expression' for {API_VERSION} should be a pandas DataFrame"
+        assert isinstance(
+            latents_df, pd.DataFrame
+        ), f"'latents' for {API_VERSION} should be a pandas DataFrame"
 
         # Check dimensions match new structure
         assert len(metadata_df) == 2, "Should have 2 metadata rows (one per output)"
         assert len(expression_df) == 2, "Should have 2 expression rows (one per output)"
+        assert len(latents_df) == 2, "Should have 2 latents rows (one per output)"
         assert len(expression_df.columns) == 3, "Should have 3 gene columns"
+        latents_types_msg = (
+            "Should have 3 latent types (biological, technical, perturbation)"
+        )
+        assert len(latents_df.columns) == 3, latents_types_msg
 
         # Check data values
         assert list(expression_df.iloc[0]) == [100, 200, 300]
         assert list(expression_df.iloc[1]) == [150, 250, 350]
+
+        # Latents now has dict structure with list-columns
+        assert "biological" in latents_df.columns
+        assert "technical" in latents_df.columns
+        assert "perturbation" in latents_df.columns
+
+        # Check that each cell contains a list
+        assert isinstance(latents_df.iloc[0]["biological"], list)
+        assert len(latents_df.iloc[0]["biological"]) == 1024
+        assert len(latents_df.iloc[0]["technical"]) == 32
+        assert len(latents_df.iloc[0]["perturbation"]) == 512
 
         print(f"Assertions passed for {API_VERSION} mocked call.")
 
@@ -406,6 +520,11 @@ def test_predict_query_auto_authenticate(mock_post, mock_get, mock_set_token):
                 {
                     "counts": [1, 2, 3],
                     "metadata": {"sample_id": "test1", "age_years": "25"},
+                    "latents": {
+                        "biological": [0.1] * 1024,
+                        "technical": [0.2] * 32,
+                        "perturbation": [0.3] * 512,
+                    },
                 }
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
@@ -510,6 +629,21 @@ def test_validate_query_not_dict():
     print("validate_query correctly failed for non-dict query.")
 
 
+def test_validate_query_single_cell_sample_generation():
+    """Tests validate_query raises ValueError for single-cell with sample generation."""
+    invalid_query = {
+        "modality": "single-cell",
+        "mode": "sample generation",  # Invalid for single-cell
+        "inputs": [{"metadata": {}, "num_samples": 1}],
+    }
+    with pytest.raises(
+        ValueError,
+        match="Single-cell modality only supports 'mean estimation' mode",
+    ):
+        validate_query(invalid_query)
+    print("validate_query correctly failed for single-cell with sample generation.")
+
+
 def test_validate_modality_valid():
     """Tests validate_modality passes for a valid modality."""
     query = {"modality": "bulk", "mode": "x", "inputs": []}
@@ -597,22 +731,17 @@ def test_new_api_structure_handling(mock_post, mock_get):
             "outputs": [
                 {
                     "counts": [0.1, 0.2, 0.3, 0.4, 0.5] * 8918,
-                    "classifier_probs": {
-                        "sex": {"female": 0.7, "male": 0.3},
-                        "age_years": {"60-70": 0.8, "70-80": 0.2},
-                        "tissue_ontology_id": {"UBERON:0000945": 0.9},
-                    },
-                    "latents": {
-                        "biological": [-0.89, 0.38, -0.08] * 100,
-                        "technical": [0.55, -0.38, -0.92] * 100,
-                        "perturbation": [1.84, 0.46, -1.39] * 100,
-                    },
                     "metadata": {
                         "age_years": "65",
                         "disease_ontology_id": "MONDO:0011719",
                         "sex": "female",
                         "sample_type": "primary tissue",
                         "tissue_ontology_id": "UBERON:0000945",
+                    },
+                    "latents": {
+                        "biological": [1.0] * 1024,
+                        "technical": [2.0] * 32,
+                        "perturbation": [3.0] * 512,
                     },
                 }
             ],
@@ -633,6 +762,109 @@ def test_new_api_structure_handling(mock_post, mock_get):
         assert len(results["expression"].columns) == 44590  # All genes as columns
 
         print("New API structure handling test passed!")
+
+    finally:
+        if original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+
+@patch("pysynthbio.call_model_api.requests.get")
+@patch("pysynthbio.call_model_api.requests.post")
+def test_latents_extraction(mock_post, mock_get):
+    """
+    Test that latents are properly extracted from production API list format.
+    """
+    original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+    os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
+
+    try:
+        # Mock the POST request to start the query
+        post_resp = MagicMock()
+        post_resp.status_code = 200
+        post_resp.json.return_value = {"modelQueryId": "test-query-id"}
+        mock_post.return_value = post_resp
+
+        # Mock the GET requests for polling and download
+        get_status_ready = MagicMock()
+        get_status_ready.status_code = 200
+        get_status_ready.json.return_value = {
+            "status": "ready",
+            "downloadUrl": "https://example.com/results.json",
+        }
+
+        # Mock response in production API format (list of dicts with latents)
+        get_download = MagicMock()
+        get_download.status_code = 200
+        get_download.json.return_value = {
+            "outputs": [
+                {
+                    "counts": [1, 2, 3, 4, 5],
+                    "metadata": {
+                        "sample_type": "cell line",
+                        "cell_line_ontology_id": "CVCL_0023",
+                    },
+                    "latents": {
+                        "biological": [0.1] * 1024,
+                        "technical": [0.2] * 32,
+                        "perturbation": [0.3] * 512,
+                    },
+                },
+                {
+                    "counts": [6, 7, 8, 9, 10],
+                    "metadata": {
+                        "sample_type": "primary tissue",
+                        "tissue_ontology_id": "UBERON:0000945",
+                    },
+                    "latents": {
+                        "biological": [0.6] * 1024,
+                        "technical": [0.7] * 32,
+                        "perturbation": [0.8] * 512,
+                    },
+                },
+            ],
+            "gene_order": [
+                "ENSG00000000001",
+                "ENSG00000000002",
+                "ENSG00000000003",
+                "ENSG00000000004",
+                "ENSG00000000005",
+            ],
+            "model_version": 3,
+        }
+        mock_get.side_effect = [get_status_ready, get_download]
+
+        # Test the predict_query function
+        query = get_valid_query()
+        results = predict_query(query, as_counts=True)
+
+        # Verify latents are present and correctly extracted
+        assert "latents" in results, "Results should contain 'latents' key"
+        assert isinstance(
+            results["latents"], pd.DataFrame
+        ), "'latents' should be a pandas DataFrame"
+
+        # Latents should have 2 rows (one per sample) and 3 columns
+        # (biological, technical, perturbation)
+        assert results["latents"].shape == (
+            2,
+            3,
+        ), f"Expected latents shape (2, 3), got {results['latents'].shape}"
+
+        # Check that the columns are the expected latent types
+        expected_cols = {"biological", "technical", "perturbation"}
+        assert (
+            set(results["latents"].columns) == expected_cols
+        ), f"Expected columns {expected_cols}, got {set(results['latents'].columns)}"
+
+        # Verify metadata and expression are present and correct
+        assert "metadata" in results
+        assert "expression" in results
+        assert results["metadata"].shape[0] == 2
+        assert results["expression"].shape == (2, 5)
+
+        print("Latents extraction test passed!")
 
     finally:
         if original_api_key is not None:
@@ -677,8 +909,24 @@ def test_predict_query_single_cell_success(mock_post, mock_get):
         get_download.status_code = 200
         get_download.json.return_value = {
             "outputs": [
-                {"counts": [1, 2, 3], "metadata": {"sample_id": "s1"}},
-                {"counts": [4, 5, 6], "metadata": {"sample_id": "s2"}},
+                {
+                    "counts": [1, 2, 3],
+                    "metadata": {"sample_id": "s1"},
+                    "latents": {
+                        "biological": [0.1] * 1024,
+                        "technical": [0.2] * 32,
+                        "perturbation": [-0.1] * 512,
+                    },
+                },
+                {
+                    "counts": [4, 5, 6],
+                    "metadata": {"sample_id": "s2"},
+                    "latents": {
+                        "biological": [0.3] * 1024,
+                        "technical": [0.4] * 32,
+                        "perturbation": [-0.2] * 512,
+                    },
+                },
             ],
             "gene_order": ["gene1", "gene2", "gene3"],
         }
@@ -762,3 +1010,346 @@ def test_predict_query_single_cell_timeout(mock_post, mock_get):
             os.environ["SYNTHESIZE_API_KEY"] = original_api_key
         elif "SYNTHESIZE_API_KEY" in os.environ:
             del os.environ["SYNTHESIZE_API_KEY"]
+
+
+# -----------------------------
+# Biological validation tests with differential expression analysis
+# -----------------------------
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_biological_validity_differential_expression_bulk():
+    """
+    Test that bulk RNA-seq data returns biologically valid expression data
+    by performing simple differential expression analysis.
+    """
+    print("\nTesting biological validity with differential expression analysis...")
+
+    # Import scipy for statistical tests
+    try:
+        from scipy import stats
+    except ImportError:
+        pytest.skip("scipy not available for statistical tests")
+
+    # Create query with two distinct conditions
+    de_query = {
+        "inputs": [
+            # Condition 1: Plasmacytoid dendritic cell
+            {
+                "metadata": {
+                    # Plasmacytoid dendritic cell
+                    "cell_type_ontology_id": "CL:0000784",
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                    "sample_type": "primary tissue",
+                },
+                "num_samples": 5,
+            },
+            # Condition 2: Myeloid cell
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000763",  # Myeloid cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                    "sample_type": "primary tissue",
+                },
+                "num_samples": 5,
+            },
+        ],
+        "modality": "bulk",
+        "mode": "sample generation",
+        "seed": 42,
+    }
+
+    results = predict_query(query=de_query, as_counts=True)
+
+    # Split samples by condition
+    group1_idx = list(range(5))
+    group2_idx = list(range(5, 10))
+
+    expr_group1 = results["expression"].iloc[group1_idx]
+    expr_group2 = results["expression"].iloc[group2_idx]
+
+    n_genes = results["expression"].shape[1]
+
+    # Calculate mean expression for each group
+    mean_group1 = expr_group1.mean(axis=0)
+    mean_group2 = expr_group2.mean(axis=0)
+
+    # Calculate fold changes (using pseudocount to avoid division by zero)
+    pseudocount = 1
+    fold_changes = np.log2((mean_group2 + pseudocount) / (mean_group1 + pseudocount))
+
+    # Perform t-tests for each gene
+    p_values = []
+    for i in range(n_genes):
+        try:
+            _, p_val = stats.ttest_ind(expr_group1.iloc[:, i], expr_group2.iloc[:, i])
+            p_values.append(p_val)
+        except Exception:
+            p_values.append(np.nan)
+
+    p_values = np.array(p_values)
+
+    # Basic validation of differential expression results
+    print("Validating differential expression statistics...")
+
+    # 1. Check that we have valid p-values
+    valid_pvals = ~np.isnan(p_values)
+    assert np.sum(valid_pvals) > n_genes * 0.9, (
+        f"At least 90% of genes should have valid p-values "
+        f"(got {np.sum(valid_pvals)}/{n_genes})"
+    )
+
+    # 2. P-values should be distributed between 0 and 1
+    assert np.all(
+        (p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)
+    ), "All p-values should be between 0 and 1"
+
+    # 3. Not all p-values should be identical (showing variation)
+    unique_pvals = len(np.unique(p_values[valid_pvals]))
+    assert (
+        unique_pvals > 100
+    ), f"P-values should show variation (got {unique_pvals} unique values)"
+
+    # 4. Fold changes should be reasonable (not all zero, not all extreme)
+    fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
+    assert fc_std > 0, "Fold changes should show variation"
+
+    fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
+    assert (
+        abs(fc_median) < 10
+    ), f"Median fold change should be reasonable (|log2FC| < 10, got {fc_median})"
+
+    # 5. Check for differentially expressed genes (p < 0.05)
+    de_genes = np.where(p_values < 0.05)[0]
+    assert len(de_genes) > 0, "Should detect some differentially expressed genes"
+    assert len(de_genes) < n_genes * 0.5, (
+        f"Not all genes should be differentially expressed "
+        f"(got {len(de_genes)}/{n_genes})"
+    )
+
+    # 6. Variance should exist within groups (biological variation)
+    var_group1 = expr_group1.var(axis=0)
+    var_group2 = expr_group2.var(axis=0)
+    assert (
+        np.median(var_group1[~np.isnan(var_group1)]) > 0
+    ), "Group 1 should show within-group variance"
+    assert (
+        np.median(var_group2[~np.isnan(var_group2)]) > 0
+    ), "Group 2 should show within-group variance"
+
+    # 7. Expression levels should be reasonable for count data
+    overall_mean = results["expression"].values.mean()
+    assert overall_mean > 0, "Mean expression should be positive"
+    assert (
+        overall_mean < 1e6
+    ), f"Mean expression should be in reasonable range (got {overall_mean})"
+
+    print(
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "
+        f"out of {np.sum(valid_pvals)} tested"
+    )
+    print(f"Median fold change: {fc_median:.3f} (log2)")
+    print(
+        f"Expression range: {results['expression'].values.min():.1f} "
+        f"to {results['expression'].values.max():.1f}"
+    )
+
+    print("Biological validity tests passed!")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+def test_predict_query_biological_validity_differential_expression_single_cell():
+    """
+    Test that single-cell data returns biologically valid expression data
+    by performing differential expression analysis.
+    """
+    print(
+        "\nTesting single-cell biological validity with "
+        "differential expression analysis..."
+    )
+
+    # Import scipy for statistical tests
+    try:
+        from scipy import stats
+    except ImportError:
+        pytest.skip("scipy not available for statistical tests")
+
+    # Create query with two distinct cell types
+    sc_de_query = {
+        "inputs": [
+            # Condition 1: T cells
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000084",  # T cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                },
+                "num_samples": 10,
+            },
+            # Condition 2: B cells
+            {
+                "metadata": {
+                    "cell_type_ontology_id": "CL:0000236",  # B cell
+                    "tissue_ontology_id": "UBERON:0002371",  # bone marrow
+                    "sex": "female",
+                },
+                "num_samples": 10,
+            },
+        ],
+        "modality": "single-cell",
+        "mode": "mean estimation",
+        "seed": 123,
+    }
+
+    results = predict_query(query=sc_de_query, as_counts=True)
+
+    # Split samples by condition
+    group1_idx = list(range(10))
+    group2_idx = list(range(10, 20))
+
+    expr_group1 = results["expression"].iloc[group1_idx]
+    expr_group2 = results["expression"].iloc[group2_idx]
+
+    n_genes = results["expression"].shape[1]
+    n_cells = results["expression"].shape[0]
+
+    print(f"Analyzing {n_cells} cells across {n_genes} genes...")
+
+    # Single-cell specific metrics
+    # 1. Calculate sparsity (proportion of zeros)
+    sparsity_group1 = (expr_group1 == 0).values.sum() / (
+        expr_group1.shape[0] * expr_group1.shape[1]
+    )
+    sparsity_group2 = (expr_group2 == 0).values.sum() / (
+        expr_group2.shape[0] * expr_group2.shape[1]
+    )
+
+    assert sparsity_group1 > 0.3, (
+        f"Single-cell data should show sparsity "
+        f"(>30% zeros, got {sparsity_group1 * 100:.1f}%)"
+    )
+    assert sparsity_group1 < 0.95, (
+        f"Single-cell data should not be too sparse "
+        f"(<95% zeros, got {sparsity_group1 * 100:.1f}%)"
+    )
+
+    print(
+        f"Sparsity: Group1 = {sparsity_group1 * 100:.1f}%, "
+        f"Group2 = {sparsity_group2 * 100:.1f}%"
+    )
+
+    # 2. Calculate mean expression for each gene
+    mean_group1 = expr_group1.mean(axis=0)
+    mean_group2 = expr_group2.mean(axis=0)
+
+    # 3. Calculate fold changes (using pseudocount for sparse data)
+    pseudocount = 0.1
+    fold_changes = np.log2((mean_group2 + pseudocount) / (mean_group1 + pseudocount))
+
+    # 4. Perform Wilcoxon rank-sum tests (better for sparse/non-normal single-cell data)
+    p_values = []
+    for i in range(n_genes):
+        try:
+            _, p_val = stats.mannwhitneyu(
+                expr_group1.iloc[:, i], expr_group2.iloc[:, i], alternative="two-sided"
+            )
+            p_values.append(p_val)
+        except Exception:
+            p_values.append(np.nan)
+
+    p_values = np.array(p_values)
+
+    # Validation of single-cell differential expression results
+    print("Validating single-cell differential expression statistics...")
+
+    # 1. Check that we have valid p-values
+    valid_pvals = ~np.isnan(p_values)
+    n_valid = np.sum(valid_pvals)
+    assert n_valid > 100, f"Should have at least 100 testable genes (got {n_valid})"
+
+    # 2. P-values should be distributed between 0 and 1
+    assert np.all(
+        (p_values[valid_pvals] >= 0) & (p_values[valid_pvals] <= 1)
+    ), "All p-values should be between 0 and 1"
+
+    # 3. P-values should show variation (not all the same)
+    unique_pvals = len(np.unique(p_values[valid_pvals]))
+    assert (
+        unique_pvals > 100
+    ), f"P-values should show variation (got {unique_pvals} unique values)"
+
+    # 4. Fold changes should show variation
+    fc_std = np.std(fold_changes[~np.isnan(fold_changes)])
+    assert fc_std > 0, "Fold changes should show variation"
+
+    fc_median = np.median(fold_changes[~np.isnan(fold_changes)])
+    assert (
+        abs(fc_median) < 15
+    ), f"Median fold change should be reasonable for single-cell (got {fc_median})"
+
+    # 5. Check for differentially expressed genes
+    de_genes = np.where(p_values < 0.05)[0]
+    assert len(de_genes) > 0, "Should detect some differentially expressed genes"
+    assert len(de_genes) < n_genes * 0.6, (
+        f"Not all genes should be differentially expressed "
+        f"(got {len(de_genes)}/{n_genes})"
+    )
+
+    # 6. Check for genes with expression in at least some cells
+    genes_expressed = (results["expression"] > 0).sum(axis=0)
+    pct_expressed_genes = (genes_expressed > 0).mean() * 100
+    assert pct_expressed_genes > 5, (
+        f"At least 5% of genes should be expressed in some cells "
+        f"(got {pct_expressed_genes:.1f}%)"
+    )
+
+    # 7. Single-cell specific: check for variance in expressed genes
+    expressed_genes = (mean_group1 > 0) | (mean_group2 > 0)
+    n_expressed = expressed_genes.sum()
+
+    if n_expressed > 10:
+        var_group1 = expr_group1.loc[:, expressed_genes].var(axis=0)
+        mean_expressed = expr_group1.loc[:, expressed_genes].mean(axis=0)
+        cv_group1 = np.sqrt(var_group1) / (mean_expressed + 1e-6)
+
+        # For expressed genes, some should show variation
+        high_cv = (cv_group1 > 0.1).sum()
+        assert high_cv > 10, (
+            f"Expressed genes should show variation "
+            f"(got {high_cv} with CV>0.1 out of {n_expressed})"
+        )
+
+    # 8. Expression levels should be reasonable for single-cell count data
+    overall_mean = results["expression"].values.mean()
+    assert overall_mean > 0, "Mean expression should be positive"
+    assert overall_mean < 1e5, (
+        f"Mean expression should be in reasonable single-cell range "
+        f"(got {overall_mean})"
+    )
+
+    # 9. Check that cell type markers might be differential
+    strong_de = np.sum((np.abs(fold_changes) > 2) & (p_values < 0.01))
+    assert (
+        strong_de > 10
+    ), f"Should detect some strongly DE genes between T and B cells (got {strong_de})"
+
+    print(
+        f"DE analysis complete: {len(de_genes)} DE genes (p<0.05) "
+        f"out of {n_valid} tested"
+    )
+    print(f"Strongly DE genes (|log2FC|>2, p<0.01): {strong_de}")
+    print(f"Median fold change: {fc_median:.3f} (log2)")
+    print(
+        f"Sparsity: {sparsity_group1 * 100:.1f}% (Group1), "
+        f"{sparsity_group2 * 100:.1f}% (Group2)"
+    )
+    print(
+        f"Expression range: {results['expression'].values.min():.1f} "
+        f"to {results['expression'].values.max():.1f}"
+    )
+
+    print("Single-cell biological validity tests passed!")

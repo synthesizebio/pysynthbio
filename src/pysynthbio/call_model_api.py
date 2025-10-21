@@ -80,8 +80,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
     if modality == "single-cell":
         return {
             "modality": "single-cell",
-            "mode": "sample generation",
-            "return_classifier_probs": True,
+            "mode": "mean estimation",
             "seed": 11,
             "inputs": [
                 {
@@ -107,7 +106,6 @@ def get_valid_query(modality: str = "bulk") -> dict:
     return {
         "modality": "bulk",
         "mode": "sample generation",
-        "return_classifier_probs": True,
         "seed": 11,
         "inputs": [
             {
@@ -172,6 +170,8 @@ def predict_query(
     dict
         metadata: pd.DataFrame (metadata, empty if return_download_url=True)
         expression: pd.DataFrame (expression, empty if return_download_url=True)
+        latents: pd.DataFrame (latents from the model, empty if
+            return_download_url=True)
 
     Raises
     -------
@@ -250,19 +250,27 @@ def predict_query(
 
         if return_download_url:
             # Caller wants the URL only; return in a structured payload
-            return {"metadata": pd.DataFrame(), "expression": pd.DataFrame()}
+            return {
+                "metadata": pd.DataFrame(),
+                "expression": pd.DataFrame(),
+                "latents": pd.DataFrame(),
+                "download_url": download_url,
+            }
 
         # Fetch the final results JSON and transform to DataFrames
         final_json = _get_json(download_url)
 
-        expression, metadata = _transform_result_to_frames(final_json)
+        expression, metadata, latents = _transform_result_to_frames(final_json)
 
         expression = expression.astype(int)
 
         if not as_counts:
             expression = log_cpm(expression)
 
-        return {"metadata": metadata, "expression": expression}
+        # Build result dictionary - always include latents
+        result = {"metadata": metadata, "expression": expression, "latents": latents}
+
+        return result
 
     raise ValueError(
         (
@@ -390,9 +398,18 @@ def _get_json(url: str) -> dict:
         ) from err
 
 
-def _transform_result_to_frames(content: dict) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def _transform_result_to_frames(
+    content: dict,
+) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Transforms the final JSON result into (expression_df, metadata_df).
+    Transforms the final JSON result into (expression_df, metadata_df, latents_df).
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing:
+            - expression_df (pd.DataFrame): DataFrame of expression counts.
+            - metadata_df (pd.DataFrame): DataFrame of sample metadata.
+            - latents_df (pd.DataFrame): DataFrame of latents, which may be empty
+              if not present in the response.
     """
     for key in ("error", "errors"):
         if key in content:
@@ -400,26 +417,52 @@ def _transform_result_to_frames(content: dict) -> Tuple[pd.DataFrame, pd.DataFra
 
     if "outputs" in content and "gene_order" in content:
         gene_order = content["gene_order"]
+        outputs = content["outputs"]
 
-        # Build expression dataframe, handling both list and dict counts formats
+        # Outputs is a list of dicts, each with
+        # "counts" and "metadata"
+        if not isinstance(outputs, list):
+            raise ValueError(
+                f"Unexpected outputs format: expected list, got {type(outputs)}. "
+                "Please check API response structure."
+            )
+
         expression_rows = []
-        for output in content["outputs"]:
+        metadata_rows = []
+        latents_rows = []
+
+        for output in outputs:
             counts = output.get("counts", [])
 
-            # Single-cell returns dict {gene_id: count}, bulk returns list
-            if isinstance(counts, dict):
-                # Convert dict to list aligned with gene_order
-                counts_list = [counts.get(gene, 0) for gene in gene_order]
-            else:
-                # Already a list
+            # Handle different response formats for counts
+            if isinstance(counts, dict) and "counts" in counts:
+                counts_list = counts["counts"]
+            elif isinstance(counts, list):
                 counts_list = counts
+            else:
+                # Single-cell format: dict mapping gene IDs to count values
+                counts_list = [counts.get(gene, 0) for gene in gene_order]
 
             expression_rows.append(counts_list)
+            metadata_rows.append(output.get("metadata", {}))
+
+            # Extract latents if present in this output
+            if "latents" in output:
+                latents_rows.append(output["latents"])
 
         expression = pd.DataFrame(expression_rows, columns=gene_order)
-        metadata_rows = [output.get("metadata", {}) for output in content["outputs"]]
         metadata = pd.DataFrame(metadata_rows)
-        return expression.astype(int), metadata
+
+        # Build latents DataFrame if any latents were found
+        # Latents is a dict with keys like 'biological', 'technical', 'perturbation'
+        # Each value is a list of floats. We create a DataFrame with these as columns
+        # where each cell contains the list (similar to R's list-columns)
+        if latents_rows:
+            latents = pd.DataFrame(latents_rows)
+        else:
+            latents = pd.DataFrame()
+
+        return expression.astype(int), metadata, latents
 
     raise ValueError(
         (
@@ -457,6 +500,17 @@ def validate_query(query: dict) -> None:
         raise ValueError(
             f"Missing required keys in query: {missing_keys}. "
             f"Use `get_valid_query()` to get an example."
+        )
+
+    # Validate single-cell modality only supports "mean estimation"
+    if (
+        query.get("modality") == "single-cell"
+        and query.get("mode") == "sample generation"
+    ):
+        raise ValueError(
+            "Single-cell modality only supports 'mean estimation' mode, "
+            "not 'sample generation'. "
+            "Please set mode='mean estimation' in your query."
         )
 
 

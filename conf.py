@@ -9,7 +9,7 @@
 project: str = "pysynthbio"
 copyright: str = "2025, Candace Savonen, Alex David"
 author: str = "Candace Savonen, Alex David"
-release: str = "3.0.0"
+release: str = "3.0.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
