@@ -418,32 +418,45 @@ def _transform_result_to_frames(
         gene_order = content["gene_order"]
         outputs = content["outputs"]
 
-        # API format: outputs is a dict with keys "counts", "metadata", "latents"
-        if not isinstance(outputs, dict):
+        # Outputs is a list of dicts, each with
+        # "counts" and "metadata"
+        if not isinstance(outputs, list):
             raise ValueError(
-                f"Unexpected outputs format: expected dict, got {type(outputs)}"
+                f"Unexpected outputs format: expected list, got {type(outputs)}. "
+                "Please check API response structure."
             )
 
-        counts_data = outputs.get("counts")
-        if counts_data is None:
-            raise ValueError("Missing 'counts' key in outputs")
+        expression_rows = []
+        metadata_rows = []
+        latents_rows = []
 
-        # Handle nested counts structure
-        if isinstance(counts_data, dict) and "counts" in counts_data:
-            counts_list = counts_data["counts"]
+        for output in outputs:
+            counts = output.get("counts", [])
+
+            # Handle different response formats for counts
+            if isinstance(counts, dict) and "counts" in counts:
+                counts_list = counts["counts"]
+            elif isinstance(counts, list):
+                counts_list = counts
+            else:
+                # Single-cell format: dict mapping gene IDs to count values
+                counts_list = [counts.get(gene, 0) for gene in gene_order]
+
+            expression_rows.append(counts_list)
+            metadata_rows.append(output.get("metadata", {}))
+
+            # Extract latents if present in this output
+            if "latents" in output:
+                latents_rows.append(output["latents"])
+
+        expression = pd.DataFrame(expression_rows, columns=gene_order)
+        metadata = pd.DataFrame(metadata_rows)
+
+        # Build latents DataFrame if any latents were found
+        if latents_rows:
+            latents = pd.DataFrame(latents_rows)
         else:
-            counts_list = counts_data
-
-        # Build expression dataframe
-        expression = pd.DataFrame(counts_list, columns=gene_order)
-
-        # Build metadata dataframe
-        metadata = pd.DataFrame(outputs.get("metadata", []))
-
-        # Extract latents if present
-        latents = pd.DataFrame()
-        if "latents" in outputs:
-            latents = pd.DataFrame(outputs["latents"])
+            latents = pd.DataFrame()
 
         return expression.astype(int), metadata, latents
 
