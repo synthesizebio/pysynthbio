@@ -453,6 +453,9 @@ def _transform_result_to_frames(
         metadata = pd.DataFrame(metadata_rows)
 
         # Build latents DataFrame if any latents were found
+        # Latents is a dict with keys like 'biological', 'technical', 'perturbation'
+        # Each value is a list of floats. We create a DataFrame with these as columns
+        # where each cell contains the list (similar to R's list-columns)
         if latents_rows:
             latents = pd.DataFrame(latents_rows)
         else:
