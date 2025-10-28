@@ -150,7 +150,6 @@ Available query parameters:
 
 - **total_count** (int): Library size for converting log CPM to counts. Defaults: 10,000,000 (bulk), 10,000 (single-cell)
 - **deterministic_latents** (bool): If True, uses mean of latent distributions instead of sampling for reproducible results
-- **fixed_total_count** (bool): For reference-conditioned generation, controls whether to preserve reference library size
 
 You can also manually add these to any query dictionary:
 

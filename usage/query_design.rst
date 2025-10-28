@@ -85,8 +85,6 @@ In addition to metadata, queries support several optional parameters that contro
     - Default: 10,000,000 for bulk RNA-seq
     - Default: 10,000 for single-cell RNA-seq
 
-    If a reference expression is supplied (reference-conditioned endpoint) and ``fixed_total_count`` is false, the model will ignore this value and use the reference's observed total counts instead.
-
     .. code-block:: python
 
         import pysynthbio
@@ -110,23 +108,6 @@ In addition to metadata, queries support several optional parameters that contro
         query = pysynthbio.get_valid_query(
             modality="bulk",
             deterministic_latents=True
-        )
-
-**fixed_total_count** (bool, reference-conditioned only)
-    Controls whether to preserve the reference's library size. This parameter is only relevant when using reference-conditioned generation.
-
-    - If false: ``total_count`` is taken from the reference sample(s)
-    - If true: ``total_count`` is taken from the request (or default), even when a reference is provided
-
-    .. code-block:: python
-
-        import pysynthbio
-
-        # Create a query with fixed_total_count
-        query = pysynthbio.get_valid_query(
-            modality="bulk",
-            total_count=10000000,
-            fixed_total_count=True
         )
 
 You can combine multiple parameters in a single query:

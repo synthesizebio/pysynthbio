@@ -603,11 +603,9 @@ def test_get_valid_query_with_optional_parameters():
         modality="bulk",
         total_count=5000000,
         deterministic_latents=True,
-        fixed_total_count=False,
     )
     assert query["total_count"] == 5000000
     assert query["deterministic_latents"] is True
-    assert query["fixed_total_count"] is False
 
     # Test single-cell with optional parameters
     query_sc = get_valid_query(
@@ -617,13 +615,11 @@ def test_get_valid_query_with_optional_parameters():
     )
     assert query_sc["total_count"] == 10000
     assert query_sc["deterministic_latents"] is False
-    assert "fixed_total_count" not in query_sc  # Not specified
 
     # Test that parameters are excluded when None
     query_minimal = get_valid_query(modality="bulk")
     assert "total_count" not in query_minimal
     assert "deterministic_latents" not in query_minimal
-    assert "fixed_total_count" not in query_minimal
 
 
 # Updated VALID_QUERY to match new structure expectations

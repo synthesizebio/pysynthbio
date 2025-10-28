@@ -66,7 +66,6 @@ def get_valid_query(
     modality: str = "bulk",
     total_count: int = None,
     deterministic_latents: bool = None,
-    fixed_total_count: bool = None,
 ) -> dict:
     """
     Generates a sample query for prediction and validation.
@@ -82,9 +81,6 @@ def get_valid_query(
     deterministic_latents : bool, optional
         If True, the model uses the mean of each latent distribution instead of
         sampling, producing deterministic outputs for the same inputs.
-    fixed_total_count : bool, optional
-        Controls whether to preserve the reference's library size (reference-conditioned
-        only). If False, total_count is taken from the reference sample(s).
 
     Returns
     -------
@@ -151,8 +147,6 @@ def get_valid_query(
         query["total_count"] = total_count
     if deterministic_latents is not None:
         query["deterministic_latents"] = deterministic_latents
-    if fixed_total_count is not None:
-        query["fixed_total_count"] = fixed_total_count
 
     return query
 
@@ -180,16 +174,10 @@ def predict_query(
         - **total_count** (int): Library size used when converting predicted log CPM
           back to raw counts. Higher values scale counts up proportionally.
           Defaults to 10,000,000 for bulk and 10,000 for single-cell if not specified.
-          If a reference expression is supplied and fixed_total_count is False,
-          the model will use the reference's observed total counts instead.
         - **deterministic_latents** (bool): If True, the model uses the mean of each
           latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
           This removes randomness from latent sampling and produces deterministic
           outputs for the same inputs.
-        - **fixed_total_count** (bool, reference-conditioned only): Controls whether
-          to preserve the reference's library size. If False, total_count is taken
-          from the reference sample(s). If True, total_count is taken from the
-          request (or default), even when a reference is provided.
 
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
