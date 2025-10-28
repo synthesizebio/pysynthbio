@@ -71,5 +71,75 @@ The following are the valid values or expected formats for selected metadata key
 
 We highly recommend using the `EMBL-EBI Ontology Lookup Service <https://www.ebi.ac.uk/ols4/>`_ to find valid IDs for your metadata.
 
-Models have a limited acceptable range of metadata input values. 
+Models have a limited acceptable range of metadata input values.
 If you provide a value that is not in the acceptable range, the API will return an error.
+
+Query Parameters
+^^^^^^^^^^^^^^^^
+
+In addition to metadata, queries support several optional parameters that control the generation process:
+
+**total_count** (int)
+    Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
+
+    - Default: 10,000,000 for bulk RNA-seq
+    - Default: 10,000 for single-cell RNA-seq
+
+    If a reference expression is supplied (reference-conditioned endpoint) and ``fixed_total_count`` is false, the model will ignore this value and use the reference's observed total counts instead.
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query with custom total_count
+        query = pysynthbio.get_valid_query(
+            modality="bulk",
+            total_count=5000000
+        )
+
+**deterministic_latents** (bool)
+    If true, the model uses the mean of each latent distribution (``p(z|metadata)`` or ``q(z|x)``) instead of sampling. This removes randomness from latent sampling and produces deterministic outputs for the same inputs.
+
+    - Default: false (sampling is enabled)
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query with deterministic latents
+        query = pysynthbio.get_valid_query(
+            modality="bulk",
+            deterministic_latents=True
+        )
+
+**fixed_total_count** (bool, reference-conditioned only)
+    Controls whether to preserve the reference's library size. This parameter is only relevant when using reference-conditioned generation.
+
+    - If false: ``total_count`` is taken from the reference sample(s)
+    - If true: ``total_count`` is taken from the request (or default), even when a reference is provided
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query with fixed_total_count
+        query = pysynthbio.get_valid_query(
+            modality="bulk",
+            total_count=10000000,
+            fixed_total_count=True
+        )
+
+You can combine multiple parameters in a single query:
+
+.. code-block:: python
+
+    import pysynthbio
+
+    # Create a query with multiple parameters
+    query = pysynthbio.get_valid_query(
+        modality="bulk",
+        total_count=8000000,
+        deterministic_latents=True
+    )
+
+    results = pysynthbio.predict_query(query)

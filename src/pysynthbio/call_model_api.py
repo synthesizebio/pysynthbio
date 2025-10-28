@@ -62,7 +62,12 @@ def get_valid_modes() -> Set[str]:
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
-def get_valid_query(modality: str = "bulk") -> dict:
+def get_valid_query(
+    modality: str = "bulk",
+    total_count: int = None,
+    deterministic_latents: bool = None,
+    fixed_total_count: bool = None,
+) -> dict:
     """
     Generates a sample query for prediction and validation.
 
@@ -70,6 +75,16 @@ def get_valid_query(modality: str = "bulk") -> dict:
     ----------
     modality : str
         'bulk' or 'single-cell'. Defaults to 'bulk'.
+    total_count : int, optional
+        Library size used when converting predicted log CPM back to raw counts.
+        Higher values scale counts up proportionally. Defaults to 10,000,000 for
+        bulk and 10,000 for single-cell if not specified.
+    deterministic_latents : bool, optional
+        If True, the model uses the mean of each latent distribution instead of
+        sampling, producing deterministic outputs for the same inputs.
+    fixed_total_count : bool, optional
+        Controls whether to preserve the reference's library size (reference-conditioned
+        only). If False, total_count is taken from the reference sample(s).
 
     Returns
     -------
@@ -78,7 +93,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
         modality.
     """
     if modality == "single-cell":
-        return {
+        query = {
             "modality": "single-cell",
             "mode": "mean estimation",
             "seed": 11,
@@ -101,35 +116,45 @@ def get_valid_query(modality: str = "bulk") -> dict:
                 },
             ],
         }
+    else:
+        # Default: bulk
+        query = {
+            "modality": "bulk",
+            "mode": "sample generation",
+            "seed": 11,
+            "inputs": [
+                {
+                    "metadata": {
+                        "cell_line_ontology_id": "CVCL_0023",
+                        "perturbation_ontology_id": "ENSG00000156127",
+                        "perturbation_type": "crispr",
+                        "perturbation_time": "96 hours",
+                        "sample_type": "cell line",
+                    },
+                    "num_samples": 5,
+                },
+                {
+                    "metadata": {
+                        "disease_ontology_id": "MONDO:0011719",
+                        "age_years": "65",
+                        "sex": "female",
+                        "sample_type": "primary tissue",
+                        "tissue_ontology_id": "UBERON:0000945",
+                    },
+                    "num_samples": 5,
+                },
+            ],
+        }
 
-    # Default: bulk
-    return {
-        "modality": "bulk",
-        "mode": "sample generation",
-        "seed": 11,
-        "inputs": [
-            {
-                "metadata": {
-                    "cell_line_ontology_id": "CVCL_0023",
-                    "perturbation_ontology_id": "ENSG00000156127",
-                    "perturbation_type": "crispr",
-                    "perturbation_time": "96 hours",
-                    "sample_type": "cell line",
-                },
-                "num_samples": 5,
-            },
-            {
-                "metadata": {
-                    "disease_ontology_id": "MONDO:0011719",
-                    "age_years": "65",
-                    "sex": "female",
-                    "sample_type": "primary tissue",
-                    "tissue_ontology_id": "UBERON:0000945",
-                },
-                "num_samples": 5,
-            },
-        ],
-    }
+    # Add optional parameters if provided
+    if total_count is not None:
+        query["total_count"] = total_count
+    if deterministic_latents is not None:
+        query["deterministic_latents"] = deterministic_latents
+    if fixed_total_count is not None:
+        query["fixed_total_count"] = fixed_total_count
+
+    return query
 
 
 def predict_query(
@@ -149,6 +174,23 @@ def predict_query(
     query : dict
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
+
+        The query dictionary supports the following optional parameters:
+
+        - **total_count** (int): Library size used when converting predicted log CPM
+          back to raw counts. Higher values scale counts up proportionally.
+          Defaults to 10,000,000 for bulk and 10,000 for single-cell if not specified.
+          If a reference expression is supplied and fixed_total_count is False,
+          the model will use the reference's observed total counts instead.
+        - **deterministic_latents** (bool): If True, the model uses the mean of each
+          latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
+          This removes randomness from latent sampling and produces deterministic
+          outputs for the same inputs.
+        - **fixed_total_count** (bool, reference-conditioned only): Controls whether
+          to preserve the reference's library size. If False, total_count is taken
+          from the reference sample(s). If True, total_count is taken from the
+          request (or default), even when a reference is provided.
+
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
         logCPM (default is True, returning counts).

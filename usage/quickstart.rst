@@ -130,7 +130,42 @@ The function handles authentication, request submission, and result retrieval. F
 Advanced Options
 ----------------
 
-``predict_query`` also exposes a few optional parameters you can use to tune behavior:
+Query Parameters
+^^^^^^^^^^^^^^^^
+
+The query dictionary supports several optional parameters to control the generation process:
+
+.. code-block:: python
+
+    # Create a query with custom parameters
+    my_query = pysynthbio.get_valid_query(
+        modality="bulk",
+        total_count=8000000,        # Custom library size
+        deterministic_latents=True  # Deterministic output
+    )
+    
+    results = pysynthbio.predict_query(query=my_query)
+
+Available query parameters:
+
+- **total_count** (int): Library size for converting log CPM to counts. Defaults: 10,000,000 (bulk), 10,000 (single-cell)
+- **deterministic_latents** (bool): If True, uses mean of latent distributions instead of sampling for reproducible results
+- **fixed_total_count** (bool): For reference-conditioned generation, controls whether to preserve reference library size
+
+You can also manually add these to any query dictionary:
+
+.. code-block:: python
+
+    my_query = pysynthbio.get_valid_query()
+    my_query["total_count"] = 5000000
+    my_query["deterministic_latents"] = False
+    
+    results = pysynthbio.predict_query(query=my_query)
+
+API Function Parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``predict_query`` also exposes a few optional parameters you can use to tune API behavior:
 
 - ``poll_interval_seconds``: Seconds between status checks for async jobs (default 2).
 - ``poll_timeout_seconds``: Maximum time to wait before raising a timeout error (default 15 minutes).
