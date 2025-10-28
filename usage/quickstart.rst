@@ -97,31 +97,25 @@ You can use ``get_valid_query`` to get a correctly structured example dictionary
 Get Predictions
 ----------------
 
-Use ``predict_query`` to send a query to the API and get expression predictions. You choose the data generation type with the ``modality`` parameter:
+Use ``predict_query`` to send a query to the API and get expression predictions. The modality (bulk or single-cell) is specified in the query dictionary itself using ``get_valid_query()``.
 
-- ``modality='bulk'`` generates bulk RNA-seq.
-- ``modality='single-cell'`` generates single-cell RNA-seq.
-
-The function handles authentication, request submission, and result retrieval. For single-cell, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
+The function handles authentication, request submission, and result retrieval. For both modalities, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
 
 .. code-block:: python
 
-    # Start from a valid base query
-    my_query = pysynthbio.get_valid_query()
-
-    # Example 1: Generate bulk counts (default)
+    # Example 1: Generate bulk RNA-seq counts
+    bulk_query = pysynthbio.get_valid_query(modality="bulk")
     bulk_results = pysynthbio.predict_query(
-        query=my_query,
-        modality="bulk",
+        query=bulk_query,
         as_counts=True,  # counts; set False for logCPM
     )
     bulk_metadata = bulk_results["metadata"]
     bulk_expression = bulk_results["expression"]
 
-    # Example 2: Generate single-cell counts (async under-the-hood)
+    # Example 2: Generate single-cell RNA-seq counts
+    sc_query = pysynthbio.get_valid_query(modality="single-cell")
     sc_results = pysynthbio.predict_query(
-        query=my_query,
-        modality="single-cell",
+        query=sc_query,
         as_counts=True,
     )
     sc_metadata = sc_results["metadata"]
