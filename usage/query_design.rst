@@ -3,7 +3,7 @@ Designing Queries for Models
 Choosing a Modality
 ^^^^^^^^^^^^^^^^^^^
 
-``predict_query`` accepts a ``modality`` argument to select the data type to generate:
+The modality (data type to generate) is specified in the query dictionary using ``get_valid_query()``:
 
 - ``bulk``: bulk RNA-seq (asynchronous under the hood, returned as DataFrames)
 - ``single-cell``: single-cell RNA-seq (asynchronous under the hood, returned as DataFrames)
@@ -14,13 +14,13 @@ You do not need to specify any internal API slugs. The library maps modalities t
 
     import pysynthbio
 
-    q = pysynthbio.get_valid_query()
+    # Create a bulk query
+    bulk_query = pysynthbio.get_valid_query(modality="bulk")
+    bulk = pysynthbio.predict_query(bulk_query, as_counts=True)
 
-    # Bulk generation
-    bulk = pysynthbio.predict_query(q, modality="bulk", as_counts=True)
-
-    # Single-cell generation
-    sc = pysynthbio.predict_query(q, modality="single-cell", as_counts=True)
+    # Create a single-cell query
+    sc_query = pysynthbio.get_valid_query(modality="single-cell")
+    sc = pysynthbio.predict_query(sc_query, as_counts=True)
 
 
 
@@ -71,5 +71,75 @@ The following are the valid values or expected formats for selected metadata key
 
 We highly recommend using the `EMBL-EBI Ontology Lookup Service <https://www.ebi.ac.uk/ols4/>`_ to find valid IDs for your metadata.
 
-Models have a limited acceptable range of metadata input values. 
+Models have a limited acceptable range of metadata input values.
 If you provide a value that is not in the acceptable range, the API will return an error.
+
+Query Parameters
+^^^^^^^^^^^^^^^^
+
+In addition to metadata, queries support several optional parameters that control the generation process:
+
+**mode** (str)
+    Controls the type of prediction the model generates. This parameter is required in all queries.
+
+    Available modes:
+
+    - **"sample generation"**: The model works identically to the mean estimation approach, except that the final gene expression distribution is also sampled to generate realistic-looking synthetic data that captures the error associated with measurements. This mode is useful when you want data that mimics real experimental measurements.
+
+    - **"mean estimation"**: The model creates a distribution capturing the biological heterogeneity consistent with the supplied metadata. This distribution is then sampled to predict a gene expression distribution that captures measurement error. The mean of that distribution serves as the prediction. This mode is useful when you want a stable estimate of expected expression levels.
+
+    .. note::
+       **Single-cell queries only support "mean estimation" mode.** Bulk queries support both modes.
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Bulk query with sample generation
+        bulk_query = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query["mode"] = "sample generation"  # Default for bulk
+
+        # Bulk query with mean estimation
+        bulk_query_mean = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query_mean["mode"] = "mean estimation"
+
+        # Single-cell query (must use mean estimation)
+        sc_query = pysynthbio.get_valid_query(modality="single-cell")
+        sc_query["mode"] = "mean estimation"  # Required for single-cell
+
+**total_count** (int)
+    Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query and add custom total_count
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["total_count"] = 5000000
+
+**deterministic_latents** (bool)
+    If true, the model uses the mean of each latent distribution (``p(z|metadata)`` or ``q(z|x)``) instead of sampling. This removes randomness from latent sampling and produces deterministic outputs for the same inputs.
+
+    - Default: false (sampling is enabled)
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query and enable deterministic latents
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["deterministic_latents"] = True
+
+You can combine multiple parameters in a single query:
+
+.. code-block:: python
+
+    import pysynthbio
+
+    # Create a query and add multiple parameters
+    query = pysynthbio.get_valid_query(modality="bulk")
+    query["total_count"] = 8000000
+    query["deterministic_latents"] = True
+
+    results = pysynthbio.predict_query(query)

@@ -78,7 +78,7 @@ def get_valid_query(modality: str = "bulk") -> dict:
         modality.
     """
     if modality == "single-cell":
-        return {
+        query = {
             "modality": "single-cell",
             "mode": "mean estimation",
             "seed": 11,
@@ -101,35 +101,37 @@ def get_valid_query(modality: str = "bulk") -> dict:
                 },
             ],
         }
+    else:
+        # Default: bulk
+        query = {
+            "modality": "bulk",
+            "mode": "sample generation",
+            "seed": 11,
+            "inputs": [
+                {
+                    "metadata": {
+                        "cell_line_ontology_id": "CVCL_0023",
+                        "perturbation_ontology_id": "ENSG00000156127",
+                        "perturbation_type": "crispr",
+                        "perturbation_time": "96 hours",
+                        "sample_type": "cell line",
+                    },
+                    "num_samples": 5,
+                },
+                {
+                    "metadata": {
+                        "disease_ontology_id": "MONDO:0011719",
+                        "age_years": "65",
+                        "sex": "female",
+                        "sample_type": "primary tissue",
+                        "tissue_ontology_id": "UBERON:0000945",
+                    },
+                    "num_samples": 5,
+                },
+            ],
+        }
 
-    # Default: bulk
-    return {
-        "modality": "bulk",
-        "mode": "sample generation",
-        "seed": 11,
-        "inputs": [
-            {
-                "metadata": {
-                    "cell_line_ontology_id": "CVCL_0023",
-                    "perturbation_ontology_id": "ENSG00000156127",
-                    "perturbation_type": "crispr",
-                    "perturbation_time": "96 hours",
-                    "sample_type": "cell line",
-                },
-                "num_samples": 5,
-            },
-            {
-                "metadata": {
-                    "disease_ontology_id": "MONDO:0011719",
-                    "age_years": "65",
-                    "sex": "female",
-                    "sample_type": "primary tissue",
-                    "tissue_ontology_id": "UBERON:0000945",
-                },
-                "num_samples": 5,
-            },
-        ],
-    }
+    return query
 
 
 def predict_query(
@@ -149,6 +151,16 @@ def predict_query(
     query : dict
         A dictionary representing the query data to send to the API.
         Use `get_valid_query()` to generate an example.
+
+        The query dictionary supports the following optional parameters:
+
+        - **total_count** (int): Library size used when converting predicted log CPM
+          back to raw counts. Higher values scale counts up proportionally.
+        - **deterministic_latents** (bool): If True, the model uses the mean of each
+          latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
+          This removes randomness from latent sampling and produces deterministic
+          outputs for the same inputs.
+
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
         logCPM (default is True, returning counts).

@@ -49,7 +49,14 @@ def test_predict_query_live_call_success():
 
     try:
         test_query = get_valid_query()
+        # Add optional parameters to test they are passed through correctly
+        test_query["total_count"] = 10000000
+        test_query["deterministic_latents"] = True
         print("Generated query:", test_query)
+        assert "total_count" in test_query, "Query should contain total_count"
+        assert (
+            "deterministic_latents" in test_query
+        ), "Query should contain deterministic_latents"
     except Exception as e:
         pytest.fail(f"get_valid_query failed: {e}")
 
@@ -151,7 +158,14 @@ def test_predict_query_live_call_success_single_cell():
 
     try:
         test_query = get_valid_query(modality="single-cell")
+        # Add optional parameters to test they are passed through correctly
+        test_query["total_count"] = 10000
+        test_query["deterministic_latents"] = False
         print("Generated single-cell query:", test_query)
+        assert "total_count" in test_query, "Query should contain total_count"
+        assert (
+            "deterministic_latents" in test_query
+        ), "Query should contain deterministic_latents"
     except Exception as e:
         pytest.fail(f"get_valid_query(modality='single-cell') failed: {e}")
 
@@ -579,6 +593,30 @@ def test_get_valid_query_structure():
     assert isinstance(query, dict)
     assert expected_keys.issubset(query.keys())
     assert isinstance(query["inputs"], list)
+
+
+def test_get_valid_query_with_optional_parameters():
+    """Tests that optional parameters can be added to queries."""
+    # Test adding optional parameters to bulk query
+    query = get_valid_query(modality="bulk")
+    query["total_count"] = 5000000
+    query["deterministic_latents"] = True
+
+    assert query["total_count"] == 5000000
+    assert query["deterministic_latents"] is True
+
+    # Test adding optional parameters to single-cell query
+    query_sc = get_valid_query(modality="single-cell")
+    query_sc["total_count"] = 10000
+    query_sc["deterministic_latents"] = False
+
+    assert query_sc["total_count"] == 10000
+    assert query_sc["deterministic_latents"] is False
+
+    # Test that basic query doesn't include these parameters by default
+    query_minimal = get_valid_query(modality="bulk")
+    assert "total_count" not in query_minimal
+    assert "deterministic_latents" not in query_minimal
 
 
 # Updated VALID_QUERY to match new structure expectations

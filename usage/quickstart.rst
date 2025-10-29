@@ -97,31 +97,25 @@ You can use ``get_valid_query`` to get a correctly structured example dictionary
 Get Predictions
 ----------------
 
-Use ``predict_query`` to send a query to the API and get expression predictions. You choose the data generation type with the ``modality`` parameter:
+Use ``predict_query`` to send a query to the API and get expression predictions. The modality (bulk or single-cell) is specified in the query dictionary itself using ``get_valid_query()``.
 
-- ``modality='bulk'`` generates bulk RNA-seq.
-- ``modality='single-cell'`` generates single-cell RNA-seq.
-
-The function handles authentication, request submission, and result retrieval. For single-cell, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
+The function handles authentication, request submission, and result retrieval. For both modalities, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
 
 .. code-block:: python
 
-    # Start from a valid base query
-    my_query = pysynthbio.get_valid_query()
-
-    # Example 1: Generate bulk counts (default)
+    # Example 1: Generate bulk RNA-seq counts
+    bulk_query = pysynthbio.get_valid_query(modality="bulk")
     bulk_results = pysynthbio.predict_query(
-        query=my_query,
-        modality="bulk",
+        query=bulk_query,
         as_counts=True,  # counts; set False for logCPM
     )
     bulk_metadata = bulk_results["metadata"]
     bulk_expression = bulk_results["expression"]
 
-    # Example 2: Generate single-cell counts (async under-the-hood)
+    # Example 2: Generate single-cell RNA-seq counts
+    sc_query = pysynthbio.get_valid_query(modality="single-cell")
     sc_results = pysynthbio.predict_query(
-        query=my_query,
-        modality="single-cell",
+        query=sc_query,
         as_counts=True,
     )
     sc_metadata = sc_results["metadata"]
@@ -130,7 +124,30 @@ The function handles authentication, request submission, and result retrieval. F
 Advanced Options
 ----------------
 
-``predict_query`` also exposes a few optional parameters you can use to tune behavior:
+Query Parameters
+^^^^^^^^^^^^^^^^
+
+The query dictionary supports several optional parameters to control the generation process. You can add these to any query after creating it with ``get_valid_query()``:
+
+.. code-block:: python
+
+    # Create a query and add custom parameters
+    my_query = pysynthbio.get_valid_query(modality="bulk")
+    my_query["total_count"] = 8000000        # Custom library size
+    my_query["deterministic_latents"] = True  # Deterministic output
+    
+    results = pysynthbio.predict_query(query=my_query)
+
+Available query parameters:
+
+- **mode** (str, required): Controls the type of prediction. Options: "sample generation" (realistic synthetic data with measurement error), "mean estimation" (stable estimate of expected expression). Note: single-cell only supports "mean estimation"
+- **total_count** (int): Library size for converting log CPM to counts.
+- **deterministic_latents** (bool): If True, uses mean of latent distributions instead of sampling for reproducible results
+
+API Function Parameters
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``predict_query`` also exposes a few optional parameters you can use to tune API behavior:
 
 - ``poll_interval_seconds``: Seconds between status checks for async jobs (default 2).
 - ``poll_timeout_seconds``: Maximum time to wait before raising a timeout error (default 15 minutes).
