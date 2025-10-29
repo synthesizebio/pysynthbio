@@ -79,6 +79,34 @@ Query Parameters
 
 In addition to metadata, queries support several optional parameters that control the generation process:
 
+**mode** (str)
+    Controls the type of prediction the model generates. This parameter is required in all queries.
+
+    Available modes:
+
+    - **"sample generation"**: The model works identically to the mean estimation approach, except that the final gene expression distribution is also sampled to generate realistic-looking synthetic data that captures the error associated with measurements. This mode is useful when you want data that mimics real experimental measurements.
+
+    - **"mean estimation"**: The model creates a distribution capturing the biological heterogeneity consistent with the supplied metadata. This distribution is then sampled to predict a gene expression distribution that captures measurement error. The mean of that distribution serves as the prediction. This mode is useful when you want a stable estimate of expected expression levels.
+
+    .. note::
+       **Single-cell queries only support "mean estimation" mode.** Bulk queries support both modes.
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Bulk query with sample generation
+        bulk_query = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query["mode"] = "sample generation"  # Default for bulk
+
+        # Bulk query with mean estimation
+        bulk_query_mean = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query_mean["mode"] = "mean estimation"
+
+        # Single-cell query (must use mean estimation)
+        sc_query = pysynthbio.get_valid_query(modality="single-cell")
+        sc_query["mode"] = "mean estimation"  # Required for single-cell
+
 **total_count** (int)
     Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
 
