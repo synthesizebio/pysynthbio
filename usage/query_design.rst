@@ -89,11 +89,9 @@ In addition to metadata, queries support several optional parameters that contro
 
         import pysynthbio
 
-        # Create a query with custom total_count
-        query = pysynthbio.get_valid_query(
-            modality="bulk",
-            total_count=5000000
-        )
+        # Create a query and add custom total_count
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["total_count"] = 5000000
 
 **deterministic_latents** (bool)
     If true, the model uses the mean of each latent distribution (``p(z|metadata)`` or ``q(z|x)``) instead of sampling. This removes randomness from latent sampling and produces deterministic outputs for the same inputs.
@@ -104,11 +102,9 @@ In addition to metadata, queries support several optional parameters that contro
 
         import pysynthbio
 
-        # Create a query with deterministic latents
-        query = pysynthbio.get_valid_query(
-            modality="bulk",
-            deterministic_latents=True
-        )
+        # Create a query and enable deterministic latents
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["deterministic_latents"] = True
 
 You can combine multiple parameters in a single query:
 
@@ -116,11 +112,9 @@ You can combine multiple parameters in a single query:
 
     import pysynthbio
 
-    # Create a query with multiple parameters
-    query = pysynthbio.get_valid_query(
-        modality="bulk",
-        total_count=8000000,
-        deterministic_latents=True
-    )
+    # Create a query and add multiple parameters
+    query = pysynthbio.get_valid_query(modality="bulk")
+    query["total_count"] = 8000000
+    query["deterministic_latents"] = True
 
     results = pysynthbio.predict_query(query)

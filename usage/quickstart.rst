@@ -127,16 +127,14 @@ Advanced Options
 Query Parameters
 ^^^^^^^^^^^^^^^^
 
-The query dictionary supports several optional parameters to control the generation process:
+The query dictionary supports several optional parameters to control the generation process. You can add these to any query after creating it with ``get_valid_query()``:
 
 .. code-block:: python
 
-    # Create a query with custom parameters
-    my_query = pysynthbio.get_valid_query(
-        modality="bulk",
-        total_count=8000000,        # Custom library size
-        deterministic_latents=True  # Deterministic output
-    )
+    # Create a query and add custom parameters
+    my_query = pysynthbio.get_valid_query(modality="bulk")
+    my_query["total_count"] = 8000000        # Custom library size
+    my_query["deterministic_latents"] = True  # Deterministic output
     
     results = pysynthbio.predict_query(query=my_query)
 
@@ -144,16 +142,6 @@ Available query parameters:
 
 - **total_count** (int): Library size for converting log CPM to counts. Defaults: 10,000,000 (bulk), 10,000 (single-cell)
 - **deterministic_latents** (bool): If True, uses mean of latent distributions instead of sampling for reproducible results
-
-You can also manually add these to any query dictionary:
-
-.. code-block:: python
-
-    my_query = pysynthbio.get_valid_query()
-    my_query["total_count"] = 5000000
-    my_query["deterministic_latents"] = False
-    
-    results = pysynthbio.predict_query(query=my_query)
 
 API Function Parameters
 ^^^^^^^^^^^^^^^^^^^^^^^
