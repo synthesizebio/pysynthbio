@@ -110,9 +110,6 @@ In addition to metadata, queries support several optional parameters that contro
 **total_count** (int)
     Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
 
-    - Default: 10,000,000 for bulk RNA-seq
-    - Default: 10,000 for single-cell RNA-seq
-
     .. code-block:: python
 
         import pysynthbio

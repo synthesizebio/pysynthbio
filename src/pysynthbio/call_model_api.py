@@ -156,7 +156,6 @@ def predict_query(
 
         - **total_count** (int): Library size used when converting predicted log CPM
           back to raw counts. Higher values scale counts up proportionally.
-          Defaults to 10,000,000 for bulk and 10,000 for single-cell if not specified.
         - **deterministic_latents** (bool): If True, the model uses the mean of each
           latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
           This removes randomness from latent sampling and produces deterministic

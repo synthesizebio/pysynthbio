@@ -141,7 +141,7 @@ The query dictionary supports several optional parameters to control the generat
 Available query parameters:
 
 - **mode** (str, required): Controls the type of prediction. Options: "sample generation" (realistic synthetic data with measurement error), "mean estimation" (stable estimate of expected expression). Note: single-cell only supports "mean estimation"
-- **total_count** (int): Library size for converting log CPM to counts. Defaults: 10,000,000 (bulk), 10,000 (single-cell)
+- **total_count** (int): Library size for converting log CPM to counts.
 - **deterministic_latents** (bool): If True, uses mean of latent distributions instead of sampling for reproducible results
 
 API Function Parameters
