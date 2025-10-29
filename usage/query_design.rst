@@ -3,7 +3,7 @@ Designing Queries for Models
 Choosing a Modality
 ^^^^^^^^^^^^^^^^^^^
 
-``predict_query`` accepts a ``modality`` argument to select the data type to generate:
+The modality (data type to generate) is specified in the query dictionary using ``get_valid_query()``:
 
 - ``bulk``: bulk RNA-seq (asynchronous under the hood, returned as DataFrames)
 - ``single-cell``: single-cell RNA-seq (asynchronous under the hood, returned as DataFrames)
@@ -14,13 +14,13 @@ You do not need to specify any internal API slugs. The library maps modalities t
 
     import pysynthbio
 
-    q = pysynthbio.get_valid_query()
+    # Create a bulk query
+    bulk_query = pysynthbio.get_valid_query(modality="bulk")
+    bulk = pysynthbio.predict_query(bulk_query, as_counts=True)
 
-    # Bulk generation
-    bulk = pysynthbio.predict_query(q, modality="bulk", as_counts=True)
-
-    # Single-cell generation
-    sc = pysynthbio.predict_query(q, modality="single-cell", as_counts=True)
+    # Create a single-cell query
+    sc_query = pysynthbio.get_valid_query(modality="single-cell")
+    sc = pysynthbio.predict_query(sc_query, as_counts=True)
 
 
 
