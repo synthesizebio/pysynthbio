@@ -62,11 +62,7 @@ def get_valid_modes() -> Set[str]:
     return ["sample generation", "mean estimation", "metadata prediction"]
 
 
-def get_valid_query(
-    modality: str = "bulk",
-    total_count: int = None,
-    deterministic_latents: bool = None,
-) -> dict:
+def get_valid_query(modality: str = "bulk") -> dict:
     """
     Generates a sample query for prediction and validation.
 
@@ -74,13 +70,6 @@ def get_valid_query(
     ----------
     modality : str
         'bulk' or 'single-cell'. Defaults to 'bulk'.
-    total_count : int, optional
-        Library size used when converting predicted log CPM back to raw counts.
-        Higher values scale counts up proportionally. Defaults to 10,000,000 for
-        bulk and 10,000 for single-cell if not specified.
-    deterministic_latents : bool, optional
-        If True, the model uses the mean of each latent distribution instead of
-        sampling, producing deterministic outputs for the same inputs.
 
     Returns
     -------
@@ -142,12 +131,6 @@ def get_valid_query(
             ],
         }
 
-    # Add optional parameters if provided
-    if total_count is not None:
-        query["total_count"] = total_count
-    if deterministic_latents is not None:
-        query["deterministic_latents"] = deterministic_latents
-
     return query
 
 
@@ -173,7 +156,6 @@ def predict_query(
 
         - **total_count** (int): Library size used when converting predicted log CPM
           back to raw counts. Higher values scale counts up proportionally.
-          Defaults to 10,000,000 for bulk and 10,000 for single-cell if not specified.
         - **deterministic_latents** (bool): If True, the model uses the mean of each
           latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
           This removes randomness from latent sampling and produces deterministic

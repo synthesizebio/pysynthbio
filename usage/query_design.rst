@@ -79,21 +79,44 @@ Query Parameters
 
 In addition to metadata, queries support several optional parameters that control the generation process:
 
-**total_count** (int)
-    Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
+**mode** (str)
+    Controls the type of prediction the model generates. This parameter is required in all queries.
 
-    - Default: 10,000,000 for bulk RNA-seq
-    - Default: 10,000 for single-cell RNA-seq
+    Available modes:
+
+    - **"sample generation"**: The model works identically to the mean estimation approach, except that the final gene expression distribution is also sampled to generate realistic-looking synthetic data that captures the error associated with measurements. This mode is useful when you want data that mimics real experimental measurements.
+
+    - **"mean estimation"**: The model creates a distribution capturing the biological heterogeneity consistent with the supplied metadata. This distribution is then sampled to predict a gene expression distribution that captures measurement error. The mean of that distribution serves as the prediction. This mode is useful when you want a stable estimate of expected expression levels.
+
+    .. note::
+       **Single-cell queries only support "mean estimation" mode.** Bulk queries support both modes.
 
     .. code-block:: python
 
         import pysynthbio
 
-        # Create a query with custom total_count
-        query = pysynthbio.get_valid_query(
-            modality="bulk",
-            total_count=5000000
-        )
+        # Bulk query with sample generation
+        bulk_query = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query["mode"] = "sample generation"  # Default for bulk
+
+        # Bulk query with mean estimation
+        bulk_query_mean = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query_mean["mode"] = "mean estimation"
+
+        # Single-cell query (must use mean estimation)
+        sc_query = pysynthbio.get_valid_query(modality="single-cell")
+        sc_query["mode"] = "mean estimation"  # Required for single-cell
+
+**total_count** (int)
+    Library size used when converting predicted log CPM back to raw counts. Higher values scale counts up proportionally.
+
+    .. code-block:: python
+
+        import pysynthbio
+
+        # Create a query and add custom total_count
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["total_count"] = 5000000
 
 **deterministic_latents** (bool)
     If true, the model uses the mean of each latent distribution (``p(z|metadata)`` or ``q(z|x)``) instead of sampling. This removes randomness from latent sampling and produces deterministic outputs for the same inputs.
@@ -104,11 +127,9 @@ In addition to metadata, queries support several optional parameters that contro
 
         import pysynthbio
 
-        # Create a query with deterministic latents
-        query = pysynthbio.get_valid_query(
-            modality="bulk",
-            deterministic_latents=True
-        )
+        # Create a query and enable deterministic latents
+        query = pysynthbio.get_valid_query(modality="bulk")
+        query["deterministic_latents"] = True
 
 You can combine multiple parameters in a single query:
 
@@ -116,11 +137,9 @@ You can combine multiple parameters in a single query:
 
     import pysynthbio
 
-    # Create a query with multiple parameters
-    query = pysynthbio.get_valid_query(
-        modality="bulk",
-        total_count=8000000,
-        deterministic_latents=True
-    )
+    # Create a query and add multiple parameters
+    query = pysynthbio.get_valid_query(modality="bulk")
+    query["total_count"] = 8000000
+    query["deterministic_latents"] = True
 
     results = pysynthbio.predict_query(query)
