@@ -1,40 +1,45 @@
 Designing Queries for Models
 ============================
-Choosing a Modality
-^^^^^^^^^^^^^^^^^^^
+Choosing a Model
+^^^^^^^^^^^^^^^^
 
-The modality (data type to generate) is specified in the query dictionary using ``get_valid_query()``:
+Models are specified by their model ID. Use ``list_models()`` to see available models and their IDs:
 
-- ``bulk``: bulk RNA-seq (asynchronous under the hood, returned as DataFrames)
-- ``single-cell``: single-cell RNA-seq (asynchronous under the hood, returned as DataFrames)
+- ``gem-1-bulk``: bulk RNA-seq model
+- ``gem-1-sc``: single-cell RNA-seq model
+- Additional models may be available depending on your API access
 
-You do not need to specify any internal API slugs. The library maps modalities to the appropriate model endpoints automatically.
+The model ID must be provided to both ``get_example_query()`` and ``predict_query()``.
 
 .. code-block:: python
 
     import pysynthbio
 
+    # List available models
+    models = pysynthbio.list_models()
+    print(models)
+
     # Create a bulk query
-    bulk_query = pysynthbio.get_valid_query(modality="bulk")
-    bulk = pysynthbio.predict_query(bulk_query, as_counts=True)
+    bulk_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
+    bulk = pysynthbio.predict_query(bulk_query, model_id="gem-1-bulk", as_counts=True)
 
     # Create a single-cell query
-    sc_query = pysynthbio.get_valid_query(modality="single-cell")
-    sc = pysynthbio.predict_query(sc_query, as_counts=True)
+    sc_query = pysynthbio.get_example_query(model_id="gem-1-sc")
+    sc = pysynthbio.predict_query(sc_query, model_id="gem-1-sc", as_counts=True)
 
 
 
 Valid Metadata Keys
 ^^^^^^^^^^^^^^^^^^^
 
-The structure of the query required by the API is fixed for the current supported model.
-You can use ``get_valid_query`` to get a correctly structured example dictionary.
+The structure of the query required by the API depends on the specific model.
+You can use ``get_example_query(model_id)`` to get a correctly structured example dictionary for a given model.
 
 .. code-block:: python
 
     import pysynthbio
-    # Get the example query structure
-    example_query = pysynthbio.get_valid_query()
+    # Get the example query structure for a specific model
+    example_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
 
 This is the full list of valid metadata keys:
 
@@ -96,15 +101,15 @@ In addition to metadata, queries support several optional parameters that contro
         import pysynthbio
 
         # Bulk query with sample generation
-        bulk_query = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
         bulk_query["mode"] = "sample generation"  # Default for bulk
 
         # Bulk query with mean estimation
-        bulk_query_mean = pysynthbio.get_valid_query(modality="bulk")
+        bulk_query_mean = pysynthbio.get_example_query(model_id="gem-1-bulk")
         bulk_query_mean["mode"] = "mean estimation"
 
         # Single-cell query (must use mean estimation)
-        sc_query = pysynthbio.get_valid_query(modality="single-cell")
+        sc_query = pysynthbio.get_example_query(model_id="gem-1-sc")
         sc_query["mode"] = "mean estimation"  # Required for single-cell
 
 **total_count** (int)
@@ -115,7 +120,7 @@ In addition to metadata, queries support several optional parameters that contro
         import pysynthbio
 
         # Create a query and add custom total_count
-        query = pysynthbio.get_valid_query(modality="bulk")
+        query = pysynthbio.get_example_query(model_id="gem-1-bulk")
         query["total_count"] = 5000000
 
 **deterministic_latents** (bool)
@@ -128,7 +133,7 @@ In addition to metadata, queries support several optional parameters that contro
         import pysynthbio
 
         # Create a query and enable deterministic latents
-        query = pysynthbio.get_valid_query(modality="bulk")
+        query = pysynthbio.get_example_query(model_id="gem-1-bulk")
         query["deterministic_latents"] = True
 
 You can combine multiple parameters in a single query:
@@ -138,8 +143,9 @@ You can combine multiple parameters in a single query:
     import pysynthbio
 
     # Create a query and add multiple parameters
-    query = pysynthbio.get_valid_query(modality="bulk")
+    model_id = "gem-1-bulk"
+    query = pysynthbio.get_example_query(model_id=model_id)
     query["total_count"] = 8000000
     query["deterministic_latents"] = True
 
-    results = pysynthbio.predict_query(query)
+    results = pysynthbio.predict_query(query, model_id=model_id)

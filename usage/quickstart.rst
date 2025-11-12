@@ -72,50 +72,52 @@ Import the package
     import pysynthbio
 
 
-Discover Valid Modalities
--------------------------
+Discover Available Models
+--------------------------
 
-The API supports multiple output modalities. Use ``get_valid_modalities`` to see what is available. The two primary modalities are ``'bulk'`` and ``'single-cell'``.
+The API supports multiple models for different modalities and tasks. Use ``list_models()`` to see what is available.
 
 .. code-block:: python
 
-    supported_modalities = pysynthbio.get_valid_modalities()
-    print(supported_modalities)
-    # Example: {'bulk', 'single-cell'}
+    available_models = pysynthbio.list_models()
+    print(available_models)
+    # Returns a list of model objects with their IDs and descriptions
 
 Generate Example Queries
 ------------------------
 
-The structure of the query required by the API is fixed for the current supported model.
-You can use ``get_valid_query`` to get a correctly structured example dictionary.
+Each model has a specific query structure. Use ``get_example_query(model_id)`` to get a correctly structured example dictionary for a specific model.
 
 .. code-block:: python
 
-    # Get the example query structure
-    example_query = pysynthbio.get_valid_query()
+    # Get the example query structure for a specific model
+    model_id = "gem-1-bulk"  # Example model ID
+    example_query = pysynthbio.get_example_query(model_id=model_id)
 
 Get Predictions
 ----------------
 
-Use ``predict_query`` to send a query to the API and get expression predictions. The modality (bulk or single-cell) is specified in the query dictionary itself using ``get_valid_query()``.
+Use ``predict_query`` to send a query to the API and get expression predictions. You must specify which model to use via the ``model_id`` parameter.
 
-The function handles authentication, request submission, and result retrieval. For both modalities, the API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
+The function handles authentication, request submission, and result retrieval. The API runs asynchronously; ``predict_query`` automatically polls the job until it's ready and then downloads the results for you.
 
 .. code-block:: python
 
     # Example 1: Generate bulk RNA-seq counts
-    bulk_query = pysynthbio.get_valid_query(modality="bulk")
+    bulk_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
     bulk_results = pysynthbio.predict_query(
         query=bulk_query,
+        model_id="gem-1-bulk",
         as_counts=True,  # counts; set False for logCPM
     )
     bulk_metadata = bulk_results["metadata"]
     bulk_expression = bulk_results["expression"]
 
     # Example 2: Generate single-cell RNA-seq counts
-    sc_query = pysynthbio.get_valid_query(modality="single-cell")
+    sc_query = pysynthbio.get_example_query(model_id="gem-1-sc")
     sc_results = pysynthbio.predict_query(
         query=sc_query,
+        model_id="gem-1-sc",
         as_counts=True,
     )
     sc_metadata = sc_results["metadata"]
@@ -127,16 +129,17 @@ Advanced Options
 Query Parameters
 ^^^^^^^^^^^^^^^^
 
-The query dictionary supports several optional parameters to control the generation process. You can add these to any query after creating it with ``get_valid_query()``:
+The query dictionary supports several optional parameters to control the generation process. You can add these to any query after creating it with ``get_example_query()``:
 
 .. code-block:: python
 
     # Create a query and add custom parameters
-    my_query = pysynthbio.get_valid_query(modality="bulk")
+    model_id = "gem-1-bulk"
+    my_query = pysynthbio.get_example_query(model_id=model_id)
     my_query["total_count"] = 8000000        # Custom library size
     my_query["deterministic_latents"] = True  # Deterministic output
-    
-    results = pysynthbio.predict_query(query=my_query)
+
+    results = pysynthbio.predict_query(query=my_query, model_id=model_id)
 
 Available query parameters:
 

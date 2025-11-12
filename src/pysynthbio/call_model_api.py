@@ -5,30 +5,15 @@ Core API functionality for the Synthesize Bio API
 import json
 import os
 import time
-from typing import Dict, Set, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
 import requests
 
-try:
-    from .key_handlers import has_synthesize_token, set_synthesize_token
-except ImportError:
-    # Fallback if relative import fails (e.g., in tests)
-    from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
-
-# Import package version and derive API version as v<major>.<minor>
-try:
-    from . import __version__ as _pkg_version
-except Exception:
-    _pkg_version = "0.0.0"
-
-_API_VERSION_PARTS = _pkg_version.split(".")
-API_VERSION = f"v{_API_VERSION_PARTS[0]}.{_API_VERSION_PARTS[1]}"
+from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 
 API_BASE_URL = "https://app.synthesize.bio"
-
-MODEL_MODALITIES = {API_VERSION: {"bulk", "single-cell"}}
 
 # Default timeout (seconds) for outbound HTTP requests
 DEFAULT_TIMEOUT = 30
@@ -38,104 +23,9 @@ DEFAULT_POLL_INTERVAL_SECONDS = 2
 DEFAULT_POLL_TIMEOUT_SECONDS = 15 * 60
 
 
-def get_valid_modalities() -> Set[str]:
-    """
-    Returns a set of possible output modalities for the supported model.
-
-    Returns
-    -------
-    Set[str]
-            A set containing the valid modality strings.
-    """
-    return MODEL_MODALITIES[API_VERSION]
-
-
-def get_valid_modes() -> Set[str]:
-    """
-    Returns a set of possible output modes for the supported model.
-
-    Returns
-    -------
-    Set[str]
-            A set containing the valid modality strings.
-    """
-    return ["sample generation", "mean estimation", "metadata prediction"]
-
-
-def get_valid_query(modality: str = "bulk") -> dict:
-    """
-    Generates a sample query for prediction and validation.
-
-    Parameters
-    ----------
-    modality : str
-        'bulk' or 'single-cell'. Defaults to 'bulk'.
-
-    Returns
-    -------
-    dict
-        A dictionary representing a valid query structure for the chosen
-        modality.
-    """
-    if modality == "single-cell":
-        query = {
-            "modality": "single-cell",
-            "mode": "mean estimation",
-            "seed": 11,
-            "inputs": [
-                {
-                    "metadata": {
-                        "cell_type_ontology_id": "CL:0000786",
-                        "tissue_ontology_id": "UBERON:0001155",
-                        "sex": "male",
-                    },
-                    "num_samples": 1,
-                },
-                {
-                    "metadata": {
-                        "cell_type_ontology_id": "CL:0000763",
-                        "tissue_ontology_id": "UBERON:0001155",
-                        "sex": "male",
-                    },
-                    "num_samples": 1,
-                },
-            ],
-        }
-    else:
-        # Default: bulk
-        query = {
-            "modality": "bulk",
-            "mode": "sample generation",
-            "seed": 11,
-            "inputs": [
-                {
-                    "metadata": {
-                        "cell_line_ontology_id": "CVCL_0023",
-                        "perturbation_ontology_id": "ENSG00000156127",
-                        "perturbation_type": "crispr",
-                        "perturbation_time": "96 hours",
-                        "sample_type": "cell line",
-                    },
-                    "num_samples": 5,
-                },
-                {
-                    "metadata": {
-                        "disease_ontology_id": "MONDO:0011719",
-                        "age_years": "65",
-                        "sex": "female",
-                        "sample_type": "primary tissue",
-                        "tissue_ontology_id": "UBERON:0000945",
-                    },
-                    "num_samples": 5,
-                },
-            ],
-        }
-
-    return query
-
-
 def predict_query(
     query: dict,
+    model_id: str,
     as_counts: bool = True,
     auto_authenticate: bool = True,
     api_base_url: str = API_BASE_URL,
@@ -160,6 +50,9 @@ def predict_query(
           latent distribution (p(z|metadata) or q(z|x)) instead of sampling.
           This removes randomness from latent sampling and produces deterministic
           outputs for the same inputs.
+
+    model_id: str
+        The model to use for prediction.
 
     as_counts : bool, optional
         If False, transforms the predicted expression counts into
@@ -204,111 +97,90 @@ def predict_query(
                 "Set the SYNTHESIZE_API_KEY environment variable or "
                 "call set_synthesize_token() before making API requests."
             )
-    # Validate base URL
-    if not api_base_url.startswith("http"):
-        raise ValueError(f"Invalid api_base_url: {api_base_url}")
-
-    # Validate the query
-    validate_query(query)
-
-    # Ensure the query modality is valid
-    validate_modality(query)
-    modality = query["modality"]
 
     # Source field for reporting
     query["source"] = "pysynthbio"
 
-    if modality in MODEL_MODALITIES[API_VERSION]:
-        # Resolve internal API slug based on modality
-        api_slug = _resolve_api_slug(modality)
-        # Start async query
-        model_query_id = _start_model_query(
-            api_base_url=api_base_url,
-            api_slug=api_slug,
-            query=query,
-        )
-
-        # Poll for completion
-        status, payload = _poll_model_query(
-            api_base_url=api_base_url,
-            model_query_id=model_query_id,
-            poll_interval=poll_interval_seconds,
-            timeout_seconds=poll_timeout_seconds,
-        )
-
-        if status == "failed":
-            # payload contains message with error details
-            error_message = (
-                payload.get("message") if isinstance(payload, dict) else None
-            )
-            if not error_message:
-                raise ValueError("Model query failed. No error message in payload.")
-
-            raise ValueError(f"Model query failed: {error_message}")
-
-        if status != "ready":
-            raise ValueError(
-                (
-                    "Model query did not complete in time ("
-                    f"status={status}). Consider increasing "
-                    "poll_timeout_seconds."
-                )
-            )
-
-        # When ready, payload should contain a signed downloadUrl to the final JSON
-        download_url = payload.get("downloadUrl") if isinstance(payload, dict) else None
-        if not download_url:
-            raise ValueError("Response missing downloadUrl when status=ready")
-
-        if return_download_url:
-            # Caller wants the URL only; return in a structured payload
-            return {
-                "metadata": pd.DataFrame(),
-                "expression": pd.DataFrame(),
-                "latents": pd.DataFrame(),
-                "download_url": download_url,
-            }
-
-        # Fetch the final results JSON and transform to DataFrames
-        final_json = _get_json(download_url)
-
-        expression, metadata, latents = _transform_result_to_frames(final_json)
-
-        expression = expression.astype(int)
-
-        if not as_counts:
-            expression = log_cpm(expression)
-
-        # Build result dictionary - always include latents
-        result = {"metadata": metadata, "expression": expression, "latents": latents}
-
-        return result
-
-    raise ValueError(
-        (
-            "Unsupported modality '"
-            + str(modality)
-            + "'. Expected one of "
-            + str(MODEL_MODALITIES[API_VERSION])
-        )
+    model_query_id = _start_model_query(
+        api_base_url=api_base_url,
+        model_id=model_id,
+        query=query,
     )
 
+    # Poll for completion
+    status, payload = _poll_model_query(
+        api_base_url=api_base_url,
+        model_query_id=model_query_id,
+        poll_interval=poll_interval_seconds,
+        timeout_seconds=poll_timeout_seconds,
+    )
 
-def _resolve_api_slug(modality: str) -> str:
-    if modality == "single-cell":
-        return "gem-1-sc"
-    if modality == "bulk":
-        return "gem-1-bulk"
-    raise ValueError(f"Unknown modality: '{modality}'")
+    if status == "failed":
+        # payload contains message with error details
+        error_message = payload.get("message") if isinstance(payload, dict) else None
+        if not error_message:
+            raise ValueError("Model query failed. No error message in payload.")
+
+        raise ValueError(f"Model query failed: {error_message}")
+
+    if status != "ready":
+        raise ValueError(
+            (
+                "Model query did not complete in time ("
+                f"status={status}). Consider increasing "
+                "poll_timeout_seconds."
+            )
+        )
+
+    # When ready, payload should contain a signed downloadUrl to the final JSON
+    download_url = payload.get("downloadUrl") if isinstance(payload, dict) else None
+    if not download_url:
+        raise ValueError("Response missing downloadUrl when status=ready")
+
+    if return_download_url:
+        # Caller wants the URL only; return in a structured payload
+        return {
+            "metadata": pd.DataFrame(),
+            "expression": pd.DataFrame(),
+            "latents": pd.DataFrame(),
+            "download_url": download_url,
+        }
+
+    # Fetch the final results JSON and transform to DataFrames
+    final_json = _get_json(download_url)
+
+    if (
+        model_id == "gem-1-bulk_predict-metadata"
+        or model_id == "gem-1-sc_predict-metadata"
+    ):
+        # outputs is a list of MetadataOutput objects; extract the first one
+        output = final_json["outputs"][0]
+        return {
+            "classifier_probs": output["classifier_probs"],
+            "latents": output["latents"],
+            "metadata": output["metadata"],
+        }
+
+    expression, metadata, latents = _transform_result_to_frames(final_json)
+
+    expression = expression.astype(int)
+
+    if not as_counts:
+        expression = log_cpm(expression)
+
+    # Build result dictionary - always include latents
+    result = {"metadata": metadata, "expression": expression, "latents": latents}
+
+    return result
 
 
-def _start_model_query(api_base_url: str, api_slug: str, query: dict) -> str:
+def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:
     """
     Starts an async model query and returns the modelQueryId.
     """
     try:
         response = requests.post(
-            url=f"{api_base_url}/api/models/{api_slug}/predict",
+            url=f"{api_base_url}/api/models/{model_id}/predict",
             headers={
                 "Accept": "application/json",
                 "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
@@ -427,131 +299,58 @@ def _transform_result_to_frames(
         if key in content:
             raise ValueError(f"Error in result payload: {content[key]}")
 
-    if "outputs" in content and "gene_order" in content:
-        gene_order = content["gene_order"]
-        outputs = content["outputs"]
+    for key in ("outputs", "gene_order"):
+        if key not in content:
+            raise ValueError(f"Unexpected result JSON structure: {content}")
 
-        # Outputs is a list of dicts, each with
-        # "counts" and "metadata"
-        if not isinstance(outputs, list):
-            raise ValueError(
-                f"Unexpected outputs format: expected list, got {type(outputs)}. "
-                "Please check API response structure."
-            )
+    gene_order = content["gene_order"]
+    outputs = content["outputs"]
 
-        expression_rows = []
-        metadata_rows = []
-        latents_rows = []
+    # Outputs is a list of dicts, each with
+    # "counts" and "metadata"
+    if not isinstance(outputs, list):
+        raise ValueError(
+            f"Unexpected outputs format: expected list, got {type(outputs)}. "
+            "Please check API response structure."
+        )
 
-        for output in outputs:
-            counts = output.get("counts", [])
+    expression_rows = []
+    metadata_rows = []
+    latents_rows = []
 
-            # Handle different response formats for counts
-            if isinstance(counts, dict) and "counts" in counts:
-                counts_list = counts["counts"]
-            elif isinstance(counts, list):
-                counts_list = counts
-            else:
-                # Single-cell format: dict mapping gene IDs to count values
-                counts_list = [counts.get(gene, 0) for gene in gene_order]
+    for output in outputs:
+        counts = output.get("counts", [])
 
-            expression_rows.append(counts_list)
-            metadata_rows.append(output.get("metadata", {}))
-
-            # Extract latents if present in this output
-            if "latents" in output:
-                latents_rows.append(output["latents"])
-
-        expression = pd.DataFrame(expression_rows, columns=gene_order)
-        metadata = pd.DataFrame(metadata_rows)
-
-        # Build latents DataFrame if any latents were found
-        # Latents is a dict with keys like 'biological', 'technical', 'perturbation'
-        # Each value is a list of floats. We create a DataFrame with these as columns
-        # where each cell contains the list (similar to R's list-columns)
-        if latents_rows:
-            latents = pd.DataFrame(latents_rows)
+        # Handle different response formats for counts
+        if isinstance(counts, dict) and "counts" in counts:
+            counts_list = counts["counts"]
+        elif isinstance(counts, list):
+            counts_list = counts
         else:
-            latents = pd.DataFrame()
+            # Single-cell format: dict mapping gene IDs to count values
+            counts_list = [counts.get(gene, 0) for gene in gene_order]
 
-        return expression.astype(int), metadata, latents
+        expression_rows.append(counts_list)
+        metadata_rows.append(output.get("metadata", {}))
 
-    raise ValueError(
-        (
-            "Unexpected result JSON structure (expected 'outputs' and 'gene_order'): "
-            f"{content}"
-        )
-    )
+        # Extract latents if present in this output
+        if "latents" in output:
+            latents_rows.append(output["latents"])
 
+    expression = pd.DataFrame(expression_rows, columns=gene_order)
+    metadata = pd.DataFrame(metadata_rows)
 
-def validate_query(query: dict) -> None:
-    """
-    Validates the structure and contents of the query based on the current API model.
+    # Build latents DataFrame if any latents were found
+    # Latents is a dict with keys like 'biological', 'technical', 'perturbation'
+    # Each value is a list of floats. We create a DataFrame with these as columns
+    # where each cell contains the list (similar to R's list-columns)
+    if latents_rows:
+        latents = pd.DataFrame(latents_rows)
+    else:
+        latents = pd.DataFrame()
 
-    Parameters
-    ----------
-    query : dict
-        The query dictionary.
+    return expression.astype(int), metadata, latents
 
-    Raises
-    -------
-    TypeError
-        If the query is not a dictionary.
-    ValueError
-        If the query is missing required keys for the current API model.
-    """
-    if not isinstance(query, dict):
-        raise TypeError(
-            f"Expected `query` to be a dictionary, but got {type(query).__name__}"
-        )
-
-    required_keys = {"inputs", "mode", "modality"}
-
-    missing_keys = required_keys - query.keys()
-    if missing_keys:
-        raise ValueError(
-            f"Missing required keys in query: {missing_keys}. "
-            f"Use `get_valid_query()` to get an example."
-        )
-
-    # Validate single-cell modality only supports "mean estimation"
-    if (
-        query.get("modality") == "single-cell"
-        and query.get("mode") == "sample generation"
-    ):
-        raise ValueError(
-            "Single-cell modality only supports 'mean estimation' mode, "
-            "not 'sample generation'. "
-            "Please set mode='mean estimation' in your query."
-        )
-
-
-def validate_modality(query: dict) -> None:
-    """
-    Validates the modality in the query is allowed for the current API model.
-
-    Parameters
-    ----------
-    query : dict
-        A dictionary containing the query data.
-
-    Raises
-    -------
-    ValueError
-        If the modality key is missing, or the selected modality is not allowed.
-    """
-    allowed_modalities = MODEL_MODALITIES[API_VERSION]
-
-    modality_key = "modality"
-    if modality_key not in query:
-        raise ValueError(f"Query requires '{modality_key}' key.")
-    selected_modality = query[modality_key]
-
-    if selected_modality not in allowed_modalities:
-        raise ValueError(
-            f"Invalid modality '{selected_modality}'. "
-            f"Allowed modalities: {allowed_modalities}"
-        )
 
 
 def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
