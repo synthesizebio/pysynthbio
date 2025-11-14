@@ -6,6 +6,8 @@ api_key_available = "SYNTHESIZE_API_KEY" in os.environ
 skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 
 models = [
+    # "gem-1-bulk",
+    # "gem-1-sc",
     "gem-1-bulk_predict-metadata",
     "gem-1-sc_predict-metadata",
 ]
@@ -29,7 +31,6 @@ def test_model_integration():
             api_base_url=os.environ.get("API_BASE_URL"),
         )
 
-        # lets inspect the top level keys
         assert "classifier_probs" in result
         assert "latents" in result
         assert "metadata" in result

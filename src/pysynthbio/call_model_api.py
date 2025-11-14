@@ -7,11 +7,11 @@ import os
 import time
 from typing import Dict, Tuple
 
-import numpy as np
 import pandas as pd
 import requests
 
 from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
+from pysynthbio.output_transformers import OUTPUT_TRANSFORMERS
 
 API_BASE_URL = "https://app.synthesize.bio"
 
@@ -138,38 +138,21 @@ def predict_query(
         raise ValueError("Response missing downloadUrl when status=ready")
 
     if return_download_url:
-        # Caller wants the URL only; return in a structured payload
         return {
-            "metadata": pd.DataFrame(),
-            "expression": pd.DataFrame(),
-            "latents": pd.DataFrame(),
             "download_url": download_url,
         }
 
     # Fetch the final results JSON and transform to DataFrames
     final_json = _get_json(download_url)
 
-    if (
-        model_id == "gem-1-bulk_predict-metadata"
-        or model_id == "gem-1-sc_predict-metadata"
-    ):
-        # outputs is a list of MetadataOutput objects; extract the first one
-        output = final_json["outputs"][0]
-        return {
-            "classifier_probs": output["classifier_probs"],
-            "latents": output["latents"],
-            "metadata": output["metadata"],
-        }
+    # Get transformer for this model, or None if not registered
+    transformer = OUTPUT_TRANSFORMERS.get(model_id)
 
-    expression, metadata, latents = _transform_result_to_frames(final_json)
-
-    expression = expression.astype(int)
-
-    if not as_counts:
-        expression = log_cpm(expression)
-
-    # Build result dictionary - always include latents
-    result = {"metadata": metadata, "expression": expression, "latents": latents}
+    if transformer:
+        result = transformer(final_json, as_counts=as_counts)
+    else:
+        # Return raw JSON for unregistered models
+        result = final_json
 
     return result
 
@@ -280,110 +263,3 @@ def _get_json(url: str) -> dict:
         raise ValueError(
             (f"Failed to decode JSON from download URL response: {r.text}")
         ) from err
-
-
-def _transform_result_to_frames(
-    content: dict,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """
-    Transforms the final JSON result into (expression_df, metadata_df, latents_df).
-
-    Returns:
-        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: A tuple containing:
-            - expression_df (pd.DataFrame): DataFrame of expression counts.
-            - metadata_df (pd.DataFrame): DataFrame of sample metadata.
-            - latents_df (pd.DataFrame): DataFrame of latents, which may be empty
-              if not present in the response.
-    """
-    for key in ("error", "errors"):
-        if key in content:
-            raise ValueError(f"Error in result payload: {content[key]}")
-
-    for key in ("outputs", "gene_order"):
-        if key not in content:
-            raise ValueError(f"Unexpected result JSON structure: {content}")
-
-    gene_order = content["gene_order"]
-    outputs = content["outputs"]
-
-    # Outputs is a list of dicts, each with
-    # "counts" and "metadata"
-    if not isinstance(outputs, list):
-        raise ValueError(
-            f"Unexpected outputs format: expected list, got {type(outputs)}. "
-            "Please check API response structure."
-        )
-
-    expression_rows = []
-    metadata_rows = []
-    latents_rows = []
-
-    for output in outputs:
-        counts = output.get("counts", [])
-
-        # Handle different response formats for counts
-        if isinstance(counts, dict) and "counts" in counts:
-            counts_list = counts["counts"]
-        elif isinstance(counts, list):
-            counts_list = counts
-        else:
-            # Single-cell format: dict mapping gene IDs to count values
-            counts_list = [counts.get(gene, 0) for gene in gene_order]
-
-        expression_rows.append(counts_list)
-        metadata_rows.append(output.get("metadata", {}))
-
-        # Extract latents if present in this output
-        if "latents" in output:
-            latents_rows.append(output["latents"])
-
-    expression = pd.DataFrame(expression_rows, columns=gene_order)
-    metadata = pd.DataFrame(metadata_rows)
-
-    # Build latents DataFrame if any latents were found
-    # Latents is a dict with keys like 'biological', 'technical', 'perturbation'
-    # Each value is a list of floats. We create a DataFrame with these as columns
-    # where each cell contains the list (similar to R's list-columns)
-    if latents_rows:
-        latents = pd.DataFrame(latents_rows)
-    else:
-        latents = pd.DataFrame()
-
-    return expression.astype(int), metadata, latents
-
-
-
-def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
-    """
-    Transforms raw counts expression data into log1p(CPM).
-
-    Parameters
-    ----------
-    expression : pd.DataFrame
-            A DataFrame containing raw counts expression data.
-
-    Returns
-    -------
-    pd.DataFrame
-            A DataFrame containing log1p(CPM) data.
-    """
-    expression_numeric = (
-        expression.apply(pd.to_numeric, errors="coerce").fillna(0).clip(lower=0)
-    )
-
-    library_size = expression_numeric.sum(axis=1)
-
-    non_zero_library = library_size > 0
-    cpm = pd.DataFrame(0.0, index=expression.index, columns=expression.columns)
-
-    if non_zero_library.any():
-        cpm.loc[non_zero_library] = (
-            expression_numeric.loc[non_zero_library].div(
-                library_size[non_zero_library], axis=0
-            )
-            * 1e6
-        )
-
-    log_cpm_transformed = np.log1p(cpm)
-
-    return log_cpm_transformed
