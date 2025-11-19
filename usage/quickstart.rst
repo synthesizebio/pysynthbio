@@ -81,7 +81,7 @@ The API supports multiple models for different modalities and tasks. Use ``list_
 
     available_models = pysynthbio.list_models()
     print(available_models)
-    # Returns a list of model objects with their IDs and descriptions
+    # Returns a list of model objects with their model_id example: [{ model_id: "gem-1-bulk" }, ]
 
 Generate Example Queries
 ------------------------
@@ -92,7 +92,8 @@ Each model has a specific query structure. Use ``get_example_query(model_id)`` t
 
     # Get the example query structure for a specific model
     model_id = "gem-1-bulk"  # Example model ID
-    example_query = pysynthbio.get_example_query(model_id=model_id)
+    example_query_response = pysynthbio.get_example_query(model_id=model_id)
+    print(example_query_response["example_query"])
 
 Get Predictions
 ----------------
@@ -104,9 +105,9 @@ The function handles authentication, request submission, and result retrieval. T
 .. code-block:: python
 
     # Example 1: Generate bulk RNA-seq counts
-    bulk_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
+    bulk_query_response = pysynthbio.get_example_query(model_id="gem-1-bulk")
     bulk_results = pysynthbio.predict_query(
-        query=bulk_query,
+        query=bulk_query_response["example_query"],
         model_id="gem-1-bulk",
         as_counts=True,  # counts; set False for logCPM
     )
@@ -114,9 +115,9 @@ The function handles authentication, request submission, and result retrieval. T
     bulk_expression = bulk_results["expression"]
 
     # Example 2: Generate single-cell RNA-seq counts
-    sc_query = pysynthbio.get_example_query(model_id="gem-1-sc")
+    sc_query_response = pysynthbio.get_example_query(model_id="gem-1-sc")
     sc_results = pysynthbio.predict_query(
-        query=sc_query,
+        query=sc_query_response["example_query"],
         model_id="gem-1-sc",
         as_counts=True,
     )
