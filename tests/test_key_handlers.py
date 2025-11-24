@@ -132,7 +132,7 @@ class TestApiWithAuthentication(unittest.TestCase):
     def test_predict_query_auto_authenticate(self, mock_post, mock_get, mock_set_token):
         """Test auto authentication in predict_query."""
         # Import here to avoid circular imports in tests
-        from pysynthbio.call_model_api import get_valid_query, predict_query
+        from pysynthbio.call_model_api import predict_query
 
         # Make the mock set_synthesize_token function
         # actually set the environment variable
@@ -178,8 +178,9 @@ class TestApiWithAuthentication(unittest.TestCase):
         mock_get.side_effect = [get_status_ready, get_download]
 
         # Call function with auto-authentication
-        query = get_valid_query()
-        results = predict_query(query, auto_authenticate=True)
+        # Query content doesn't matter since HTTP responses are mocked
+        query = {"samples": [{"test": "data"}]}
+        results = predict_query(query, model_id="gem-1-bulk", auto_authenticate=True)
 
         # Verify set_token was called
         mock_set_token.assert_called_once_with(use_keyring=True)
@@ -200,12 +201,13 @@ class TestApiWithAuthentication(unittest.TestCase):
     def test_predict_query_without_auto_authenticate(self, mock_post):
         """Test predict_query without auto authentication."""
         # Import here to avoid circular imports in tests
-        from pysynthbio.call_model_api import get_valid_query, predict_query
+        from pysynthbio.call_model_api import predict_query
 
         # Call function without auto-authentication and no token
-        query = get_valid_query()
+        # Query content doesn't matter since we're testing auth failure
+        query = {"samples": [{"test": "data"}]}
         with self.assertRaises(KeyError):
-            predict_query(query, auto_authenticate=False)
+            predict_query(query, model_id="gem-1-bulk", auto_authenticate=False)
 
         # Verify API was not called
         mock_post.assert_not_called()
@@ -215,7 +217,7 @@ class TestApiWithAuthentication(unittest.TestCase):
     def test_predict_query_with_token(self, mock_post, mock_get):
         """Test predict_query with token already set."""
         # Import here to avoid circular imports in tests
-        from pysynthbio.call_model_api import get_valid_query, predict_query
+        from pysynthbio.call_model_api import predict_query
 
         # Set a token
         os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
@@ -246,8 +248,9 @@ class TestApiWithAuthentication(unittest.TestCase):
         mock_get.side_effect = [get_status_ready, get_download]
 
         # Call function without auto-authentication but with token set
-        query = get_valid_query()
-        results = predict_query(query, auto_authenticate=False)
+        # Query content doesn't matter since HTTP responses are mocked
+        query = {"samples": [{"test": "data"}]}
+        results = predict_query(query, model_id="gem-1-bulk", auto_authenticate=False)
 
         # Verify API was called with correct token
         mock_post.assert_called_once()
@@ -272,7 +275,7 @@ class TestApiWithAuthentication(unittest.TestCase):
     def test_predict_query_single_vs_multiple_samples(self, mock_post, mock_get):
         """Test that the code correctly handles both single and multiple samples."""
         # Import here to avoid circular imports in tests
-        from pysynthbio.call_model_api import get_valid_query, predict_query
+        from pysynthbio.call_model_api import predict_query
 
         # Set a token
         os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
@@ -300,8 +303,11 @@ class TestApiWithAuthentication(unittest.TestCase):
         }
         mock_get.side_effect = [get_status_ready_1, get_download_1]
 
-        query = get_valid_query()
-        results_single = predict_query(query, auto_authenticate=False)
+        # Query content doesn't matter since HTTP responses are mocked
+        query = {"samples": [{"test": "data"}]}
+        results_single = predict_query(
+            query, model_id="gem-1-bulk", auto_authenticate=False
+        )
 
         # Verify single sample results
         self.assertEqual(len(results_single["metadata"]), 1)
@@ -337,7 +343,9 @@ class TestApiWithAuthentication(unittest.TestCase):
         }
         mock_get.side_effect = [get_status_ready_2, get_download_2]
 
-        results_multiple = predict_query(query, auto_authenticate=False)
+        results_multiple = predict_query(
+            query, model_id="gem-1-bulk", auto_authenticate=False
+        )
 
         # Verify multiple sample results
         self.assertEqual(len(results_multiple["metadata"]), 3)
