@@ -119,7 +119,7 @@ def _transform_result_to_frames(
 
 def transform_metadata_model_output(final_json: dict, as_counts: bool) -> Dict:
     """
-    Transformer for metadata prediction models (gem-1-bulk_predict-metadata, gem-1-sc_predict-metadata).
+    Transformer for metadata prediction models.
 
     These models return classifier probabilities, latents, and metadata predictions
     rather than expression counts.
@@ -149,7 +149,8 @@ def transform_standard_model_output(final_json: dict, as_counts: bool) -> Dict:
     """
     Transformer for standard expression prediction models.
 
-    Converts raw API JSON into structured DataFrames for expression, metadata, and latents.
+    Converts raw API JSON into structured DataFrames
+    for expression, metadata, and latents.
 
     Parameters
     ----------

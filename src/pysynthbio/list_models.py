@@ -15,7 +15,8 @@ def list_models(
     """
     if not has_synthesize_token():
         raise KeyError(
-            "No API token found. Set the SYNTHESIZE_API_KEY environment variable or call set_synthesize_token() before making API requests."
+            "No API token found. Set the SYNTHESIZE_API_KEY environment variable or "
+            + "call set_synthesize_token() before making API requests."
         )
 
     url = f"{api_base_url}/api/models"

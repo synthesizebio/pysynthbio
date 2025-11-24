@@ -3,11 +3,17 @@ import pprint
 
 import pytest
 
+# these tests are meant to be run for local integration, not on CI
+
 api_key_available = "SYNTHESIZE_API_KEY" in os.environ
 skip_reason_api_key = "SYNTHESIZE_API_KEY environment variable not set"
 
+base_url_available = "API_BASE_URL" in os.environ
+skip_reason_base_url = "API_BASE_URL environment variable not set"
+
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+@pytest.mark.skipif(not base_url_available, reason=skip_reason_base_url)
 def test_list_models():
     from pysynthbio.list_models import list_models
 
@@ -17,10 +23,15 @@ def test_list_models():
 
 
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
+@pytest.mark.skipif(not base_url_available, reason=skip_reason_base_url)
 def test_model_integration():
     model_ids = [
-        # "gem-1-bulk_reference-conditioning",
         "gem-1-sc",
+        "gem-1-bulk",
+        "gem-1-sc_predict-metadata",
+        "gem-1-bulk_predict-metadata",
+        "gem-1-bulk_reference-conditioning",
+        "gem-1-sc_reference-conditioning",
     ]
     import pandas as pd
 
