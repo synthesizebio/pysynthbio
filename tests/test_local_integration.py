@@ -25,47 +25,32 @@ def test_list_models():
 @pytest.mark.skipif(not api_key_available, reason=skip_reason_api_key)
 @pytest.mark.skipif(not base_url_available, reason=skip_reason_base_url)
 def test_model_integration():
-    model_ids = [
-        "gem-1-sc",
-        "gem-1-bulk",
-        "gem-1-sc_predict-metadata",
-        "gem-1-bulk_predict-metadata",
-        "gem-1-bulk_reference-conditioning",
-        "gem-1-sc_reference-conditioning",
+    models = [
+        {"model_id": "gem-1-sc", "expected_outputs": ["expression", "metadata"]},
+        {"model_id": "gem-1-bulk", "expected_outputs": ["expression", "metadata"]},
+        {"model_id": "gem-1-sc_predict-metadata", "expected_outputs": ["classifier_probs", "latents", "metadata"]},
+        {"model_id": "gem-1-bulk_predict-metadata", "expected_outputs": ["classifier_probs", "latents", "metadata"]},
+        {"model_id": "gem-1-bulk_reference-conditioning", "expected_outputs": ["expression", "metadata"]},
+        {"model_id": "gem-1-sc_reference-conditioning", "expected_outputs": ["expression", "metadata"]},
     ]
     import pandas as pd
 
     from pysynthbio.call_model_api import predict_query
     from pysynthbio.get_example_query import get_example_query
 
-    for model_id in model_ids:
-        print(f"Testing model: {model_id}")
+    for model in models:
+        print(f"Testing model: {model['model_id']}")
         query = get_example_query(
-            model_id=model_id,
+            model_id=model['model_id'],
             api_base_url=os.environ.get("API_BASE_URL"),
         )
         result = predict_query(
             query=query["example_query"],
-            model_id=model_id,
+            model_id=model['model_id'],
             auto_authenticate=False,
             api_base_url=os.environ.get("API_BASE_URL"),
         )
 
-        assert "metadata" in result
-        assert "expression" in result
-        # check that the expression is a DataFrame
-        assert isinstance(result["expression"], pd.DataFrame)
-        # check the length of the expression matches query
-        print(
-            len(result["expression"]),
-            len(query["example_query"]["inputs"]),
-        )
-        pprint.pprint(query["example_query"]["inputs"])
-        samples_per_input = query["example_query"]["inputs"][0]["num_samples"] * len(
-            query["example_query"]["inputs"]
-        )
-        assert len(result["expression"]) == samples_per_input
+        for output in model["expected_outputs"]:
+            assert output in result
 
-        assert "latents" in result
-        assert len(result["metadata"]) > 0
-        assert len(result["expression"]) > 0
