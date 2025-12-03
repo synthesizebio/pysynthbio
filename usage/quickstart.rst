@@ -109,7 +109,6 @@ The function handles authentication, request submission, and result retrieval. T
     bulk_results = pysynthbio.predict_query(
         query=bulk_query_response["example_query"],
         model_id="gem-1-bulk",
-        as_counts=True,  # counts; set False for logCPM
     )
     bulk_metadata = bulk_results["metadata"]
     bulk_expression = bulk_results["expression"]
@@ -119,7 +118,6 @@ The function handles authentication, request submission, and result retrieval. T
     sc_results = pysynthbio.predict_query(
         query=sc_query_response["example_query"],
         model_id="gem-1-sc",
-        as_counts=True,
     )
     sc_metadata = sc_results["metadata"]
     sc_expression = sc_results["expression"]

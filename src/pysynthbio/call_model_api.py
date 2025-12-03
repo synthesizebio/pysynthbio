@@ -26,7 +26,6 @@ DEFAULT_POLL_TIMEOUT_SECONDS = 15 * 60
 def predict_query(
     query: dict,
     model_id: str,
-    as_counts: bool = True,
     auto_authenticate: bool = True,
     api_base_url: str = API_BASE_URL,
     poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
@@ -54,9 +53,6 @@ def predict_query(
     model_id: str
         The model to use for prediction.
 
-    as_counts : bool, optional
-        If False, transforms the predicted expression counts into
-        logCPM (default is True, returning counts).
     auto_authenticate : bool, optional
         If True and no API token is found, will prompt the user to
         input one (default is True).
@@ -149,7 +145,7 @@ def predict_query(
     transformer = OUTPUT_TRANSFORMERS.get(model_id)
 
     if transformer:
-        result = transformer(final_json, as_counts=as_counts)
+        result = transformer(final_json)
     else:
         # Return raw JSON for unregistered models
         result = final_json

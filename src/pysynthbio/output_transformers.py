@@ -7,44 +7,7 @@ into the appropriate output format for a specific model or model family.
 
 from typing import Dict, Tuple
 
-import numpy as np
 import pandas as pd
-
-
-def log_cpm(expression: pd.DataFrame) -> pd.DataFrame:
-    """
-    Transforms raw counts expression data into log1p(CPM).
-
-    Parameters
-    ----------
-    expression : pd.DataFrame
-            A DataFrame containing raw counts expression data.
-
-    Returns
-    -------
-    pd.DataFrame
-            A DataFrame containing log1p(CPM) data.
-    """
-    expression_numeric = (
-        expression.apply(pd.to_numeric, errors="coerce").fillna(0).clip(lower=0)
-    )
-
-    library_size = expression_numeric.sum(axis=1)
-
-    non_zero_library = library_size > 0
-    cpm = pd.DataFrame(0.0, index=expression.index, columns=expression.columns)
-
-    if non_zero_library.any():
-        cpm.loc[non_zero_library] = (
-            expression_numeric.loc[non_zero_library].div(
-                library_size[non_zero_library], axis=0
-            )
-            * 1e6
-        )
-
-    log_cpm_transformed = np.log1p(cpm)
-
-    return log_cpm_transformed
 
 
 def _transform_result_to_frames(
@@ -117,7 +80,7 @@ def _transform_result_to_frames(
     return expression.astype(int), metadata, latents
 
 
-def transform_metadata_model_output(final_json: dict, as_counts: bool) -> Dict:
+def transform_metadata_model_output(final_json: dict) -> Dict:
     """
     Transformer for metadata prediction models.
 
@@ -128,8 +91,6 @@ def transform_metadata_model_output(final_json: dict, as_counts: bool) -> Dict:
     ----------
     final_json : dict
         Raw JSON response from the API
-    as_counts : bool
-        Ignored for this transformer (no expression data to convert)
 
     Returns
     -------
@@ -145,7 +106,7 @@ def transform_metadata_model_output(final_json: dict, as_counts: bool) -> Dict:
     }
 
 
-def transform_standard_model_output(final_json: dict, as_counts: bool) -> Dict:
+def transform_standard_model_output(final_json: dict) -> Dict:
     """
     Transformer for standard expression prediction models.
 
@@ -156,8 +117,6 @@ def transform_standard_model_output(final_json: dict, as_counts: bool) -> Dict:
     ----------
     final_json : dict
         Raw JSON response from the API
-    as_counts : bool
-        If False, transforms the predicted expression counts into logCPM
 
     Returns
     -------
@@ -167,9 +126,6 @@ def transform_standard_model_output(final_json: dict, as_counts: bool) -> Dict:
     expression, metadata, latents = _transform_result_to_frames(final_json)
 
     expression = expression.astype(int)
-
-    if not as_counts:
-        expression = log_cpm(expression)
 
     # Build result dictionary - always include latents
     result = {"metadata": metadata, "expression": expression, "latents": latents}

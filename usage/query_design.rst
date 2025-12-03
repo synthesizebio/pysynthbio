@@ -21,11 +21,11 @@ The model ID must be provided to both ``get_example_query()`` and ``predict_quer
 
     # Create a bulk query
     bulk_query = pysynthbio.get_example_query(model_id="gem-1-bulk")
-    bulk = pysynthbio.predict_query(bulk_query, model_id="gem-1-bulk", as_counts=True)
+    bulk = pysynthbio.predict_query(bulk_query, model_id="gem-1-bulk")
 
     # Create a single-cell query
     sc_query = pysynthbio.get_example_query(model_id="gem-1-sc")
-    sc = pysynthbio.predict_query(sc_query, model_id="gem-1-sc", as_counts=True)
+    sc = pysynthbio.predict_query(sc_query, model_id="gem-1-sc")
 
 
 
