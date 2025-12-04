@@ -1,6 +1,6 @@
 [project]
 name = "pysynthbio"
-version = "3.0.2"
+version = "4.0.0"
 description = "A package to retrieve data and models from Synthesize Bio's API"
 authors = [
     { name = "Alex David" },
@@ -36,7 +36,6 @@ all = [
 dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
-    "scipy>=1.10.0",  # For statistical tests in validation
     "ruff",
     "mypy",
     "black",
