@@ -389,7 +389,7 @@ wheels = [
 
 [[package]]
 name = "pysynthbio"
-version = "3.0.2"
+version = "4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "keyring" },
