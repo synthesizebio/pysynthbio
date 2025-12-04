@@ -1,5 +1,4 @@
 import os
-import pprint
 
 import pytest
 
@@ -27,13 +26,27 @@ def test_list_models():
 def test_model_integration():
     models = [
         {"model_id": "gem-1-sc", "expected_outputs": ["expression", "metadata"]},
-        {"model_id": "gem-1-bulk", "expected_outputs": ["expression", "metadata"]},
-        {"model_id": "gem-1-sc_predict-metadata", "expected_outputs": ["classifier_probs", "latents", "metadata"]},
-        {"model_id": "gem-1-bulk_predict-metadata", "expected_outputs": ["classifier_probs", "latents", "metadata"]},
-        {"model_id": "gem-1-bulk_reference-conditioning", "expected_outputs": ["expression", "metadata"]},
-        {"model_id": "gem-1-sc_reference-conditioning", "expected_outputs": ["expression", "metadata"]},
+        {
+            "model_id": "gem-1-bulk",
+            "expected_outputs": ["expression", "metadata"],
+        },
+        {
+            "model_id": "gem-1-sc_predict-metadata",
+            "expected_outputs": ["classifier_probs", "latents", "metadata"],
+        },
+        {
+            "model_id": "gem-1-bulk_predict-metadata",
+            "expected_outputs": ["classifier_probs", "latents", "metadata"],
+        },
+        {
+            "model_id": "gem-1-bulk_reference-conditioning",
+            "expected_outputs": ["expression", "metadata"],
+        },
+        {
+            "model_id": "gem-1-sc_reference-conditioning",
+            "expected_outputs": ["expression", "metadata"],
+        },
     ]
-    import pandas as pd
 
     from pysynthbio.call_model_api import predict_query
     from pysynthbio.get_example_query import get_example_query
@@ -41,16 +54,15 @@ def test_model_integration():
     for model in models:
         print(f"Testing model: {model['model_id']}")
         query = get_example_query(
-            model_id=model['model_id'],
+            model_id=model["model_id"],
             api_base_url=os.environ.get("API_BASE_URL"),
         )
         result = predict_query(
             query=query["example_query"],
-            model_id=model['model_id'],
+            model_id=model["model_id"],
             auto_authenticate=False,
             api_base_url=os.environ.get("API_BASE_URL"),
         )
 
         for output in model["expected_outputs"]:
             assert output in result
-
