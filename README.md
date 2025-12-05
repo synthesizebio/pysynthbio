@@ -1,4 +1,4 @@
-# <img src="assets/logomark.png" style="width: 40px;" alt="Logomark"> &nbsp; pysynthbio
+# <img src="https://assets.synthesize.bio/logomark.png" style="width: 30px; height: 30px;" alt="Logomark">&nbsp;pysynthbio
 
 `pysynthbio` is an Python package that provides a convenient interface to the [Synthesize Bio](https://www.synthesize.bio/) API, allowing users to generate realistic gene expression data based on specified biological conditions. This package enables researchers to easily access AI-generated transcriptomic data for various modalities including bulk RNA-seq and single-cell RNA-seq.
 
