@@ -1,6 +1,6 @@
 [project]
 name = "pysynthbio"
-version = "4.0.0"
+version = "4.0.1"
 description = "A package to retrieve data and models from Synthesize Bio's API"
 authors = [
     { name = "Alex David" },
