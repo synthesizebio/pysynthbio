@@ -12,7 +12,7 @@ Authentication
 Get your API key
 ^^^^^^^^^^^^^^^^
 
-Visit `<https://app.synthesize.bio/account/api-keys>`_ to generate an API key.
+Visit `the API Keys page <https://app.synthesize.bio/account/api-keys>`_ to generate an API key.
 Click "+ Create API Key" then "Create Key", and copy your key.
 
 There are multiple ways to set up your token:
