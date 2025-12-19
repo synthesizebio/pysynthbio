@@ -10,8 +10,20 @@ pysynthbio documentation
    :maxdepth: 2
 
    usage/installation
-   usage/quickstart
-   usage/query_design
+   usage/getting-started
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Models
+
+   usage/baseline
+   usage/reference-conditioning
+   usage/metadata-prediction
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Links
+
    Source Code <https://github.com/synthesizebio/pysynthbio>
    Report a bug <https://github.com/synthesizebio/pysynthbio/issues>
    usage/license

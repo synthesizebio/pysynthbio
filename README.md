@@ -14,11 +14,28 @@ Create a [Synthesize Bio](https://app.synthesize.bio/) account and generate an [
 pip install pysynthbio
 ```
 
-## Usage
+## Quickstart
 
-[Quick start](https://synthesizebio.github.io/pysynthbio/usage/quickstart.html)
+```python
+import pysynthbio
 
-[Full documentation](https://synthesizebio.github.io/pysynthbio/)
+# Set your API token (or use environment variable SYNTHESIZE_API_KEY)
+pysynthbio.set_synthesize_token(use_keyring=True)
+
+# Get an example query for the bulk RNA-seq baseline model
+query = pysynthbio.get_example_query(model_id="gem-1-bulk")
+
+# Generate synthetic expression data
+result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
+
+# Access the results
+metadata = result["metadata"]
+expression = result["expression"]
+```
+
+## Documentation
+
+[Get Started](https://synthesizebio.github.io/pysynthbio/usage/getting-started.html) | [Full Documentation](https://synthesizebio.github.io/pysynthbio/)
 
 ## Questions? Suggestions? Support?
 
