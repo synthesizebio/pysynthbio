@@ -209,7 +209,7 @@ Validate existing sample labels against predicted metadata:
 .. code-block:: python
 
     # Compare predicted vs. provided labels
-    provided_labels = ["liver", "liver", "brain", "brain"]
+    provided_labels = ["UBERON:0002107", "UBERON:0002107", "UBERON:0000955", "UBERON:0000955"]
     predicted_labels = result["metadata"]["tissue_ontology_id"].tolist()
 
     # Identify potential mismatches
