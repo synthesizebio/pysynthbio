@@ -100,6 +100,8 @@ Infer metadata from observed expression data. Given a gene expression profile, p
 
 See :doc:`metadata-prediction` for detailed usage.
 
+Only baseline models are available to all users. You can check which models are available programmatically, see ``list_models()``. Contact us at support@synthesize.bio if you have any questions.
+
 Listing Available Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
