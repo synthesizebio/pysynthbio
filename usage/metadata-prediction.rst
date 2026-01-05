@@ -43,7 +43,7 @@ Metadata prediction queries are simpler than other model types—you only need t
 .. code-block:: python
 
     # Get the example query structure
-    example_query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")
+    example_query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")["example_query"]
 
     # Inspect the query structure
     print(example_query)
@@ -62,7 +62,7 @@ Here's a complete example predicting metadata for expression samples:
 .. code-block:: python
 
     # Start with example query structure
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")["example_query"]
 
     # Replace with your actual expression counts
     # Each input should be a dictionary with a counts list
@@ -85,7 +85,7 @@ For predicting metadata of a single sample:
 
 .. code-block:: python
 
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")["example_query"]
 
     # Single sample
     query["inputs"] = [
@@ -188,7 +188,7 @@ Annotate unlabeled samples with predicted metadata:
     unlabeled_counts = pd.read_csv("unlabeled_samples.csv", index_col=0)
 
     # Create query
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk_predict-metadata")["example_query"]
     query["inputs"] = [
         {"counts": unlabeled_counts.iloc[:, i].tolist()}
         for i in range(unlabeled_counts.shape[1])
