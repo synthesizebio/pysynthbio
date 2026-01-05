@@ -23,7 +23,7 @@ import pysynthbio
 pysynthbio.set_synthesize_token(use_keyring=True)
 
 # Get an example query for the bulk RNA-seq baseline model
-query = pysynthbio.get_example_query(model_id="gem-1-bulk")
+query = pysynthbio.get_example_query(model_id="gem-1-bulk")["example_query"]
 
 # Generate synthetic expression data
 result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
