@@ -125,7 +125,7 @@ Here's a quick example using a baseline model:
     import pysynthbio
 
     # Get an example query structure
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk")["example_query"]
 
     # Submit the query and get results
     result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
