@@ -42,7 +42,7 @@ Reference conditioning queries require different inputs than baseline models:
 .. code-block:: python
 
     # Get the example query structure
-    example_query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")
+    example_query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")["example_query"]
 
     # Inspect the query structure
     print(example_query)
@@ -79,7 +79,7 @@ Here's a complete example simulating a drug treatment effect on a reference samp
 .. code-block:: python
 
     # Start with example query structure
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")["example_query"]
 
     # Replace with your actual reference counts
     # The counts list must match the model's expected gene order and length
@@ -108,7 +108,7 @@ Simulate the effect of knocking out a specific gene:
 
 .. code-block:: python
 
-    query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")
+    query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")["example_query"]
 
     # Your reference sample counts
     query["inputs"][0]["counts"] = {"counts": control_sample_counts}
