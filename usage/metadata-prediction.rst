@@ -94,8 +94,8 @@ For predicting metadata of a single sample:
 
     result = pysynthbio.predict_query(query, model_id="gem-1-bulk_predict-metadata")
 
-    # Access the predictions
-    print(result["metadata"])
+    # Access the predictions for the first (and only) sample
+    print(result[0]["metadata"])
 
 Query Parameters
 ----------------
@@ -126,22 +126,37 @@ Random seed for reproducibility.
 Understanding the Results
 -------------------------
 
-The results from metadata prediction include several components:
+The results from metadata prediction are returned as a **list of output dictionaries**, one per input sample. Each output dictionary contains:
+
+- ``metadata``: Predicted metadata values for the sample
+- ``classifier_probs``: Probability distributions over possible values for each metadata field
+- ``latents``: Latent representations (biological, technical, perturbation)
+
+.. code-block:: python
+
+    # result is a list of outputs, one per input sample
+    print(f"Number of outputs: {len(result)}")
+
+    # Access the first sample's output
+    first_output = result[0]
+    print(first_output.keys())  # dict_keys(['metadata', 'classifier_probs', 'latents'])
 
 Predicted Metadata
 ^^^^^^^^^^^^^^^^^^
 
-The ``metadata`` DataFrame contains the predicted values for each sample:
+Each output's ``metadata`` field contains the predicted values for that sample:
 
 .. code-block:: python
 
-    # View predicted metadata
-    print(result["metadata"].head())
+    # Access predictions for each sample
+    for i, output in enumerate(result):
+        print(f"Sample {i}: {output['metadata']}")
 
-    # Access specific predictions
-    print(result["metadata"]["cell_type_ontology_id"])
-    print(result["metadata"]["tissue_ontology_id"])
-    print(result["metadata"]["disease_ontology_id"])
+    # Access specific predictions for first sample
+    first_sample = result[0]["metadata"]
+    print(first_sample.get("cell_type_ontology_id"))
+    print(first_sample.get("tissue_ontology_id"))
+    print(first_sample.get("disease_ontology_id"))
 
 Classifier Probabilities
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -150,15 +165,11 @@ For categorical metadata fields, the model returns probability distributions ove
 
 .. code-block:: python
 
-    # If probabilities are included in the output
     # Access cell type probabilities for first sample
-    # The exact structure depends on the API response format
-
-    # Example: viewing top predicted cell types
-    if "classifier_probs" in result:
-        cell_type_probs = result["classifier_probs"]["cell_type"][0]
-        sorted_probs = sorted(cell_type_probs.items(), key=lambda x: x[1], reverse=True)
-        print("Top predicted cell types:", sorted_probs[:5])
+    first_output = result[0]
+    cell_type_probs = first_output["classifier_probs"]["cell_type"]
+    sorted_probs = sorted(cell_type_probs.items(), key=lambda x: x[1], reverse=True)
+    print("Top predicted cell types:", sorted_probs[:5])
 
 Latent Representations
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -167,10 +178,10 @@ The model also returns latent vectors that capture biological, technical, and pe
 
 .. code-block:: python
 
-    # Access latent representations (if returned)
-    if "latents" in result:
-        biological_latents = result["latents"]["biological"]
-        technical_latents = result["latents"]["technical"]
+    # Access latent representations for first sample
+    first_output = result[0]
+    biological_latents = first_output["latents"]["biological"]
+    technical_latents = first_output["latents"]["technical"]
 
 Use Cases
 ---------
@@ -197,8 +208,8 @@ Annotate unlabeled samples with predicted metadata:
     # Predict metadata
     result = pysynthbio.predict_query(query, model_id="gem-1-bulk_predict-metadata")
 
-    # Combine with sample IDs
-    annotations = result["metadata"].copy()
+    # Combine with sample IDs - result is a list of outputs
+    annotations = pd.DataFrame([output["metadata"] for output in result])
     annotations["sample_id"] = unlabeled_counts.columns.tolist()
 
 Quality Control
@@ -210,7 +221,7 @@ Validate existing sample labels against predicted metadata:
 
     # Compare predicted vs. provided labels
     provided_labels = ["UBERON:0002107", "UBERON:0002107", "UBERON:0000955", "UBERON:0000955"]
-    predicted_labels = result["metadata"]["tissue_ontology_id"].tolist()
+    predicted_labels = [output["metadata"].get("tissue_ontology_id") for output in result]
 
     # Identify potential mismatches
     mismatches = [
@@ -234,12 +245,12 @@ Understand batch-specific technical characteristics:
 
     # Check if technical predictions cluster by batch
     # This can help identify batch effects
-    if "latents" in result:
-        technical = result["latents"]["technical"]
-        for batch in set(batch_labels):
-            batch_indices = [i for i, b in enumerate(batch_labels) if b == batch]
-            batch_mean = np.mean([technical[i][0] for i in batch_indices])
-            print(f"{batch} technical latent mean: {batch_mean}")
+    # Extract technical latents from each sample's output
+    technical_latents = [output["latents"]["technical"] for output in result]
+    for batch in set(batch_labels):
+        batch_indices = [i for i, b in enumerate(batch_labels) if b == batch]
+        batch_mean = np.mean([technical_latents[i][0] for i in batch_indices])
+        print(f"{batch} technical latent mean: {batch_mean}")
 
 Important Notes
 ---------------

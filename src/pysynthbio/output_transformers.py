@@ -5,7 +5,7 @@ Each transformer is responsible for converting raw API JSON responses
 into the appropriate output format for a specific model or model family.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import pandas as pd
 
@@ -80,7 +80,7 @@ def _transform_result_to_frames(
     return expression.astype(int), metadata, latents
 
 
-def transform_metadata_model_output(final_json: dict) -> Dict:
+def transform_metadata_model_output(final_json: dict) -> List[Dict]:
     """
     Transformer for metadata prediction models.
 
@@ -95,15 +95,10 @@ def transform_metadata_model_output(final_json: dict) -> Dict:
     Returns
     -------
     dict
-        Dictionary containing classifier_probs, latents, and metadata
+        List of MetadataOutput objects
     """
-    # outputs is a list of MetadataOutput objects; extract the first one
-    output = final_json["outputs"][0]
-    return {
-        "classifier_probs": output["classifier_probs"],
-        "latents": output["latents"],
-        "metadata": output["metadata"],
-    }
+
+    return final_json["outputs"]
 
 
 def transform_standard_model_output(final_json: dict) -> Dict:
