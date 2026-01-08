@@ -25,26 +25,45 @@ def test_list_models():
 @pytest.mark.skipif(not base_url_available, reason=skip_reason_base_url)
 def test_model_integration():
     models = [
-        {"model_id": "gem-1-sc", "expected_outputs": ["expression", "metadata"]},
+        {
+            "model_id": "gem-1-sc",
+            "expected_outputs": ["expression", "metadata"],
+            "returns_list": False,
+        },
         {
             "model_id": "gem-1-bulk",
             "expected_outputs": ["expression", "metadata"],
+            "returns_list": False,
         },
         {
             "model_id": "gem-1-sc_predict-metadata",
-            "expected_outputs": ["classifier_probs", "latents", "metadata"],
+            "expected_outputs": [
+                "classifier_probs",
+                "latents",
+                "metadata",
+                "decoder_sample",
+            ],
+            "returns_list": True,
         },
         {
             "model_id": "gem-1-bulk_predict-metadata",
-            "expected_outputs": ["classifier_probs", "latents", "metadata"],
+            "expected_outputs": [
+                "classifier_probs",
+                "latents",
+                "metadata",
+                "decoder_sample",
+            ],
+            "returns_list": True,
         },
         {
             "model_id": "gem-1-bulk_reference-conditioning",
             "expected_outputs": ["expression", "metadata"],
+            "returns_list": False,
         },
         {
             "model_id": "gem-1-sc_reference-conditioning",
             "expected_outputs": ["expression", "metadata"],
+            "returns_list": False,
         },
     ]
 
@@ -64,5 +83,17 @@ def test_model_integration():
             api_base_url=os.environ.get("API_BASE_URL"),
         )
 
-        for output in model["expected_outputs"]:
-            assert output in result
+        if model["returns_list"]:
+            # Metadata prediction models return a list of output dicts
+            assert isinstance(result, list), f"Expected list for {model['model_id']}"
+            assert len(result) > 0, f"Expected non-empty list for {model['model_id']}"
+            for output_key in model["expected_outputs"]:
+                assert (
+                    output_key in result[0]
+                ), f"Missing {output_key} in {model['model_id']}"
+        else:
+            # Standard models return a dict
+            for output_key in model["expected_outputs"]:
+                assert (
+                    output_key in result
+                ), f"Missing {output_key} in {model['model_id']}"
