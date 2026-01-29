@@ -31,6 +31,7 @@ def predict_query(
     poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
     poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
     return_download_url: bool = False,
+    **kwargs,
 ) -> Dict[str, pd.DataFrame]:
     """
     Sends a query to the Synthesize Bio API for prediction and retrieves samples.
@@ -65,6 +66,9 @@ def predict_query(
     return_download_url : bool, optional
         If True, returns a dictionary with empty DataFrames without downloading
         or parsing the results. Default False.
+    **kwargs : dict, optional
+        Additional parameters to include in the query body. These are passed
+        directly to the API and validated server-side.
 
     Returns
     -------
@@ -96,6 +100,9 @@ def predict_query(
 
     # Source field for reporting
     query["source"] = "pysynthbio"
+
+    # Merge any additional kwargs into the query (validated server-side)
+    query.update(kwargs)
 
     model_query_id = _start_model_query(
         api_base_url=api_base_url,
