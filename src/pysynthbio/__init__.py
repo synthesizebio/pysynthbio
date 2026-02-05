@@ -11,6 +11,18 @@ from .call_model_api import (
 from .get_example_query import (
     get_example_query as get_example_query,
 )
+from .http_client import (
+    AuthenticationError as AuthenticationError,
+)
+from .http_client import (
+    NotFoundError as NotFoundError,
+)
+from .http_client import (
+    SynthesizeAPIError as SynthesizeAPIError,
+)
+from .http_client import (
+    ValidationError as ValidationError,
+)
 from .key_handlers import (
     clear_synthesize_token as clear_synthesize_token,
 )

@@ -1,31 +1,29 @@
-import os
+"""List available models from the Synthesize Bio API."""
 
-import requests
-
-from pysynthbio.key_handlers import has_synthesize_token
-
-API_BASE_URL = "https://app.synthesize.bio"
+from pysynthbio.http_client import API_BASE_URL, api_request
 
 
-def list_models(
-    api_base_url: str = API_BASE_URL,
-):
+def list_models(api_base_url: str = API_BASE_URL):
     """
     List all models available in the Synthesize Bio API.
-    """
-    if not has_synthesize_token():
-        raise KeyError(
-            "No API token found. Set the SYNTHESIZE_API_KEY environment variable or "
-            + "call set_synthesize_token() before making API requests."
-        )
 
-    url = f"{api_base_url}/api/models"
-    response = requests.get(
-        url,
-        headers={
-            "Accept": "application/json",
-            "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-        },
-    )
-    models = response.json()
-    return models
+    Parameters
+    ----------
+    api_base_url : str, optional
+        Base URL for the API server. Defaults to the production host.
+
+    Returns
+    -------
+    list
+        List of available models.
+
+    Raises
+    ------
+    KeyError
+        If no API token is configured.
+    AuthenticationError
+        If the token is invalid.
+    SynthesizeAPIError
+        For other API errors.
+    """
+    return api_request("GET", "/api/models", api_base_url=api_base_url)

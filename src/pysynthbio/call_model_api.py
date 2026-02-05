@@ -2,25 +2,31 @@
 Core API functionality for the Synthesize Bio API
 """
 
-import json
-import os
 import time
 from typing import Dict, Tuple
 
 import pandas as pd
-import requests
 
+from pysynthbio.http_client import (
+    API_BASE_URL,
+    DEFAULT_TIMEOUT,
+    SynthesizeAPIError,
+    api_request,
+    get_json,
+)
 from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 from pysynthbio.output_transformers import OUTPUT_TRANSFORMERS
-
-API_BASE_URL = "https://app.synthesize.bio"
-
-# Default timeout (seconds) for outbound HTTP requests
-DEFAULT_TIMEOUT = 30
 
 # Polling defaults for async model queries
 DEFAULT_POLL_INTERVAL_SECONDS = 2
 DEFAULT_POLL_TIMEOUT_SECONDS = 15 * 60
+
+
+def _clean_error_message(message: str) -> str:
+    """Strip server-side tracebacks from error messages."""
+    if "\nTraceback" in message:
+        return message.split("\nTraceback")[0].strip()
+    return message
 
 
 def predict_query(
@@ -79,11 +85,13 @@ def predict_query(
             return_download_url=True)
 
     Raises
-    -------
+    ------
     KeyError
         If the SYNTHESIZE_API_KEY environment variable is not set and
         auto_authenticate is False.
-    ValueError
+    AuthenticationError
+        If the API token is invalid.
+    SynthesizeAPIError
         If API fails or response is invalid.
     """
     # Check if token is available and prompt if needed
@@ -122,12 +130,14 @@ def predict_query(
         # payload contains message with error details
         error_message = payload.get("message") if isinstance(payload, dict) else None
         if not error_message:
-            raise ValueError("Model query failed. No error message in payload.")
+            raise SynthesizeAPIError("Model query failed. No error message in payload.")
 
-        raise ValueError(f"Model query failed: {error_message}")
+        raise SynthesizeAPIError(
+            f"Model query failed: {_clean_error_message(error_message)}"
+        )
 
     if status != "ready":
-        raise ValueError(
+        raise SynthesizeAPIError(
             (
                 "Model query did not complete in time ("
                 f"status={status}). Consider increasing "
@@ -138,7 +148,7 @@ def predict_query(
     # When ready, payload should contain a signed downloadUrl to the final JSON
     download_url = payload.get("downloadUrl") if isinstance(payload, dict) else None
     if not download_url:
-        raise ValueError("Response missing downloadUrl when status=ready")
+        raise SynthesizeAPIError("Response missing downloadUrl when status=ready")
 
     if return_download_url:
         return {
@@ -146,7 +156,7 @@ def predict_query(
         }
 
     # Fetch the final results JSON and transform to DataFrames
-    final_json = _get_json(download_url)
+    final_json = get_json(download_url)
 
     # Get transformer for this model, or None if not registered
     transformer = OUTPUT_TRANSFORMERS.get(model_id)
@@ -164,33 +174,20 @@ def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:
     """
     Starts an async model query and returns the modelQueryId.
     """
-    try:
-        response = requests.post(
-            url=f"{api_base_url}/api/models/{model_id}/predict",
-            headers={
-                "Accept": "application/json",
-                "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-                "Content-Type": "application/json",
-            },
-            json=query,
-            timeout=DEFAULT_TIMEOUT,
+    content = api_request(
+        method="POST",
+        endpoint=f"/api/models/{model_id}/predict",
+        api_base_url=api_base_url,
+        json=query,
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if not isinstance(content, dict) or "modelQueryId" not in content:
+        raise SynthesizeAPIError(
+            f"Unexpected response from predict endpoint: {content}"
         )
-        response.raise_for_status()
-        content = response.json()
-        if not isinstance(content, dict) or "modelQueryId" not in content:
-            raise ValueError(f"Unexpected response from predict endpoint: {content}")
-        return str(content["modelQueryId"]).strip()
-    except requests.exceptions.HTTPError as err:
-        raise ValueError(
-            (
-                f"Predict request failed with status "
-                f"{err.response.status_code}: {err.response.text}"
-            )
-        ) from err
-    except requests.exceptions.RequestException as err:
-        raise ValueError(
-            f"Predict request failed due to a network issue: {err}"
-        ) from err
+
+    return str(content["modelQueryId"]).strip()
 
 
 def _poll_model_query(
@@ -205,35 +202,19 @@ def _poll_model_query(
     Returns (status, payload) where payload may include downloadUrl or errorUrl.
     """
     start = time.time()
-    status_url = f"{api_base_url}/api/model-queries/{model_query_id}/status"
-    headers = {
-        "Accept": "application/json",
-        "Authorization": "Bearer " + os.environ["SYNTHESIZE_API_KEY"],
-    }
+    endpoint = f"/api/model-queries/{model_query_id}/status"
     last_payload: Dict[str, str] = {}
+
     while True:
-        try:
-            resp = requests.get(status_url, headers=headers, timeout=DEFAULT_TIMEOUT)
-            resp.raise_for_status()
-            payload = resp.json()
-        except requests.exceptions.HTTPError as err:
-            raise ValueError(
-                (
-                    "Status request failed with status "
-                    f"{err.response.status_code}: {err.response.text}"
-                )
-            ) from err
-        except requests.exceptions.RequestException as err:
-            raise ValueError(
-                f"Status request failed due to a network issue: {err}"
-            ) from err
-        except json.JSONDecodeError as err:
-            raise ValueError(
-                f"Failed to decode JSON from status response: {resp.text}"
-            ) from err
+        payload = api_request(
+            method="GET",
+            endpoint=endpoint,
+            api_base_url=api_base_url,
+            timeout=DEFAULT_TIMEOUT,
+        )
 
         if not isinstance(payload, dict) or "status" not in payload:
-            raise ValueError(f"Unexpected status response: {payload}")
+            raise SynthesizeAPIError(f"Unexpected status response: {payload}")
 
         status = str(payload.get("status"))
         last_payload = payload
@@ -244,25 +225,3 @@ def _poll_model_query(
             return status, last_payload
 
         time.sleep(max(1, int(poll_interval)))
-
-
-def _get_json(url: str) -> dict:
-    try:
-        r = requests.get(url, timeout=DEFAULT_TIMEOUT)
-        r.raise_for_status()
-        return r.json()
-    except requests.exceptions.HTTPError as err:
-        raise ValueError(
-            (
-                "Download URL fetch failed with status "
-                f"{err.response.status_code}: {err.response.text}"
-            )
-        ) from err
-    except requests.exceptions.RequestException as err:
-        raise ValueError(
-            f"Failed to fetch download URL due to a network issue: {err}"
-        ) from err
-    except json.JSONDecodeError as err:
-        raise ValueError(
-            (f"Failed to decode JSON from download URL response: {r.text}")
-        ) from err
