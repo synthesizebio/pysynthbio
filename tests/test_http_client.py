@@ -25,7 +25,7 @@ class TestCleanErrorMessage(unittest.TestCase):
     def test_clean_message_with_traceback(self):
         """Test that server-side tracebacks are stripped."""
         message = (
-            "Metadata validation failed: [\"Query 1 has bad values.\"]\n"
+            'Metadata validation failed: ["Query 1 has bad values."]\n'
             "Traceback (most recent call last):\n"
             '  File "/opt/ml/model/code/inference.py", line 100\n'
             "ValueError: something went wrong"
