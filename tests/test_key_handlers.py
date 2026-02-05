@@ -127,9 +127,11 @@ class TestApiWithAuthentication(unittest.TestCase):
                 del os.environ["SYNTHESIZE_API_KEY"]
 
     @patch("pysynthbio.call_model_api.set_synthesize_token")
-    @patch("pysynthbio.call_model_api.requests.get")
-    @patch("pysynthbio.call_model_api.requests.post")
-    def test_predict_query_auto_authenticate(self, mock_post, mock_get, mock_set_token):
+    @patch("pysynthbio.http_client.requests.get")
+    @patch("pysynthbio.http_client.requests.request")
+    def test_predict_query_auto_authenticate(
+        self, mock_request, mock_get, mock_set_token
+    ):
         """Test auto authentication in predict_query."""
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import predict_query
@@ -142,19 +144,23 @@ class TestApiWithAuthentication(unittest.TestCase):
 
         mock_set_token.side_effect = mock_set_token_implementation
 
-        # POST /predict returns modelQueryId
+        # Mock requests.request for api_request calls (POST /predict, GET /status)
         post_resp = MagicMock()
         post_resp.status_code = 200
         post_resp.json.return_value = {"modelQueryId": "abc123"}
-        mock_post.return_value = post_resp
+        post_resp.raise_for_status.return_value = None
 
-        # Then status ready and download with final JSON
         get_status_ready = MagicMock()
         get_status_ready.status_code = 200
         get_status_ready.json.return_value = {
             "status": "ready",
             "downloadUrl": "https://example.com/final.json",
         }
+        get_status_ready.raise_for_status.return_value = None
+
+        mock_request.side_effect = [post_resp, get_status_ready]
+
+        # Mock requests.get for get_json (download URL)
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
@@ -175,7 +181,8 @@ class TestApiWithAuthentication(unittest.TestCase):
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
-        mock_get.side_effect = [get_status_ready, get_download]
+        get_download.raise_for_status.return_value = None
+        mock_get.return_value = get_download
 
         # Call function with auto-authentication
         # Query content doesn't matter since HTTP responses are mocked
@@ -186,7 +193,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         mock_set_token.assert_called_once_with(use_keyring=True)
 
         # Verify API was called
-        mock_post.assert_called_once()
+        self.assertEqual(mock_request.call_count, 2)  # POST + GET status
 
         # Verify results structure
         self.assertIn("metadata", results)
@@ -197,8 +204,8 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertEqual(len(results["expression"]), 1)  # One row
         self.assertEqual(len(results["expression"].columns), 3)  # Three genes
 
-    @patch("pysynthbio.call_model_api.requests.post")
-    def test_predict_query_without_auto_authenticate(self, mock_post):
+    @patch("pysynthbio.http_client.requests.request")
+    def test_predict_query_without_auto_authenticate(self, mock_request):
         """Test predict_query without auto authentication."""
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import predict_query
@@ -210,11 +217,11 @@ class TestApiWithAuthentication(unittest.TestCase):
             predict_query(query, model_id="gem-1-bulk", auto_authenticate=False)
 
         # Verify API was not called
-        mock_post.assert_not_called()
+        mock_request.assert_not_called()
 
-    @patch("pysynthbio.call_model_api.requests.get")
-    @patch("pysynthbio.call_model_api.requests.post")
-    def test_predict_query_with_token(self, mock_post, mock_get):
+    @patch("pysynthbio.http_client.requests.get")
+    @patch("pysynthbio.http_client.requests.request")
+    def test_predict_query_with_token(self, mock_request, mock_get):
         """Test predict_query with token already set."""
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import predict_query
@@ -222,19 +229,23 @@ class TestApiWithAuthentication(unittest.TestCase):
         # Set a token
         os.environ["SYNTHESIZE_API_KEY"] = "test-api-token"
 
-        # POST /predict -> modelQueryId
+        # Mock requests.request for api_request calls (POST /predict, GET /status)
         post_resp = MagicMock()
         post_resp.status_code = 200
         post_resp.json.return_value = {"modelQueryId": "bulk-xyz"}
-        mock_post.return_value = post_resp
+        post_resp.raise_for_status.return_value = None
 
-        # Then ready + download
         get_status_ready = MagicMock()
         get_status_ready.status_code = 200
         get_status_ready.json.return_value = {
             "status": "ready",
             "downloadUrl": "https://example.com/bulk.json",
         }
+        get_status_ready.raise_for_status.return_value = None
+
+        mock_request.side_effect = [post_resp, get_status_ready]
+
+        # Mock requests.get for get_json (download URL)
         get_download = MagicMock()
         get_download.status_code = 200
         get_download.json.return_value = {
@@ -245,7 +256,8 @@ class TestApiWithAuthentication(unittest.TestCase):
             "gene_order": ["gene1", "gene2", "gene3"],
             "model_version": 2,
         }
-        mock_get.side_effect = [get_status_ready, get_download]
+        get_download.raise_for_status.return_value = None
+        mock_get.return_value = get_download
 
         # Call function without auto-authentication but with token set
         # Query content doesn't matter since HTTP responses are mocked
@@ -253,8 +265,8 @@ class TestApiWithAuthentication(unittest.TestCase):
         results = predict_query(query, model_id="gem-1-bulk", auto_authenticate=False)
 
         # Verify API was called with correct token
-        mock_post.assert_called_once()
-        _, kwargs = mock_post.call_args
+        mock_request.assert_called()
+        _, kwargs = mock_request.call_args_list[0]
         self.assertEqual(kwargs["headers"]["Authorization"], "Bearer test-api-token")
 
         # Verify results structure
@@ -270,9 +282,9 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertEqual(list(results["expression"].iloc[0]), [100, 200, 300])
         self.assertEqual(list(results["expression"].iloc[1]), [150, 250, 350])
 
-    @patch("pysynthbio.call_model_api.requests.get")
-    @patch("pysynthbio.call_model_api.requests.post")
-    def test_predict_query_single_vs_multiple_samples(self, mock_post, mock_get):
+    @patch("pysynthbio.http_client.requests.get")
+    @patch("pysynthbio.http_client.requests.request")
+    def test_predict_query_single_vs_multiple_samples(self, mock_request, mock_get):
         """Test that the code correctly handles both single and multiple samples."""
         # Import here to avoid circular imports in tests
         from pysynthbio.call_model_api import predict_query
@@ -284,7 +296,7 @@ class TestApiWithAuthentication(unittest.TestCase):
         post_resp_single = MagicMock()
         post_resp_single.status_code = 200
         post_resp_single.json.return_value = {"modelQueryId": "bulk-1"}
-        mock_post.return_value = post_resp_single
+        post_resp_single.raise_for_status.return_value = None
 
         get_status_ready_1 = MagicMock()
         get_status_ready_1.status_code = 200
@@ -292,6 +304,10 @@ class TestApiWithAuthentication(unittest.TestCase):
             "status": "ready",
             "downloadUrl": "https://example.com/bulk1.json",
         }
+        get_status_ready_1.raise_for_status.return_value = None
+
+        mock_request.side_effect = [post_resp_single, get_status_ready_1]
+
         get_download_1 = MagicMock()
         get_download_1.status_code = 200
         get_download_1.json.return_value = {
@@ -301,7 +317,8 @@ class TestApiWithAuthentication(unittest.TestCase):
             "gene_order": ["gene1", "gene2", "gene3", "gene4"],
             "model_version": 2,
         }
-        mock_get.side_effect = [get_status_ready_1, get_download_1]
+        get_download_1.raise_for_status.return_value = None
+        mock_get.return_value = get_download_1
 
         # Query content doesn't matter since HTTP responses are mocked
         query = {"samples": [{"test": "data"}]}
@@ -315,14 +332,14 @@ class TestApiWithAuthentication(unittest.TestCase):
         self.assertEqual(len(results_single["expression"].columns), 4)
 
         # Reset mocks for multiple samples test
-        mock_post.reset_mock()
+        mock_request.reset_mock()
         mock_get.reset_mock()
 
         # Test with multiple samples
         post_resp_multi = MagicMock()
         post_resp_multi.status_code = 200
         post_resp_multi.json.return_value = {"modelQueryId": "bulk-2"}
-        mock_post.return_value = post_resp_multi
+        post_resp_multi.raise_for_status.return_value = None
 
         get_status_ready_2 = MagicMock()
         get_status_ready_2.status_code = 200
@@ -330,6 +347,10 @@ class TestApiWithAuthentication(unittest.TestCase):
             "status": "ready",
             "downloadUrl": "https://example.com/bulk2.json",
         }
+        get_status_ready_2.raise_for_status.return_value = None
+
+        mock_request.side_effect = [post_resp_multi, get_status_ready_2]
+
         get_download_2 = MagicMock()
         get_download_2.status_code = 200
         get_download_2.json.return_value = {
@@ -341,7 +362,8 @@ class TestApiWithAuthentication(unittest.TestCase):
             "gene_order": ["gene1", "gene2"],
             "model_version": 2,
         }
-        mock_get.side_effect = [get_status_ready_2, get_download_2]
+        get_download_2.raise_for_status.return_value = None
+        mock_get.return_value = get_download_2
 
         results_multiple = predict_query(
             query, model_id="gem-1-bulk", auto_authenticate=False
