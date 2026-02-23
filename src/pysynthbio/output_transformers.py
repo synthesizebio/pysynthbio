@@ -136,4 +136,5 @@ OUTPUT_TRANSFORMERS = {
     "gem-1-sc": transform_standard_model_output,
     "gem-1-bulk_reference-conditioning": transform_standard_model_output,
     "gem-1-sc_reference-conditioning": transform_standard_model_output,
+    "gem-1-bulk_condition-on-sample-ids": transform_standard_model_output,
 }

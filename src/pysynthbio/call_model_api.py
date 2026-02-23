@@ -37,6 +37,7 @@ def predict_query(
     poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
     poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
     return_download_url: bool = False,
+    raw_response: bool = False,
     **kwargs,
 ) -> Dict[str, pd.DataFrame]:
     """
@@ -72,6 +73,9 @@ def predict_query(
     return_download_url : bool, optional
         If True, returns a dictionary with empty DataFrames without downloading
         or parsing the results. Default False.
+    raw_response : bool, optional
+        If True, returns the raw (unformatted) JSON response from the API
+        without applying any output transformers. Default False.
     **kwargs : dict, optional
         Additional parameters to include in the query body. These are passed
         directly to the API and validated server-side.
@@ -158,16 +162,18 @@ def predict_query(
     # Fetch the final results JSON and transform to DataFrames
     final_json = get_json(download_url)
 
-    # Get transformer for this model, or None if not registered
+    if raw_response:
+        return final_json
+
     transformer = OUTPUT_TRANSFORMERS.get(model_id)
+    if transformer is None:
+        raise ValueError(
+            f"No output formatter registered for model_id '{model_id}'. "
+            "To receive raw (unformatted) JSON, pass raw_response=True "
+            "to predict_query()."
+        )
 
-    if transformer:
-        result = transformer(final_json)
-    else:
-        # Return raw JSON for unregistered models
-        result = final_json
-
-    return result
+    return transformer(final_json)
 
 
 def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:
