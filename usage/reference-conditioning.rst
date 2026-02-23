@@ -51,7 +51,7 @@ The query structure includes:
 
 1. **inputs**: A list where each input contains:
 
-   - **counts**: The reference expression counts (a dictionary with a ``counts`` list)
+   - **counts**: The reference expression counts (a list of numbers)
    - **metadata**: Perturbation-only metadata (see below)
    - **num_samples**: How many samples to generate
 
@@ -83,14 +83,14 @@ Here's a complete example simulating a drug treatment effect on a reference samp
 
     # Replace with your actual reference counts
     # The counts list must match the model's expected gene order and length
-    query["inputs"][0]["counts"] = {"counts": your_reference_counts}
+    query["inputs"][0]["counts"] = your_reference_counts
 
     # Specify the perturbation
     query["inputs"][0]["metadata"] = {
         "perturbation_ontology_id": "CHEMBL25",  # Aspirin (ChEMBL ID)
         "perturbation_type": "compound",
-        "perturbation_time": "24h",
-        "perturbation_dose": "10uM"
+        "perturbation_time": "24 hours",
+        "perturbation_dose": "10 um"
     }
 
     query["inputs"][0]["num_samples"] = 3
@@ -111,7 +111,7 @@ Simulate the effect of knocking out a specific gene:
     query = pysynthbio.get_example_query(model_id="gem-1-bulk_reference-conditioning")["example_query"]
 
     # Your reference sample counts
-    query["inputs"][0]["counts"] = {"counts": control_sample_counts}
+    query["inputs"][0]["counts"] = control_sample_counts
 
     # CRISPR knockout of TP53
     query["inputs"][0]["metadata"] = {
@@ -203,9 +203,9 @@ Valid Perturbation Metadata
    * - ``perturbation_type``
      - One of: "coculture", "compound", "control", "crispr", "genetic", "infection", "other", "overexpression", "peptide or biologic", "shrna", "sirna"
    * - ``perturbation_time``
-     - Time since perturbation (e.g., "24h", "48h")
+     - Time since perturbation, as a number and unit separated by a space (e.g., "24 hours", "48 hours")
    * - ``perturbation_dose``
-     - Dose of perturbation (e.g., "10uM", "1mg/kg")
+     - Dose of perturbation, as a number and unit separated by a space (e.g., "10 um", "1 mg/kg")
 
 Working with Results
 --------------------

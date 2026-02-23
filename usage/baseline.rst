@@ -176,9 +176,9 @@ Biological
 Perturbational
 ^^^^^^^^^^^^^^
 
-- ``perturbation_dose``
+- ``perturbation_dose`` (number and unit separated by a space, e.g., "10 um")
 - ``perturbation_ontology_id``
-- ``perturbation_time``
+- ``perturbation_time`` (number and unit separated by a space, e.g., "24 hours")
 - ``perturbation_type`` ("coculture", "compound", "control", "crispr", "genetic", "infection", "other", "overexpression", "peptide or biologic", "shrna", "sirna")
 
 Technical
