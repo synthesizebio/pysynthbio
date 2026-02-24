@@ -41,9 +41,9 @@ def test_model_integration():
                 "classifier_probs",
                 "latents",
                 "metadata",
-                "decoder_sample",
+                "expression",
             ],
-            "returns_list": True,
+            "returns_list": False,
         },
         {
             "model_id": "gem-1-bulk_predict-metadata",
@@ -51,9 +51,9 @@ def test_model_integration():
                 "classifier_probs",
                 "latents",
                 "metadata",
-                "decoder_sample",
+                "expression",
             ],
-            "returns_list": True,
+            "returns_list": False,
         },
         {
             "model_id": "gem-1-bulk_reference-conditioning",
