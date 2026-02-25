@@ -3,7 +3,7 @@ Core API functionality for the Synthesize Bio API
 """
 
 import time
-from typing import Dict, Tuple
+from typing import Any, Dict, Literal, Tuple, overload
 
 import pandas as pd
 
@@ -29,6 +29,48 @@ def _clean_error_message(message: str) -> str:
     return message
 
 
+@overload
+def predict_query(
+    query: dict,
+    model_id: str,
+    auto_authenticate: bool = ...,
+    api_base_url: str = ...,
+    poll_interval_seconds: int = ...,
+    poll_timeout_seconds: int = ...,
+    return_download_url: Literal[True] = ...,
+    raw_response: bool = ...,
+    **kwargs: Any,
+) -> Dict[str, str]: ...
+
+
+@overload
+def predict_query(
+    query: dict,
+    model_id: str,
+    auto_authenticate: bool = ...,
+    api_base_url: str = ...,
+    poll_interval_seconds: int = ...,
+    poll_timeout_seconds: int = ...,
+    return_download_url: bool = ...,
+    raw_response: Literal[True] = ...,
+    **kwargs: Any,
+) -> dict: ...
+
+
+@overload
+def predict_query(
+    query: dict,
+    model_id: str,
+    auto_authenticate: bool = ...,
+    api_base_url: str = ...,
+    poll_interval_seconds: int = ...,
+    poll_timeout_seconds: int = ...,
+    return_download_url: bool = ...,
+    raw_response: bool = ...,
+    **kwargs: Any,
+) -> Dict[str, pd.DataFrame]: ...
+
+
 def predict_query(
     query: dict,
     model_id: str,
@@ -37,8 +79,9 @@ def predict_query(
     poll_interval_seconds: int = DEFAULT_POLL_INTERVAL_SECONDS,
     poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
     return_download_url: bool = False,
-    **kwargs,
-) -> Dict[str, pd.DataFrame]:
+    raw_response: bool = False,
+    **kwargs: Any,
+) -> Dict[str, pd.DataFrame] | Dict[str, str] | dict:
     """
     Sends a query to the Synthesize Bio API for prediction and retrieves samples.
 
@@ -70,19 +113,26 @@ def predict_query(
     poll_timeout_seconds : int, optional
         Maximum total seconds to wait before timing out.
     return_download_url : bool, optional
-        If True, returns a dictionary with empty DataFrames without downloading
-        or parsing the results. Default False.
+        If True, returns a dictionary containing the download URL as a string.
+        Default False.
+    raw_response : bool, optional
+        If True, returns the raw (unformatted) JSON response from the API
+        without applying any output transformers. Default False.
     **kwargs : dict, optional
         Additional parameters to include in the query body. These are passed
         directly to the API and validated server-side.
 
     Returns
     -------
+    Dict[str, pd.DataFrame]
+        Default. Dictionary with string keys mapping to DataFrames.
+        Standard models return ``metadata``, ``expression``, and ``latents``.
+        Metadata prediction models return ``metadata``, ``latents``,
+        ``classifier_probs``, and ``expression``.
+    Dict[str, str]
+        When ``return_download_url=True``. Contains a single ``download_url`` key.
     dict
-        metadata: pd.DataFrame (metadata, empty if return_download_url=True)
-        expression: pd.DataFrame (expression, empty if return_download_url=True)
-        latents: pd.DataFrame (latents from the model, empty if
-            return_download_url=True)
+        When ``raw_response=True``. The unprocessed JSON response from the API.
 
     Raises
     ------
@@ -93,6 +143,9 @@ def predict_query(
         If the API token is invalid.
     SynthesizeAPIError
         If API fails or response is invalid.
+    ValueError
+        If no output transformer is registered for the given model_id
+        and raw_response is False.
     """
     # Check if token is available and prompt if needed
     if not has_synthesize_token():
@@ -158,16 +211,18 @@ def predict_query(
     # Fetch the final results JSON and transform to DataFrames
     final_json = get_json(download_url)
 
-    # Get transformer for this model, or None if not registered
+    if raw_response:
+        return final_json
+
     transformer = OUTPUT_TRANSFORMERS.get(model_id)
+    if transformer is None:
+        raise ValueError(
+            f"No output formatter registered for model_id '{model_id}'. "
+            "To receive raw (unformatted) JSON, pass raw_response=True "
+            "to predict_query()."
+        )
 
-    if transformer:
-        result = transformer(final_json)
-    else:
-        # Return raw JSON for unregistered models
-        result = final_json
-
-    return result
+    return transformer(final_json)
 
 
 def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:

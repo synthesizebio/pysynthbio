@@ -5,7 +5,7 @@ Each transformer is responsible for converting raw API JSON responses
 into the appropriate output format for a specific model or model family.
 """
 
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import pandas as pd
 
@@ -80,12 +80,13 @@ def _transform_result_to_frames(
     return expression.astype(int), metadata, latents
 
 
-def transform_metadata_model_output(final_json: dict) -> List[Dict]:
+def transform_metadata_model_output(final_json: dict) -> Dict:
     """
     Transformer for metadata prediction models.
 
-    These models return classifier probabilities, latents, and metadata predictions
-    rather than expression counts.
+    Converts raw API JSON into structured DataFrames for metadata,
+    latents, classifier probabilities, and expression counts
+    (from the decoder sample).
 
     Parameters
     ----------
@@ -95,10 +96,43 @@ def transform_metadata_model_output(final_json: dict) -> List[Dict]:
     Returns
     -------
     dict
-        List of MetadataOutput objects
+        Dictionary containing:
+            - metadata: pd.DataFrame of predicted metadata
+            - latents: pd.DataFrame with biological/technical/perturbation columns
+            - classifier_probs: pd.DataFrame of per-category probability dicts
+            - expression: pd.DataFrame of decoder sample counts (int)
     """
+    outputs = final_json["outputs"]
 
-    return final_json["outputs"]
+    metadata_rows = []
+    latents_rows = []
+    classifier_probs_rows = []
+    expression_rows = []
+
+    for output in outputs:
+        metadata_rows.append(output.get("metadata", {}))
+        latents_rows.append(output.get("latents", {}))
+        classifier_probs_rows.append(output.get("classifier_probs", {}))
+        decoder_sample = output.get("decoder_sample", {})
+        expression_rows.append(decoder_sample.get("counts", []))
+
+    metadata = pd.DataFrame(metadata_rows)
+    latents = pd.DataFrame(latents_rows)
+    classifier_probs = pd.DataFrame(classifier_probs_rows)
+
+    gene_order = final_json.get("gene_order")
+    if gene_order:
+        expression = pd.DataFrame(expression_rows, columns=gene_order)
+    else:
+        expression = pd.DataFrame(expression_rows)
+    expression = expression.astype(int)
+
+    return {
+        "metadata": metadata,
+        "latents": latents,
+        "classifier_probs": classifier_probs,
+        "expression": expression,
+    }
 
 
 def transform_standard_model_output(final_json: dict) -> Dict:
@@ -136,4 +170,5 @@ OUTPUT_TRANSFORMERS = {
     "gem-1-sc": transform_standard_model_output,
     "gem-1-bulk_reference-conditioning": transform_standard_model_output,
     "gem-1-sc_reference-conditioning": transform_standard_model_output,
+    "gem-1-bulk_condition-on-sample-ids": transform_standard_model_output,
 }

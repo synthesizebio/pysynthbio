@@ -1,6 +1,6 @@
 [project]
 name = "pysynthbio"
-version = "4.0.5"
+version = "4.1.0"
 requires-python = ">=3.10"
 description = "A package to retrieve data and models from Synthesize Bio's API"
 authors = [
