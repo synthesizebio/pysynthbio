@@ -79,7 +79,7 @@ jobs:
 
       - name: Build package
         run: |
-          uv pip install build
+          uv pip install build setuptools
           python -m build --no-isolation
 
       - name: Store built package
