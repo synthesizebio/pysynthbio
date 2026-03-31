@@ -1,0 +1,13 @@
+---
+description: Security posture for Python packaging, secrets, workflows, and releases
+alwaysApply: true
+---
+
+# Security Posture
+
+- Treat `pyproject.toml`, `uv.lock`, `.python-version`, GitHub Actions workflows, release config, and env templates as security-sensitive files.
+- Never commit API keys, tokens, passwords, or real secrets in code, tests, docs, examples, `.env` files, or logs.
+- Prefer standard `uv` workflows with exact pins, committed `uv.lock`, and `.python-version`; use `uv sync --frozen` in CI and release automation, and avoid `pip install` or `uv pip install` in committed workflows.
+- Review dependency diffs carefully. Unexpected new packages, source changes, or broad version ranges are supply chain risks.
+- In GitHub Actions, pin third-party actions to full commit SHAs with version comments, declare explicit `permissions:`, and prefer OIDC or other short-lived credentials over stored long-lived secrets.
+- If Docker or publishing workflows are touched, use lockfile-based installs, BuildKit secrets instead of Docker `ARG`, and non-root runtime containers.
