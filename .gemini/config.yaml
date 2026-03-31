@@ -35,13 +35,9 @@ ignore_patterns:
 
   # API/Data related ignores (if applicable)
   - "data/"           # Directory typically containing large data objects or fixtures
-  - "docs/"           # Sphinx/MkDocs documentation output
   - "results/"        # Output directories
   - "*.csv"           # Example: Ignore large CSV data files
   - "*.parquet"       # Example: Ignore large Parquet data files
-  - "*.json"          # Large JSON data dumps
-  - "*.pkl"           # Python pickle files
-  - "*.sqlite"        # SQLite databases
 
   # General development ignores
   - ".git/"                 # Git metadata
@@ -94,12 +90,14 @@ code_review:
 
     # summary:
     # Posts a pull request summary on pull request open. Defaults to 'true'.
-    # Keeping 'true' can be useful for a quick overview of changes in Python code.
-    # Set to 'false' if you want to eliminate all automatic initial PR comments.
-    summary: true
+    # Keep this off so Gemini focuses on actionable review findings.
+    summary: false
 
     # code_review:
     # Posts a full code review on pull request open. Defaults to 'true'.
     # Setting to 'false' will prevent automatic reviews on every PR,
     # allowing reviews to be triggered manually with '/gemini review' if needed.
     code_review: false
+
+    # Skip draft PRs to reduce noise until the author asks for review.
+    include_drafts: false

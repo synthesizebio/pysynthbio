@@ -1,3 +1,13 @@
+Security Review Override
+This security section takes precedence over the rest of this file when review guidance conflicts. Prioritize actionable security, credential-handling, dependency, and workflow findings over style nits.
+
+Review focus:
+- Flag API keys, tokens, passwords, or real secrets committed to code, tests, docs, examples, `.env` files, or logs.
+- Flag Python dependency changes that introduce broad version ranges, `pip install`, `uv pip install`, or other non-lockfile installation flows when dependency management is being touched.
+- Flag GitHub Actions that use third-party actions by tag instead of full commit SHA, omit explicit `permissions:`, use long-lived cloud credentials, or use unsafe `pull_request_target` patterns.
+- Flag Docker or release automation that passes secrets through `ARG`, installs dependencies without a reviewed lockfile, or runs runtime containers as root.
+- Treat `pyproject.toml`, lockfiles, release workflows, and examples that show authentication patterns as security-sensitive.
+
 Python API Wrapper Style Guide
 This style guide outlines conventions and best practices for developing a Python package that serves as an API wrapper. Adhering to these guidelines will ensure a consistent, robust, and user-friendly package that interacts gracefully with external APIs.
 
