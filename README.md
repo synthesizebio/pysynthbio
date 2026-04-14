@@ -6,7 +6,7 @@ If you'd prefer 1-click dataset generation and analysis, try our [web platform](
 
 ## Prerequisites
 
-Create a [Synthesize Bio](https://app.synthesize.bio/) account and generate an [API Key](https://app.synthesize.bio/account/api-key).
+Create a [Synthesize Bio](https://app.synthesize.bio/) account and generate an [API Key](https://app.synthesize.bio/account/api-keys).
 
 ## Installation
 

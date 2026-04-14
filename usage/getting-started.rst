@@ -102,6 +102,13 @@ See :doc:`metadata-prediction` for detailed usage.
 
 Only baseline models are available to all users. You can check which models are available programmatically, see ``list_models()``. Contact us at support@synthesize.bio if you have any questions.
 
+Exploring Available Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Each model accepts a specific set of metadata fields with defined vocabularies (valid ontology IDs, cell lines, tissues, etc.). You can browse and download these vocabularies at `app.synthesize.bio/docs/vocab <https://app.synthesize.bio/docs/vocab>`_.
+
+See :doc:`available-metadata` for more details.
+
 Listing Available Models
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
