@@ -19,6 +19,7 @@ pysynthbio documentation
    usage/baseline
    usage/reference-conditioning
    usage/metadata-prediction
+   usage/available-metadata
 
 .. toctree::
    :maxdepth: 1

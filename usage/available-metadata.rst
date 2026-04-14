@@ -1,0 +1,10 @@
+Available Metadata
+==================
+
+Every model on Synthesize Bio accepts specific metadata fields as inputs—things like cell type, tissue, disease state, and perturbation details. The valid values for each field (e.g. ontology IDs, cell line names) are defined by the model's vocabulary.
+
+You can browse and download the vocabulary for any model you have access to at:
+
+`app.synthesize.bio/docs/vocab <https://app.synthesize.bio/docs/vocab>`_
+
+Select a model from the dropdown to see all available fields, and use the download links to get the full list of valid values for each field as JSON.
