@@ -35,7 +35,7 @@ expression = result["expression"]
 
 ## Documentation
 
-[Get started](https://synthesizebio.mintlify.app/python-sdk/getting-started) | [Full Python SDK docs](https://synthesizebio.mintlify.app/python-sdk)
+[Get started](https://docs.synthesize.bio/python-sdk/getting-started) | [Full Python SDK docs](https://docs.synthesize.bio/python-sdk)
 
 User-facing documentation source lives in [`synthesizebio/mintlify-docs`](https://github.com/synthesizebio/mintlify-docs) under [`python-sdk/`](https://github.com/synthesizebio/mintlify-docs/tree/main/python-sdk). To update the docs, open a PR there.
 

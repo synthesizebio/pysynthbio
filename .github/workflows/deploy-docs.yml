@@ -1,6 +1,6 @@
 name: Deploy redirect site to GitHub Pages
 
-# The pysynthbio docs have moved to https://synthesizebio.mintlify.app/python-sdk.
+# The pysynthbio docs have moved to https://docs.synthesize.bio/python-sdk.
 # This workflow keeps the old GitHub Pages URL alive by serving a small
 # redirect site so existing links in papers, slides, and bookmarks don't break.
 
