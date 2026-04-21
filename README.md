@@ -35,7 +35,9 @@ expression = result["expression"]
 
 ## Documentation
 
-[Get Started](https://synthesizebio.github.io/pysynthbio/usage/getting-started.html) | [Full Documentation](https://synthesizebio.github.io/pysynthbio/)
+[Get started](https://synthesizebio.mintlify.app/python-sdk/getting-started) | [Full Python SDK docs](https://synthesizebio.mintlify.app/python-sdk)
+
+The user-facing documentation source lives in [`docs/`](./docs) and is published to [synthesizebio.mintlify.app](https://synthesizebio.mintlify.app) via the [`Sync docs to mintlify-docs`](./.github/workflows/sync-docs-to-mintlify.yml) workflow. See [`docs/README.md`](./docs/README.md) for contributor instructions.
 
 ## Questions? Suggestions? Support?
 

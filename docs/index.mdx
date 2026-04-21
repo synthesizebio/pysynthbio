@@ -1,0 +1,47 @@
+---
+title: "Python SDK"
+description: "pysynthbio — the official Python client for the Synthesize Bio platform."
+---
+
+`pysynthbio` is a Python package that provides a convenient interface to the [Synthesize Bio](https://www.synthesize.bio/) API. It lets you generate realistic gene expression data for specified biological conditions, work with reference samples, and predict metadata from observed expression — all from Python.
+
+If you'd prefer 1-click dataset generation and analysis, try the [web platform](https://app.synthesize.bio/datasets/).
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/python-sdk/installation">
+    Install from PyPI, source, or a GitHub release.
+  </Card>
+  <Card title="Getting started" icon="rocket" href="/python-sdk/getting-started">
+    Authenticate, list models, and make your first prediction.
+  </Card>
+  <Card title="Baseline models" icon="dna" href="/python-sdk/models/baseline">
+    Generate synthetic expression from metadata alone.
+  </Card>
+  <Card title="Reference conditioning" icon="microscope" href="/python-sdk/models/reference-conditioning">
+    Anchor generation to a real reference sample.
+  </Card>
+  <Card title="Metadata prediction" icon="magnifying-glass" href="/python-sdk/models/metadata-prediction">
+    Infer biological metadata from observed expression.
+  </Card>
+  <Card title="GitHub" icon="github" href="https://github.com/synthesizebio/pysynthbio">
+    Source code, issues, and releases.
+  </Card>
+</CardGroup>
+
+## Quickstart
+
+```python
+import pysynthbio
+
+pysynthbio.set_synthesize_token(use_keyring=True)
+
+query = pysynthbio.get_example_query(model_id="gem-1-bulk")["example_query"]
+result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
+
+metadata = result["metadata"]
+expression = result["expression"]
+```
+
+## Support
+
+Email [support@synthesize.bio](mailto:support@synthesize.bio) or [open an issue](https://github.com/synthesizebio/pysynthbio/issues) on GitHub.

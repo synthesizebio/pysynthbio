@@ -1,0 +1,63 @@
+name: Sync docs to mintlify-docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/sync-docs-to-mintlify.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pysynthbio
+        uses: actions/checkout@v4
+        with:
+          path: pysynthbio
+
+      - name: Check out mintlify-docs
+        uses: actions/checkout@v4
+        with:
+          repository: synthesizebio/mintlify-docs
+          token: ${{ secrets.MINTLIFY_DOCS_TOKEN }}
+          path: mintlify-docs
+
+      - name: Sync pysynthbio/docs into mintlify-docs/python-sdk
+        run: |
+          set -euo pipefail
+          rm -rf mintlify-docs/python-sdk
+          mkdir -p mintlify-docs/python-sdk
+          cp -R pysynthbio/docs/. mintlify-docs/python-sdk/
+          # Stamp source so reviewers can see what triggered the sync
+          cat > mintlify-docs/python-sdk/.synced-from <<EOF
+          source_repo: ${{ github.repository }}
+          source_sha: ${{ github.sha }}
+          source_workflow_run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+
+      - name: Open / update sync PR in mintlify-docs
+        uses: peter-evans/create-pull-request@v6
+        with:
+          path: mintlify-docs
+          token: ${{ secrets.MINTLIFY_DOCS_TOKEN }}
+          branch: sync/pysynthbio
+          base: main
+          title: "docs(pysynthbio): sync from pysynthbio main"
+          commit-message: |
+            docs(pysynthbio): sync from synthesizebio/pysynthbio@${{ github.sha }}
+          body: |
+            Automated sync of `docs/` from [synthesizebio/pysynthbio@${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
+
+            - **Source workflow run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - **Last commit:** ${{ github.event.head_commit.message }}
+
+            This PR is updated in-place by every push to `pysynthbio:main` that touches `docs/`. Merge to publish the latest Python SDK docs to Mintlify.
+          delete-branch: true
+          labels: |
+            docs-sync
+            pysynthbio

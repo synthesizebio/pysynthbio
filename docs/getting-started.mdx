@@ -1,0 +1,156 @@
+---
+title: "Getting started"
+description: "Authenticate, list models, and make your first prediction with pysynthbio."
+---
+
+`pysynthbio` is a Python package for the [Synthesize Bio](https://www.synthesize.bio/) API. It lets researchers easily access AI-generated transcriptomic data across modalities including bulk and single-cell RNA-seq.
+
+To generate datasets without code, use the [web platform](https://app.synthesize.bio/datasets/).
+
+## Authentication
+
+### Get your API key
+
+Visit the [API keys page](https://app.synthesize.bio/account/api-keys) to generate a key. Click **+ Create API Key**, then **Create Key**, and copy your key.
+
+There are several ways to make `pysynthbio` aware of your token.
+
+<Tabs>
+  <Tab title="Interactive">
+    ```python
+    import pysynthbio
+
+    # Opens a browser to the token creation page and prompts for input
+    pysynthbio.set_synthesize_token(use_keyring=True)
+    ```
+
+    With `use_keyring=True`, the token persists across sessions; with `use_keyring=False`, it's only set for the current session. Keyring support is included by default in `pysynthbio` 2.2.1 and later.
+  </Tab>
+  <Tab title="Environment variable">
+    ```bash
+    # macOS / Linux
+    export SYNTHESIZE_API_KEY=your_api_token_here
+
+    # Windows PowerShell
+    $Env:SYNTHESIZE_API_KEY='your_api_token_here'
+    ```
+  </Tab>
+  <Tab title="Non-interactive">
+    For scripts running in non-interactive environments:
+
+    ```python
+    import pysynthbio
+
+    # Avoid hardcoding secrets in source control
+    pysynthbio.set_synthesize_token(token="SECURE_SECRET_HERE")
+    ```
+  </Tab>
+  <Tab title="System keyring">
+    If you've previously stored your token in the system keyring:
+
+    ```python
+    import pysynthbio
+
+    pysynthbio.load_synthesize_token_from_keyring()
+    ```
+  </Tab>
+</Tabs>
+
+## Available model types
+
+Synthesize Bio provides several model types for different use cases.
+
+### Baseline models
+
+Generate synthetic gene expression data from metadata alone — describe the biological conditions (tissue type, disease state, perturbations, etc.) and the model generates realistic expression profiles.
+
+- **`gem-1-bulk`** — Bulk RNA-seq baseline model
+- **`gem-1-sc`** — Single-cell RNA-seq baseline model
+
+See [Baseline models](/python-sdk/models/baseline) for detailed usage.
+
+### Reference conditioning models
+
+Generate expression data conditioned on a real reference sample. This lets you "anchor" to an existing expression profile while applying perturbations or modifications.
+
+- **`gem-1-bulk_reference-conditioning`** — Bulk RNA-seq reference conditioning model
+- **`gem-1-sc_reference-conditioning`** — Single-cell RNA-seq reference conditioning model
+
+See [Reference conditioning](/python-sdk/models/reference-conditioning) for detailed usage.
+
+### Metadata prediction models
+
+Infer metadata from observed expression data. Given a gene expression profile, predict the likely biological characteristics (cell type, tissue, disease state, etc.).
+
+- **`gem-1-bulk_predict-metadata`** — Bulk RNA-seq metadata prediction model
+- **`gem-1-sc_predict-metadata`** — Single-cell RNA-seq metadata prediction model
+
+See [Metadata prediction](/python-sdk/models/metadata-prediction) for detailed usage.
+
+<Note>
+  Only baseline models are available to all users. Check programmatically with `list_models()`. Contact [support@synthesize.bio](mailto:support@synthesize.bio) if you have questions.
+</Note>
+
+### Listing available models
+
+```python
+import pysynthbio
+
+models = pysynthbio.list_models()
+print(models)
+```
+
+## Quick start
+
+A minimal example using a baseline model:
+
+```python
+import pysynthbio
+
+# Get an example query structure
+query = pysynthbio.get_example_query(model_id="gem-1-bulk")["example_query"]
+
+# Submit the query and get results
+result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
+
+# Access the results
+metadata = result["metadata"]
+expression = result["expression"]
+```
+
+For more detailed examples and advanced usage, see the model-specific documentation linked above.
+
+## Security notes
+
+- The API token provides full access to your Synthesize Bio account.
+- When using `use_keyring=True`, your token is stored securely in your system's credential manager.
+- For production environments, prefer environment variables or a secrets management tool.
+
+## Cleanup
+
+When you're done using the API, you can clear the token from your environment:
+
+```python
+# Clear from current session only
+pysynthbio.clear_synthesize_token()
+
+# Clear from both session and system keyring
+pysynthbio.clear_synthesize_token(remove_from_keyring=True)
+```
+
+## Rate limits
+
+Free usage of Synthesize Bio is limited. If you exceed the limit, the API returns an error explaining it. For higher limits, contact [support@synthesize.bio](mailto:support@synthesize.bio).
+
+## Troubleshooting
+
+### Keychain access on Mac
+
+If you get this error on macOS when using `use_keyring=True`:
+
+```text
+<stdin>:1: UserWarning: Failed to store token in keyring:
+Can't store password on keychain: (-25244, 'Unknown Error')
+```
+
+Your IDE or terminal doesn't have access to Keychain. Open **System Preferences → Security & Privacy → Privacy → Full Disk Access** and add the terminal or IDE you're working from (Terminal, iTerm, VS Code, PyCharm, etc.).

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>pysynthbio docs have moved</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href="https://synthesizebio.mintlify.app/python-sdk" />
+    <meta http-equiv="refresh" content="0; url=https://synthesizebio.mintlify.app/python-sdk" />
+    <script>
+      (function () {
+        var base = "https://synthesizebio.mintlify.app/python-sdk";
+        var pathMap = {
+          "installation": "/installation",
+          "getting-started": "/getting-started",
+          "baseline": "/models/baseline",
+          "reference-conditioning": "/models/reference-conditioning",
+          "metadata-prediction": "/models/metadata-prediction",
+          "license": "/license"
+        };
+        var path = window.location.pathname.replace(/^\/pysynthbio/, "");
+        var match = path.match(/\/usage\/([^/]+?)(?:\.html)?\/?$/);
+        var target = base;
+        if (match && pathMap[match[1]]) {
+          target = base + pathMap[match[1]];
+        }
+        window.location.replace(target);
+      })();
+    </script>
+    <style>
+      body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; max-width: 36rem; margin: 4rem auto; padding: 0 1rem; color: #0f172a; }
+      a { color: #15803d; }
+      code { background: #f1f5f9; padding: 0.1em 0.3em; border-radius: 0.25rem; }
+    </style>
+  </head>
+  <body>
+    <h1>pysynthbio docs have moved</h1>
+    <p>
+      The Python SDK documentation now lives at
+      <a href="https://synthesizebio.mintlify.app/python-sdk">synthesizebio.mintlify.app/python-sdk</a>.
+    </p>
+    <p>If you aren't redirected automatically, click the link above.</p>
+  </body>
+</html>
