@@ -39,10 +39,10 @@ expression = result["expression"]
 
 ## Mintlify source
 
-This repo also includes Mintlify-compatible docs source under `docs/` for aggregation into the shared docs site via `mintlify/multirepo-action`.
+This repo also includes public Mintlify-compatible docs source under `docs-external/` for aggregation into the shared docs site via `mintlify/multirepo-action`.
 
-- `docs/docs.json` defines the SDK navigation used by the aggregator
-- `docs/*.mdx` and `docs/models/*.mdx` contain the customer-facing Mintlify content
+- `docs-external/docs.json` defines the SDK navigation used by the aggregator
+- `docs-external/*.mdx` and `docs-external/models/*.mdx` contain the customer-facing Mintlify content
 - In the aggregated site, these pages are prefixed with the repo name, so the SDK lives under `/pysynthbio/...`
 
 ## Questions? Suggestions? Support?
