@@ -6,7 +6,7 @@ If you'd prefer 1-click dataset generation and analysis, try our [web platform](
 
 ## Prerequisites
 
-Create a [Synthesize Bio](https://app.synthesize.bio/) account and generate an [API Key](https://app.synthesize.bio/account/api-key).
+Create a [Synthesize Bio](https://app.synthesize.bio/) account and generate an [API Key](https://app.synthesize.bio/account/api-keys).
 
 ## Installation
 
@@ -36,6 +36,14 @@ expression = result["expression"]
 ## Documentation
 
 [Get Started](https://synthesizebio.github.io/pysynthbio/usage/getting-started.html) | [Full Documentation](https://synthesizebio.github.io/pysynthbio/)
+
+## Mintlify source
+
+This repo also includes public Mintlify-compatible docs source under `docs-external/` for aggregation into the shared docs site via `mintlify/multirepo-action`.
+
+- `docs-external/docs.json` defines the SDK navigation used by the aggregator
+- `docs-external/*.mdx` and `docs-external/models/*.mdx` contain the customer-facing Mintlify content
+- In the aggregated site, these pages are prefixed with the repo name, so the SDK lives under `/pysynthbio/...`
 
 ## Questions? Suggestions? Support?
 

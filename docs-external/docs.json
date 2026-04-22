@@ -1,0 +1,26 @@
+{
+  "name": "pysynthbio",
+  "description": "Mintlify navigation for the pysynthbio Python SDK docs.",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Python SDK",
+        "pages": [
+          "index",
+          "installation",
+          "getting-started",
+          "available-metadata",
+          {
+            "group": "Models",
+            "pages": [
+              "models/baseline",
+              "models/reference-conditioning",
+              "models/metadata-prediction"
+            ]
+          },
+          "license"
+        ]
+      }
+    ]
+  }
+}
