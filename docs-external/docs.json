@@ -9,6 +9,7 @@
           "index",
           "installation",
           "getting-started",
+          "available-metadata",
           {
             "group": "Models",
             "pages": [
