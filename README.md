@@ -35,11 +35,11 @@ expression = result["expression"]
 
 ## Documentation
 
-[Get Started](https://synthesizebio.github.io/pysynthbio/usage/getting-started.html) | [Full Documentation](https://synthesizebio.github.io/pysynthbio/)
+[Shared docs](https://docs.synthesize.bio/pysynthbio) | [Getting started](https://docs.synthesize.bio/pysynthbio/getting-started) | [Legacy Sphinx docs](https://synthesizebio.github.io/pysynthbio/)
 
 ## Mintlify source
 
-This repo also includes public Mintlify-compatible docs source under `docs-external/` for aggregation into the shared docs site via `mintlify/multirepo-action`.
+This repo also includes public Mintlify-compatible docs source under `docs-external/` for aggregation into the shared docs site.
 
 - `docs-external/docs.json` defines the SDK navigation used by the aggregator
 - `docs-external/*.mdx` and `docs-external/models/*.mdx` contain the customer-facing Mintlify content
