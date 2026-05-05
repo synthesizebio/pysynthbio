@@ -35,7 +35,7 @@ expression = result["expression"]
 
 ## Documentation
 
-[Shared docs](https://docs.synthesize.bio/pysynthbio) | [Getting started](https://docs.synthesize.bio/pysynthbio/getting-started) | [Legacy Sphinx docs](https://synthesizebio.github.io/pysynthbio/)
+[Shared docs](https://docs.synthesize.bio/pysynthbio) | [Getting started](https://docs.synthesize.bio/pysynthbio/getting-started)
 
 ## Mintlify source
 
