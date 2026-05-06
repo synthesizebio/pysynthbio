@@ -42,11 +42,6 @@ dev = [
     "black",
     "build",
 ]
-# Documentation dependencies
-docs = [
-    "sphinx",
-    "sphinx-autobuild",
-]
 
 [tool.setuptools]
 package-dir = {"" = "src"}

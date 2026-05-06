@@ -35,15 +35,13 @@ expression = result["expression"]
 
 ## Documentation
 
-[Get Started](https://synthesizebio.github.io/pysynthbio/usage/getting-started.html) | [Full Documentation](https://synthesizebio.github.io/pysynthbio/)
+The canonical pysynthbio docs live at [docs.synthesize.bio/pysynthbio](https://docs.synthesize.bio/pysynthbio).
 
-## Mintlify source
+- [Get started](https://docs.synthesize.bio/pysynthbio/getting-started)
+- [Installation](https://docs.synthesize.bio/pysynthbio/installation)
+- [Models](https://docs.synthesize.bio/pysynthbio/models/baseline)
 
-This repo also includes public Mintlify-compatible docs source under `docs-external/` for aggregation into the shared docs site via `mintlify/multirepo-action`.
-
-- `docs-external/docs.json` defines the SDK navigation used by the aggregator
-- `docs-external/*.mdx` and `docs-external/models/*.mdx` contain the customer-facing Mintlify content
-- In the aggregated site, these pages are prefixed with the repo name, so the SDK lives under `/pysynthbio/...`
+The legacy GitHub Pages site at `synthesizebio.github.io/pysynthbio` redirects to the new URLs and is no longer updated. The MDX source for the customer-facing docs lives in [`docs-external/`](./docs-external) and is aggregated into [`docs-external`](https://github.com/synthesizebio/docs-external) by the Mintlify multirepo workflow.
 
 ## Questions? Suggestions? Support?
 
