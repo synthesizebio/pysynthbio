@@ -7,12 +7,16 @@ from typing import Any, Dict, Literal, Tuple, overload
 
 import pandas as pd
 
+from pysynthbio.arrow_transformers import transform_arrow_stream
 from pysynthbio.http_client import (
     API_BASE_URL,
     DEFAULT_TIMEOUT,
     SynthesizeAPIError,
     api_request,
     get_json,
+    request_arrow_stream,
+    resolve_base_url,
+    self_hosted_enabled,
 )
 from pysynthbio.key_handlers import has_synthesize_token, set_synthesize_token
 from pysynthbio.output_transformers import OUTPUT_TRANSFORMERS
@@ -80,6 +84,7 @@ def predict_query(
     poll_timeout_seconds: int = DEFAULT_POLL_TIMEOUT_SECONDS,
     return_download_url: bool = False,
     raw_response: bool = False,
+    self_hosted: bool | None = None,
     **kwargs: Any,
 ) -> Dict[str, pd.DataFrame] | Dict[str, str] | dict:
     """
@@ -116,8 +121,16 @@ def predict_query(
         If True, returns a dictionary containing the download URL as a string.
         Default False.
     raw_response : bool, optional
-        If True, returns the raw (unformatted) JSON response from the API
-        without applying any output transformers. Default False.
+        If True, returns the raw (unformatted) response. For the hosted API this
+        is the JSON response; for a self-hosted container it is the raw Apache
+        Arrow stream bytes. Default False.
+    self_hosted : bool, optional
+        If True, talk to a self-hosted model container that returns predictions
+        synchronously as an Apache Arrow stream (no polling, no download URL).
+        Can also be enabled via the ``SYNTHESIZE_SELF_HOSTED`` environment
+        variable. The container's base URL is taken from ``api_base_url`` or the
+        ``SYNTHESIZE_API_BASE_URL`` environment variable. Authentication is
+        optional and only sent when ``SYNTHESIZE_API_KEY`` is set. Default False.
     **kwargs : dict, optional
         Additional parameters to include in the query body. These are passed
         directly to the API and validated server-side.
@@ -147,6 +160,18 @@ def predict_query(
         If no output transformer is registered for the given model_id
         and raw_response is False.
     """
+    api_base_url = resolve_base_url(api_base_url)
+
+    if self_hosted_enabled(self_hosted):
+        return _predict_self_hosted(
+            query=query,
+            model_id=model_id,
+            api_base_url=api_base_url,
+            return_download_url=return_download_url,
+            raw_response=raw_response,
+            **kwargs,
+        )
+
     # Check if token is available and prompt if needed
     if not has_synthesize_token():
         if auto_authenticate:
@@ -223,6 +248,35 @@ def predict_query(
         )
 
     return transformer(final_json)
+
+
+def _predict_self_hosted(
+    query: dict,
+    model_id: str,
+    api_base_url: str,
+    return_download_url: bool,
+    raw_response: bool,
+    **kwargs: Any,
+) -> Dict[str, pd.DataFrame] | bytes:
+    """Synchronous Arrow-stream prediction against a self-hosted container."""
+    if return_download_url:
+        raise ValueError(
+            "return_download_url is not supported in self-hosted mode; the "
+            "container returns results synchronously as an Arrow stream."
+        )
+
+    query = {**query, "source": "pysynthbio", **kwargs}
+
+    arrow_bytes = request_arrow_stream(
+        endpoint=f"/api/models/{model_id}/predict",
+        api_base_url=api_base_url,
+        json=query,
+        timeout=DEFAULT_TIMEOUT,
+    )
+
+    if raw_response:
+        return arrow_bytes
+    return transform_arrow_stream(arrow_bytes)
 
 
 def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:

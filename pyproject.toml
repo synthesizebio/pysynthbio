@@ -29,9 +29,14 @@ Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 secure = [
     "keyring>=23.0.0",
 ]
+# Talking to a self-hosted model container that streams Apache Arrow.
+self_hosted = [
+    "pyarrow>=15.0.0",
+]
 # Install all optional dependencies
 all = [
     "keyring>=23.0.0",
+    "pyarrow>=15.0.0",
 ]
 # Development dependencies
 dev = [

@@ -10,6 +10,30 @@ from pysynthbio.key_handlers import has_synthesize_token
 API_BASE_URL = "https://app.synthesize.bio"
 DEFAULT_TIMEOUT = 30
 
+# Env vars that let a partner's data scientists point any client call at a
+# self-hosted container without code changes.
+SELF_HOSTED_ENV = "SYNTHESIZE_SELF_HOSTED"
+API_BASE_URL_ENV = "SYNTHESIZE_API_BASE_URL"
+
+
+def env_flag(name: str) -> bool:
+    """Interpret an env var as a boolean (1/true/yes/on, case-insensitive)."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def resolve_base_url(api_base_url: Optional[str] = None) -> str:
+    """Resolve the API base URL: explicit arg > env var > production default."""
+    if api_base_url and api_base_url != API_BASE_URL:
+        return api_base_url
+    return os.environ.get(API_BASE_URL_ENV, API_BASE_URL)
+
+
+def self_hosted_enabled(explicit: Optional[bool] = None) -> bool:
+    """Resolve self-hosted mode: explicit arg wins, else the env flag."""
+    if explicit is not None:
+        return explicit
+    return env_flag(SELF_HOSTED_ENV)
+
 
 class SynthesizeAPIError(Exception):
     """Base exception for Synthesize API errors."""
@@ -129,6 +153,97 @@ def api_request(
                 status_code=status,
             ) from err
 
+    except requests.exceptions.RequestException as err:
+        raise SynthesizeAPIError(f"Network error: {err}") from err
+
+
+def request_arrow_stream(
+    endpoint: str,
+    api_base_url: str,
+    json: dict,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> bytes:
+    """POST a query to a self-hosted container and return the Arrow stream bytes.
+
+    Unlike :func:`api_request`, authentication is optional: a self-hosted
+    container in an isolated network typically runs with auth disabled, so a
+    token is attached only when ``SYNTHESIZE_API_KEY`` is set. The server
+    responds synchronously with an Apache Arrow IPC stream.
+    """
+    url = f"{api_base_url}{endpoint}"
+    headers = {
+        "Accept": "application/vnd.apache.arrow.stream",
+        "Content-Type": "application/json",
+    }
+    token = os.environ.get("SYNTHESIZE_API_KEY")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        response = requests.post(url, headers=headers, json=json, timeout=timeout)
+        response.raise_for_status()
+        return response.content
+    except requests.exceptions.HTTPError as err:
+        status = err.response.status_code
+        body = err.response.text
+        if status in (401, 403):
+            raise AuthenticationError(
+                f"Authentication failed ({status}): {body}. "
+                "The container has auth enabled; set SYNTHESIZE_API_KEY.",
+                status_code=status,
+            ) from err
+        if status == 404:
+            raise NotFoundError(
+                f"Resource not found: {endpoint}", status_code=status
+            ) from err
+        if status in (400, 422):
+            raise ValidationError(
+                f"Invalid request ({status}): {body}", status_code=status
+            ) from err
+        raise SynthesizeAPIError(
+            f"Self-hosted request failed ({status}): {body}", status_code=status
+        ) from err
+    except requests.exceptions.RequestException as err:
+        raise SynthesizeAPIError(f"Network error: {err}") from err
+
+
+def get_self_hosted(
+    endpoint: str,
+    api_base_url: str,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> Any:
+    """GET a JSON resource from a self-hosted container (auth optional).
+
+    A token is attached only when ``SYNTHESIZE_API_KEY`` is set, so endpoints
+    like ``/api/models`` and ``/api/models/{id}/example-query`` work against a
+    no-auth container in an isolated network.
+    """
+    url = f"{api_base_url}{endpoint}"
+    headers = {"Accept": "application/json"}
+    token = os.environ.get("SYNTHESIZE_API_KEY")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    try:
+        response = requests.get(url, headers=headers, timeout=timeout)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.HTTPError as err:
+        status = err.response.status_code
+        body = err.response.text
+        if status in (401, 403):
+            raise AuthenticationError(
+                f"Authentication failed ({status}): {body}. "
+                "The container has auth enabled; set SYNTHESIZE_API_KEY.",
+                status_code=status,
+            ) from err
+        if status == 404:
+            raise NotFoundError(
+                f"Resource not found: {endpoint}", status_code=status
+            ) from err
+        raise SynthesizeAPIError(
+            f"Self-hosted request failed ({status}): {body}", status_code=status
+        ) from err
     except requests.exceptions.RequestException as err:
         raise SynthesizeAPIError(f"Network error: {err}") from err
 
