@@ -11,10 +11,11 @@ from pysynthbio.arrow_transformers import transform_arrow_stream
 from pysynthbio.http_client import (
     API_BASE_URL,
     DEFAULT_TIMEOUT,
+    SELF_HOSTED_TIMEOUT,
     SynthesizeAPIError,
     api_request,
     get_json,
-    request_arrow_stream,
+    open_arrow_stream,
     resolve_base_url,
     self_hosted_enabled,
 )
@@ -267,16 +268,17 @@ def _predict_self_hosted(
 
     query = {**query, "source": "pysynthbio", **kwargs}
 
-    arrow_bytes = request_arrow_stream(
+    with open_arrow_stream(
         endpoint=f"/api/models/{model_id}/predict",
         api_base_url=api_base_url,
         json=query,
-        timeout=DEFAULT_TIMEOUT,
-    )
-
-    if raw_response:
-        return arrow_bytes
-    return transform_arrow_stream(arrow_bytes)
+        timeout=SELF_HOSTED_TIMEOUT,
+    ) as response:
+        if raw_response:
+            return response.content
+        # Parse the IPC stream straight off the socket so the raw bytes are
+        # never held in memory alongside the assembled table.
+        return transform_arrow_stream(response.raw)
 
 
 def _start_model_query(api_base_url: str, model_id: str, query: dict) -> str:

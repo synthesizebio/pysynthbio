@@ -10,6 +10,13 @@ from pysynthbio.key_handlers import has_synthesize_token
 API_BASE_URL = "https://app.synthesize.bio"
 DEFAULT_TIMEOUT = 30
 
+# Self-hosted predictions run synchronously on the partner's GPU box and can
+# take minutes for large sample counts, so they use a much longer timeout than
+# the (quick) hosted control-plane calls.
+SELF_HOSTED_TIMEOUT = 600
+
+ARROW_STREAM_CONTENT_TYPE = "application/vnd.apache.arrow.stream"
+
 # Env vars that let a partner's data scientists point any client call at a
 # self-hosted container without code changes.
 SELF_HOSTED_ENV = "SYNTHESIZE_SELF_HOSTED"
@@ -157,22 +164,50 @@ def api_request(
         raise SynthesizeAPIError(f"Network error: {err}") from err
 
 
-def request_arrow_stream(
+def _raise_self_hosted_http_error(err: "requests.exceptions.HTTPError", endpoint: str):
+    """Map a self-hosted HTTP error to the appropriate SynthesizeAPIError."""
+    status = err.response.status_code
+    body = err.response.text
+    if status in (401, 403):
+        raise AuthenticationError(
+            f"Authentication failed ({status}): {body}. "
+            "The container has auth enabled; set SYNTHESIZE_API_KEY.",
+            status_code=status,
+        ) from err
+    if status == 404:
+        raise NotFoundError(
+            f"Resource not found: {endpoint}", status_code=status
+        ) from err
+    if status in (400, 422):
+        raise ValidationError(
+            f"Invalid request ({status}): {body}", status_code=status
+        ) from err
+    raise SynthesizeAPIError(
+        f"Self-hosted request failed ({status}): {body}", status_code=status
+    ) from err
+
+
+def open_arrow_stream(
     endpoint: str,
     api_base_url: str,
     json: dict,
-    timeout: int = DEFAULT_TIMEOUT,
-) -> bytes:
-    """POST a query to a self-hosted container and return the Arrow stream bytes.
+    timeout: int = SELF_HOSTED_TIMEOUT,
+) -> "requests.Response":
+    """POST a query to a self-hosted container and return a streaming response.
+
+    The response body is an Apache Arrow IPC stream that the caller reads
+    incrementally from ``response.raw`` (``stream=True``), so the full payload
+    is never buffered in memory at once -- this is what lets a partner generate
+    more samples than would fit in RAM as a single buffer.
 
     Unlike :func:`api_request`, authentication is optional: a self-hosted
     container in an isolated network typically runs with auth disabled, so a
-    token is attached only when ``SYNTHESIZE_API_KEY`` is set. The server
-    responds synchronously with an Apache Arrow IPC stream.
+    token is attached only when ``SYNTHESIZE_API_KEY`` is set. The caller owns
+    the returned response and must close it (use it as a context manager).
     """
     url = f"{api_base_url}{endpoint}"
     headers = {
-        "Accept": "application/vnd.apache.arrow.stream",
+        "Accept": ARROW_STREAM_CONTENT_TYPE,
         "Content-Type": "application/json",
     }
     token = os.environ.get("SYNTHESIZE_API_KEY")
@@ -180,31 +215,18 @@ def request_arrow_stream(
         headers["Authorization"] = f"Bearer {token}"
 
     try:
-        response = requests.post(url, headers=headers, json=json, timeout=timeout)
+        response = requests.post(
+            url, headers=headers, json=json, timeout=timeout, stream=True
+        )
         response.raise_for_status()
-        return response.content
     except requests.exceptions.HTTPError as err:
-        status = err.response.status_code
-        body = err.response.text
-        if status in (401, 403):
-            raise AuthenticationError(
-                f"Authentication failed ({status}): {body}. "
-                "The container has auth enabled; set SYNTHESIZE_API_KEY.",
-                status_code=status,
-            ) from err
-        if status == 404:
-            raise NotFoundError(
-                f"Resource not found: {endpoint}", status_code=status
-            ) from err
-        if status in (400, 422):
-            raise ValidationError(
-                f"Invalid request ({status}): {body}", status_code=status
-            ) from err
-        raise SynthesizeAPIError(
-            f"Self-hosted request failed ({status}): {body}", status_code=status
-        ) from err
+        _raise_self_hosted_http_error(err, endpoint)
     except requests.exceptions.RequestException as err:
         raise SynthesizeAPIError(f"Network error: {err}") from err
+
+    # Decompress transparently if the server ever negotiates content-encoding.
+    response.raw.decode_content = True
+    return response
 
 
 def get_self_hosted(
