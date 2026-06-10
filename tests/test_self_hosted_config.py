@@ -6,6 +6,7 @@ import pysynthbio
 from pysynthbio.http_client import (
     API_BASE_URL,
     env_flag,
+    per_model_env_var,
     resolve_base_url,
     self_hosted_enabled,
 )
@@ -27,6 +28,55 @@ def test_resolve_base_url_precedence(monkeypatch):
     assert resolve_base_url(None) == "http://box:8080"
     # Explicit non-default arg wins over env
     assert resolve_base_url("http://explicit:9000") == "http://explicit:9000"
+
+
+def test_per_model_env_var_naming():
+    assert per_model_env_var("gem-1-bulk") == "SYNTHESIZE_API_BASE_URL__GEM_1_BULK"
+    assert per_model_env_var("gem-1-sc") == "SYNTHESIZE_API_BASE_URL__GEM_1_SC"
+    # Variant slugs normalize to their base model's variable.
+    assert (
+        per_model_env_var("gem-1-bulk_predict-metadata")
+        == "SYNTHESIZE_API_BASE_URL__GEM_1_BULK"
+    )
+    assert (
+        per_model_env_var("gem-1-sc_reference-conditioning")
+        == "SYNTHESIZE_API_BASE_URL__GEM_1_SC"
+    )
+
+
+def test_resolve_base_url_per_model(monkeypatch):
+    monkeypatch.delenv("SYNTHESIZE_API_BASE_URL", raising=False)
+    monkeypatch.setenv("SYNTHESIZE_API_BASE_URL__GEM_1_BULK", "http://bulk:8080")
+    monkeypatch.setenv("SYNTHESIZE_API_BASE_URL__GEM_1_SC", "http://sc:8080")
+
+    # Each model resolves to its own host, no per-call URL needed.
+    assert resolve_base_url(model_id="gem-1-bulk") == "http://bulk:8080"
+    assert resolve_base_url(model_id="gem-1-sc") == "http://sc:8080"
+    # Variant slugs share the base model's host.
+    assert (
+        resolve_base_url(model_id="gem-1-bulk_predict-metadata") == "http://bulk:8080"
+    )
+    assert (
+        resolve_base_url(model_id="gem-1-sc_reference-conditioning") == "http://sc:8080"
+    )
+    # Explicit arg still wins over the per-model env var.
+    assert (
+        resolve_base_url("http://explicit:9000", model_id="gem-1-bulk")
+        == "http://explicit:9000"
+    )
+    # A model with no per-model var falls back to the global, then the default.
+    assert resolve_base_url(model_id="gem-1-unknown") == API_BASE_URL
+    monkeypatch.setenv("SYNTHESIZE_API_BASE_URL", "http://global:8080")
+    assert resolve_base_url(model_id="gem-1-unknown") == "http://global:8080"
+
+
+def test_resolve_base_url_per_model_beats_global(monkeypatch):
+    monkeypatch.setenv("SYNTHESIZE_API_BASE_URL", "http://global:8080")
+    monkeypatch.setenv("SYNTHESIZE_API_BASE_URL__GEM_1_SC", "http://sc:8080")
+    # Per-model wins over global when present...
+    assert resolve_base_url(model_id="gem-1-sc") == "http://sc:8080"
+    # ...but a model without its own var uses the global.
+    assert resolve_base_url(model_id="gem-1-bulk") == "http://global:8080"
 
 
 def test_self_hosted_enabled_precedence(monkeypatch):

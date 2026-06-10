@@ -23,8 +23,9 @@ def get_example_query(
     model_id : str
         The ID of the model to get an example query for.
     api_base_url : str, optional
-        Base URL for the API server. Defaults to ``SYNTHESIZE_API_BASE_URL`` or
-        the production host.
+        Base URL for the API server. Defaults to the per-model env var
+        ``SYNTHESIZE_API_BASE_URL__<MODEL>``, then ``SYNTHESIZE_API_BASE_URL``,
+        then the production host.
     self_hosted : bool, optional
         Talk to a self-hosted container (auth optional). Defaults to the
         ``SYNTHESIZE_SELF_HOSTED`` environment variable.
@@ -34,7 +35,7 @@ def get_example_query(
     dict
         Example query dictionary for the model.
     """
-    base_url = resolve_base_url(api_base_url)
+    base_url = resolve_base_url(api_base_url, model_id=model_id)
     endpoint = f"/api/models/{model_id}/example-query"
     if self_hosted_enabled(self_hosted):
         return get_self_hosted(endpoint, api_base_url=base_url)

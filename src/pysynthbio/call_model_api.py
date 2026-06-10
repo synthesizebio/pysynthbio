@@ -129,9 +129,11 @@ def predict_query(
         If True, talk to a self-hosted model container that returns predictions
         synchronously as an Apache Arrow stream (no polling, no download URL).
         Can also be enabled via the ``SYNTHESIZE_SELF_HOSTED`` environment
-        variable. The container's base URL is taken from ``api_base_url`` or the
-        ``SYNTHESIZE_API_BASE_URL`` environment variable. Authentication is
-        optional and only sent when ``SYNTHESIZE_API_KEY`` is set. Default False.
+        variable. The container's base URL is taken from ``api_base_url``, then
+        the per-model env var ``SYNTHESIZE_API_BASE_URL__<MODEL>`` (e.g.
+        ``SYNTHESIZE_API_BASE_URL__GEM_1_BULK``), then ``SYNTHESIZE_API_BASE_URL``.
+        Authentication is optional and only sent when ``SYNTHESIZE_API_KEY`` is
+        set. Default False.
     **kwargs : dict, optional
         Additional parameters to include in the query body. These are passed
         directly to the API and validated server-side.
@@ -161,7 +163,7 @@ def predict_query(
         If no output transformer is registered for the given model_id
         and raw_response is False.
     """
-    api_base_url = resolve_base_url(api_base_url)
+    api_base_url = resolve_base_url(api_base_url, model_id=model_id)
 
     if self_hosted_enabled(self_hosted):
         return _predict_self_hosted(

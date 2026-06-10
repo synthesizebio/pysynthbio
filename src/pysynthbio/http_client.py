@@ -1,6 +1,7 @@
 """Centralized HTTP client with consistent error handling for the Synthesize Bio API."""
 
 import os
+import re
 from typing import Any, Optional
 
 import requests
@@ -28,10 +29,45 @@ def env_flag(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def resolve_base_url(api_base_url: Optional[str] = None) -> str:
-    """Resolve the API base URL: explicit arg > env var > production default."""
+# A model's variant slugs (reference-conditioning, predict-metadata) are served
+# by the same container as their base model, so they resolve to the same host.
+_MODEL_ID_SUFFIXES = ("_reference-conditioning", "_predict-metadata")
+
+
+def _base_model_id(model_id: str) -> str:
+    """Reduce a model slug to the base model that backs it (variants share a host)."""
+    for suffix in _MODEL_ID_SUFFIXES:
+        if model_id.endswith(suffix):
+            return model_id[: -len(suffix)]
+    return model_id
+
+
+def per_model_env_var(model_id: str) -> str:
+    """Env var holding the self-hosted base URL for a specific model.
+
+    The base model and all its variants map to one variable, e.g. ``gem-1-bulk``,
+    ``gem-1-bulk_predict-metadata`` -> ``SYNTHESIZE_API_BASE_URL__GEM_1_BULK``.
+    """
+    key = re.sub(r"[^A-Z0-9]+", "_", _base_model_id(model_id).upper())
+    return f"{API_BASE_URL_ENV}__{key}"
+
+
+def resolve_base_url(
+    api_base_url: Optional[str] = None, model_id: Optional[str] = None
+) -> str:
+    """Resolve the API base URL for a request.
+
+    Precedence: explicit ``api_base_url`` arg > per-model env var
+    (``SYNTHESIZE_API_BASE_URL__<MODEL>``) > global ``SYNTHESIZE_API_BASE_URL`` >
+    production default. The per-model variable lets a scientist point each model
+    at its own self-hosted container once and never pass a URL on every call.
+    """
     if api_base_url and api_base_url != API_BASE_URL:
         return api_base_url
+    if model_id:
+        per_model = os.environ.get(per_model_env_var(model_id))
+        if per_model:
+            return per_model
     return os.environ.get(API_BASE_URL_ENV, API_BASE_URL)
 
 
