@@ -24,10 +24,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install build dependencies
-        run: |
-          uv pip install build twine setuptools
-          uv sync --all-extras --dev
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
 
       - name: Verify version matches tag
         run: |
@@ -44,15 +42,16 @@ jobs:
           echo "Version verification passed: $PACKAGE_VERSION"
 
       - name: Run tests
-        run: |
-          uv pip install pytest
-          pytest
+        run: uv run pytest
 
       - name: Build package
-        run: python -m build --no-isolation
+        # uv build resolves the PEP 517 backend (setuptools) in an isolated
+        # env, so it does not depend on setuptools being present in the synced
+        # venv (uv sync prunes anything not in the lockfile).
+        run: uv build
 
       - name: Verify package
-        run: twine check dist/*
+        run: uvx twine check dist/*
 
       - name: Store the distribution packages
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
