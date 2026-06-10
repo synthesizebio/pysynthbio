@@ -26,13 +26,17 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          uv pip install build twine setuptools toml
+          uv pip install build twine setuptools
           uv sync --all-extras --dev
 
       - name: Verify version matches tag
         run: |
           TAG_VERSION=${GITHUB_REF#refs/tags/v}
-          PACKAGE_VERSION=$(python -c "import toml; print(toml.load('pyproject.toml')['project']['version'])")
+          # Read [project].version without a non-stdlib module or a specific
+          # interpreter on PATH. The previous `python -c "import toml"` failed
+          # with ModuleNotFoundError because toml was only installed in the uv
+          # venv, not the python resolved here.
+          PACKAGE_VERSION=$(grep -m1 -E '^version *= *"' pyproject.toml | sed -E 's/^version *= *"([^"]+)".*/\1/')
           if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "Version mismatch: Tag version ($TAG_VERSION) doesn't match package version ($PACKAGE_VERSION)"
             exit 1
