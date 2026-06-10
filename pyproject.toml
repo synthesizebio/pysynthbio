@@ -1,6 +1,6 @@
 [project]
 name = "pysynthbio"
-version = "4.1.0"
+version = "4.2.0"
 requires-python = ">=3.10"
 description = "A package to retrieve data and models from Synthesize Bio's API"
 authors = [
@@ -24,14 +24,26 @@ build-backend = "setuptools.build_meta"
 Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 
+[tool.uv]
+# cryptography is a transitive dependency (keyring -> SecretStorage on Linux).
+# Constrain it to the latest 46.x to pick up security fixes while staying on the
+# 46 line (avoids a future lock silently jumping to a 47.x major). Bump the upper
+# bound deliberately when adopting cryptography 47.
+constraint-dependencies = ["cryptography>=46.0.7,<47"]
+
 [project.optional-dependencies]
 # Core optional dependencies - similar to R options
 secure = [
     "keyring>=23.0.0",
 ]
+# Talking to a self-hosted model container that streams Apache Arrow.
+self_hosted = [
+    "pyarrow>=15.0.0",
+]
 # Install all optional dependencies
 all = [
     "keyring>=23.0.0",
+    "pyarrow>=15.0.0",
 ]
 # Development dependencies
 dev = [
@@ -39,7 +51,7 @@ dev = [
     "pytest-cov>=4.0.0",
     "ruff",
     "mypy",
-    "black",
+    "black>=26.3.1",
     "build",
 ]
 
