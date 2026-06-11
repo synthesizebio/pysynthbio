@@ -1,0 +1,124 @@
+---
+title: "Self-hosted models"
+description: "Run Synthesize Bio models in your own environment via synchronous Apache Arrow streaming."
+---
+
+Partners who run Synthesize Bio models inside their own environment (for
+example, on a GPU host in their own cloud account) can use the same `pysynthbio`
+client against a self-hosted model container instead of the hosted API at
+`app.synthesize.bio`.
+
+<Note>
+  Self-hosting is a model deployment option available through a Synthesize Bio
+  partnership. Reach out to
+  [partnerships@synthesize.bio](mailto:partnerships@synthesize.bio) for more
+  information.
+</Note>
+
+## How it differs from the hosted path
+
+The hosted path is asynchronous: it starts a query, polls for completion, and
+downloads results. A self-hosted container instead returns predictions
+**synchronously** as an [Apache Arrow](https://arrow.apache.org/) IPC stream.
+`pysynthbio` decodes that stream into exactly the same data frames you get from
+the hosted path (`expression`, `metadata`, and `latents`), so downstream code
+does not change.
+
+Key differences:
+
+- **No polling and no download URL** — a single request returns the data.
+  `return_download_url=True` is not supported in self-hosted mode.
+- **Requires the optional `pyarrow` package** — install it with the
+  `self_hosted` extra: `pip install "pysynthbio[self_hosted]"`.
+- **No API key required** — a key is only sent when `SYNTHESIZE_API_KEY` is set
+  (use this if your container runs with authentication enabled).
+
+## Enabling self-hosted mode
+
+Set `self_hosted=True` on a call, or enable it for the whole session with the
+`SYNTHESIZE_SELF_HOSTED` environment variable (truthy values: `1`, `true`,
+`yes`, `on`).
+
+```python
+import os
+
+os.environ["SYNTHESIZE_SELF_HOSTED"] = "1"
+```
+
+## Pointing each model at its container
+
+Self-hosted deployments typically run one container per model. Set a per-model
+base URL once and you never have to pass `api_base_url` on individual calls.
+The variable name is `SYNTHESIZE_API_BASE_URL__<MODEL>`, where `<MODEL>` is the
+upper-cased model id with non-alphanumeric characters replaced by underscores
+(for example, `gem-1-bulk` becomes `SYNTHESIZE_API_BASE_URL__GEM_1_BULK`).
+
+```python
+import os
+
+import pysynthbio
+
+os.environ["SYNTHESIZE_API_BASE_URL__GEM_1_BULK"] = "https://gem-1-bulk.internal.example"
+os.environ["SYNTHESIZE_API_BASE_URL__GEM_1_SC"] = "https://gem-1-sc.internal.example"
+
+query = pysynthbio.get_example_query("gem-1-bulk", self_hosted=True)["example_query"]
+result = pysynthbio.predict_query(query, model_id="gem-1-bulk", self_hosted=True)
+
+expression = result["expression"]
+metadata = result["metadata"]
+```
+
+Variant slugs backed by the same container (for example,
+`gem-1-bulk_reference-conditioning` and `gem-1-bulk_predict-metadata`) resolve
+to the same per-model variable as their base model.
+
+### Resolution precedence
+
+The base URL is resolved in this order:
+
+1. An explicit `api_base_url` argument passed to the call.
+2. The per-model variable `SYNTHESIZE_API_BASE_URL__<MODEL>`.
+3. The global `SYNTHESIZE_API_BASE_URL`.
+4. The production default (`https://app.synthesize.bio`).
+
+You can always override the environment by passing `api_base_url` directly:
+
+```python
+result = pysynthbio.predict_query(
+    query,
+    model_id="gem-1-bulk",
+    api_base_url="https://gem-1-bulk.internal.example",
+    self_hosted=True,
+)
+```
+
+## Authentication (optional)
+
+Self-hosted containers may run without authentication. If yours requires a key,
+set `SYNTHESIZE_API_KEY` and the client attaches it as a bearer token:
+
+```python
+import os
+
+os.environ["SYNTHESIZE_API_KEY"] = "your-container-api-key"
+```
+
+## Raw responses
+
+Pass `raw_response=True` to receive the raw Apache Arrow IPC stream bytes
+instead of the transformed data frames. Decode them yourself with `pyarrow`:
+
+```python
+import io
+
+import pyarrow as pa
+
+raw = pysynthbio.predict_query(
+    query,
+    model_id="gem-1-bulk",
+    self_hosted=True,
+    raw_response=True,
+)
+
+table = pa.ipc.open_stream(io.BytesIO(raw)).read_all()
+```
