@@ -10,12 +10,14 @@ import requests
 
 from pysynthbio.call_model_api import _clean_error_message
 from pysynthbio.http_client import (
+    ARROW_STREAM_CONTENT_TYPE,
     AuthenticationError,
     NotFoundError,
     SynthesizeAPIError,
     ValidationError,
     api_request,
     get_json,
+    open_arrow_stream,
 )
 
 
@@ -232,6 +234,55 @@ class TestGetJson(unittest.TestCase):
             get_json("https://example.com/data.json")
 
         self.assertEqual(context.exception.status_code, 403)
+
+
+class TestOpenArrowStream(unittest.TestCase):
+    """Test cases for self-hosted Arrow stream requests."""
+
+    def setUp(self):
+        self.original_api_key = os.environ.get("SYNTHESIZE_API_KEY")
+
+    def tearDown(self):
+        if self.original_api_key is not None:
+            os.environ["SYNTHESIZE_API_KEY"] = self.original_api_key
+        elif "SYNTHESIZE_API_KEY" in os.environ:
+            del os.environ["SYNTHESIZE_API_KEY"]
+
+    @patch("pysynthbio.http_client.requests.post")
+    def test_no_authorization_header_without_token(self, mock_post):
+        os.environ.pop("SYNTHESIZE_API_KEY", None)
+        mock_response = MagicMock()
+        mock_response.raw = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        open_arrow_stream(
+            "/api/models/gem-1-bulk/predict",
+            api_base_url="http://box:8080",
+            json={"inputs": []},
+        )
+
+        headers = mock_post.call_args.kwargs["headers"]
+        self.assertEqual(headers["Accept"], ARROW_STREAM_CONTENT_TYPE)
+        self.assertNotIn("Authorization", headers)
+        self.assertTrue(mock_post.call_args.kwargs["stream"])
+
+    @patch("pysynthbio.http_client.requests.post")
+    def test_authorization_header_with_token(self, mock_post):
+        os.environ["SYNTHESIZE_API_KEY"] = "sbio_test"
+        mock_response = MagicMock()
+        mock_response.raw = MagicMock()
+        mock_response.raise_for_status.return_value = None
+        mock_post.return_value = mock_response
+
+        open_arrow_stream(
+            "/api/models/gem-1-bulk/predict",
+            api_base_url="http://box:8080",
+            json={"inputs": []},
+        )
+
+        headers = mock_post.call_args.kwargs["headers"]
+        self.assertEqual(headers["Authorization"], "Bearer sbio_test")
 
 
 class TestExceptionHierarchy(unittest.TestCase):

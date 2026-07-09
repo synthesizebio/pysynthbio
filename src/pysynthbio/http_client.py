@@ -2,6 +2,7 @@
 
 import os
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 import requests
@@ -22,6 +23,20 @@ ARROW_STREAM_CONTENT_TYPE = "application/vnd.apache.arrow.stream"
 # self-hosted container without code changes.
 SELF_HOSTED_ENV = "SYNTHESIZE_SELF_HOSTED"
 API_BASE_URL_ENV = "SYNTHESIZE_API_BASE_URL"
+CONFIG_FILE_ENV = "SYNTHESIZE_CONFIG"
+DEFAULT_CONFIG_PATH = "~/.config/synthbio/config.toml"
+
+_MODEL_ENDPOINT_ENVS = {
+    "gem-1-bulk": "SYNTHESIZE_ENDPOINT_GEM_1_BULK",
+    "gem-1-sc": "SYNTHESIZE_ENDPOINT_GEM_1_SC",
+    "gem-2": "SYNTHESIZE_ENDPOINT_GEM_2",
+}
+
+_CONFIG: dict[str, Any] = {
+    "api_base_url": None,
+    "self_hosted": None,
+    "model_endpoints": {},
+}
 
 
 def env_flag(name: str) -> bool:
@@ -45,11 +60,132 @@ def _base_model_id(model_id: str) -> str:
 def per_model_env_var(model_id: str) -> str:
     """Env var holding the self-hosted base URL for a specific model.
 
-    The base model and all its variants map to one variable, e.g. ``gem-1-bulk``,
-    ``gem-1-bulk_predict-metadata`` -> ``SYNTHESIZE_API_BASE_URL__GEM_1_BULK``.
+    The base model and all its variants map to one variable, e.g.
+    ``gem-1-bulk`` and ``gem-1-bulk_predict-metadata`` both resolve to
+    ``SYNTHESIZE_ENDPOINT_GEM_1_BULK``.
     """
+    base_model_id = _base_model_id(model_id)
+    if base_model_id in _MODEL_ENDPOINT_ENVS:
+        return _MODEL_ENDPOINT_ENVS[base_model_id]
+    key = re.sub(r"[^A-Z0-9]+", "_", base_model_id.upper())
+    return f"SYNTHESIZE_ENDPOINT_{key}"
+
+
+def legacy_per_model_env_var(model_id: str) -> str:
+    """Previous per-model env var spelling kept for backward compatibility."""
     key = re.sub(r"[^A-Z0-9]+", "_", _base_model_id(model_id).upper())
     return f"{API_BASE_URL_ENV}__{key}"
+
+
+def _model_config_key(model_id: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", _base_model_id(model_id).lower()).strip("_")
+
+
+def _normalize_base_url(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value:
+        return None
+    return value.rstrip("/")
+
+
+def _load_toml(path: Path) -> dict:
+    if not path.exists():
+        return {}
+    try:
+        import tomllib  # type: ignore[attr-defined]
+    except ModuleNotFoundError:  # pragma: no cover - Python 3.10 only
+        import tomli as tomllib
+
+    with path.open("rb") as handle:
+        return tomllib.load(handle)
+
+
+def _config_file_path() -> Path:
+    return Path(os.environ.get(CONFIG_FILE_ENV, DEFAULT_CONFIG_PATH)).expanduser()
+
+
+def _file_config() -> dict:
+    return _load_toml(_config_file_path())
+
+
+def _configured_endpoint(model_id: str) -> Optional[str]:
+    return _normalize_base_url(_CONFIG["model_endpoints"].get(_base_model_id(model_id)))
+
+
+def _env_endpoint(model_id: str) -> Optional[str]:
+    return _normalize_base_url(
+        os.environ.get(per_model_env_var(model_id))
+        or os.environ.get(legacy_per_model_env_var(model_id))
+    )
+
+
+def _file_endpoint(config: dict, model_id: str) -> Optional[str]:
+    base_model_id = _base_model_id(model_id)
+    key = _model_config_key(model_id)
+    candidates = (
+        f"endpoint_{key}",
+        f"endpoint_{key.upper()}",
+        base_model_id,
+        key,
+        key.upper(),
+    )
+
+    for candidate in candidates:
+        value = _normalize_base_url(config.get(candidate))
+        if value:
+            return value
+
+    for section_name in ("model_endpoints", "endpoints"):
+        section = config.get(section_name)
+        if not isinstance(section, dict):
+            continue
+        for candidate in candidates[2:]:
+            value = _normalize_base_url(section.get(candidate))
+            if value:
+                return value
+    return None
+
+
+def configure(
+    *,
+    api_base_url: Optional[str] = None,
+    endpoint_gem_1_bulk: Optional[str] = None,
+    endpoint_gem_1_sc: Optional[str] = None,
+    endpoint_gem_2: Optional[str] = None,
+    model_endpoints: Optional[dict[str, str]] = None,
+    self_hosted: Optional[bool] = None,
+    reset: bool = False,
+) -> None:
+    """Configure default endpoints for the current Python process.
+
+    Values passed here have higher precedence than environment variables and
+    config files. Passing ``reset=True`` clears previous process-level settings
+    before applying the provided values.
+    """
+    if reset:
+        _CONFIG["api_base_url"] = None
+        _CONFIG["self_hosted"] = None
+        _CONFIG["model_endpoints"] = {}
+
+    if api_base_url is not None:
+        _CONFIG["api_base_url"] = _normalize_base_url(api_base_url)
+    if self_hosted is not None:
+        _CONFIG["self_hosted"] = bool(self_hosted)
+
+    endpoints = {
+        "gem-1-bulk": endpoint_gem_1_bulk,
+        "gem-1-sc": endpoint_gem_1_sc,
+        "gem-2": endpoint_gem_2,
+    }
+    if model_endpoints:
+        endpoints.update({_base_model_id(k): v for k, v in model_endpoints.items()})
+
+    for model_id, endpoint in endpoints.items():
+        normalized = _normalize_base_url(endpoint)
+        if normalized:
+            _CONFIG["model_endpoints"][_base_model_id(model_id)] = normalized
 
 
 def resolve_base_url(
@@ -57,24 +193,55 @@ def resolve_base_url(
 ) -> str:
     """Resolve the API base URL for a request.
 
-    Precedence: explicit ``api_base_url`` arg > per-model env var
-    (``SYNTHESIZE_API_BASE_URL__<MODEL>``) > global ``SYNTHESIZE_API_BASE_URL`` >
-    production default. The per-model variable lets a scientist point each model
-    at its own self-hosted container once and never pass a URL on every call.
+    Precedence: explicit per-call ``api_base_url`` arg > ``configure(...)`` >
+    env vars > config file > production default.
     """
-    if api_base_url and api_base_url != API_BASE_URL:
-        return api_base_url
+    explicit_base_url = _normalize_base_url(api_base_url)
+    if explicit_base_url and explicit_base_url != API_BASE_URL:
+        return explicit_base_url
+
     if model_id:
-        per_model = os.environ.get(per_model_env_var(model_id))
-        if per_model:
-            return per_model
-    return os.environ.get(API_BASE_URL_ENV, API_BASE_URL)
+        configured = _configured_endpoint(model_id)
+        if configured:
+            return configured
+
+    configured_base_url = _normalize_base_url(_CONFIG.get("api_base_url"))
+    if configured_base_url:
+        return configured_base_url
+
+    if model_id:
+        env_endpoint = _env_endpoint(model_id)
+        if env_endpoint:
+            return env_endpoint
+
+    env_base_url = _normalize_base_url(os.environ.get(API_BASE_URL_ENV))
+    if env_base_url:
+        return env_base_url
+
+    config = _file_config()
+    if model_id:
+        config_endpoint = _file_endpoint(config, model_id)
+        if config_endpoint:
+            return config_endpoint
+
+    config_base_url = _normalize_base_url(config.get("api_base_url"))
+    if config_base_url:
+        return config_base_url
+
+    return API_BASE_URL
 
 
 def self_hosted_enabled(explicit: Optional[bool] = None) -> bool:
-    """Resolve self-hosted mode: explicit arg wins, else the env flag."""
+    """Resolve self-hosted mode: explicit arg > configure > env > config file."""
     if explicit is not None:
         return explicit
+    if _CONFIG["self_hosted"] is not None:
+        return bool(_CONFIG["self_hosted"])
+    if SELF_HOSTED_ENV in os.environ:
+        return env_flag(SELF_HOSTED_ENV)
+    config = _file_config()
+    if "self_hosted" in config:
+        return bool(config["self_hosted"])
     return env_flag(SELF_HOSTED_ENV)
 
 

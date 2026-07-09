@@ -23,6 +23,9 @@ from .http_client import (
 from .http_client import (
     ValidationError as ValidationError,
 )
+from .http_client import (
+    configure as configure,
+)
 from .key_handlers import (
     clear_synthesize_token as clear_synthesize_token,
 )
