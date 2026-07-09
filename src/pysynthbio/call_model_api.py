@@ -130,8 +130,9 @@ def predict_query(
         synchronously as an Apache Arrow stream (no polling, no download URL).
         Can also be enabled via the ``SYNTHESIZE_SELF_HOSTED`` environment
         variable. The container's base URL is taken from ``api_base_url``, then
-        the per-model env var ``SYNTHESIZE_API_BASE_URL__<MODEL>`` (e.g.
-        ``SYNTHESIZE_API_BASE_URL__GEM_1_BULK``), then ``SYNTHESIZE_API_BASE_URL``.
+        ``pysynthbio.configure(...)``, then per-model env vars such as
+        ``SYNTHESIZE_ENDPOINT_GEM_1_BULK``, then ``SYNTHESIZE_API_BASE_URL``,
+        then the config file.
         Authentication is optional and only sent when ``SYNTHESIZE_API_KEY`` is
         set. Default False.
     **kwargs : dict, optional

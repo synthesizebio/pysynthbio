@@ -23,9 +23,9 @@ def get_example_query(
     model_id : str
         The ID of the model to get an example query for.
     api_base_url : str, optional
-        Base URL for the API server. Defaults to the per-model env var
-        ``SYNTHESIZE_API_BASE_URL__<MODEL>``, then ``SYNTHESIZE_API_BASE_URL``,
-        then the production host.
+        Base URL for the API server. Defaults to configured per-model endpoints,
+        then env vars such as ``SYNTHESIZE_ENDPOINT_GEM_1_BULK``, then
+        ``SYNTHESIZE_API_BASE_URL``, then the config file, then production.
     self_hosted : bool, optional
         Talk to a self-hosted container (auth optional). Defaults to the
         ``SYNTHESIZE_SELF_HOSTED`` environment variable.

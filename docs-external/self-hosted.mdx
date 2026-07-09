@@ -49,17 +49,36 @@ os.environ["SYNTHESIZE_SELF_HOSTED"] = "1"
 
 Self-hosted deployments typically run one container per model. Set a per-model
 base URL once and you never have to pass `api_base_url` on individual calls.
-The variable name is `SYNTHESIZE_API_BASE_URL__<MODEL>`, where `<MODEL>` is the
-upper-cased model id with non-alphanumeric characters replaced by underscores
-(for example, `gem-1-bulk` becomes `SYNTHESIZE_API_BASE_URL__GEM_1_BULK`).
+You can configure endpoints in Python, with environment variables, or with a
+TOML config file.
+
+### Configure in Python
+
+Call `pysynthbio.configure(...)` once near process startup:
+
+```python
+import pysynthbio
+
+pysynthbio.configure(
+    self_hosted=True,
+    endpoint_gem_1_bulk="https://gem-1-bulk.internal.example",
+    endpoint_gem_1_sc="https://gem-1-sc.internal.example",
+    endpoint_gem_2="https://gem-2.internal.example",
+)
+```
+
+### Configure with environment variables
+
+Set the per-model endpoint variables for the containers you run:
 
 ```python
 import os
 
 import pysynthbio
 
-os.environ["SYNTHESIZE_API_BASE_URL__GEM_1_BULK"] = "https://gem-1-bulk.internal.example"
-os.environ["SYNTHESIZE_API_BASE_URL__GEM_1_SC"] = "https://gem-1-sc.internal.example"
+os.environ["SYNTHESIZE_ENDPOINT_GEM_1_BULK"] = "https://gem-1-bulk.internal.example"
+os.environ["SYNTHESIZE_ENDPOINT_GEM_1_SC"] = "https://gem-1-sc.internal.example"
+os.environ["SYNTHESIZE_ENDPOINT_GEM_2"] = "https://gem-2.internal.example"
 
 query = pysynthbio.get_example_query("gem-1-bulk", self_hosted=True)["example_query"]
 result = pysynthbio.predict_query(query, model_id="gem-1-bulk", self_hosted=True)
@@ -72,14 +91,33 @@ Variant slugs backed by the same container (for example,
 `gem-1-bulk_reference-conditioning` and `gem-1-bulk_predict-metadata`) resolve
 to the same per-model variable as their base model.
 
+### Configure with a file
+
+By default `pysynthbio` reads `~/.config/synthbio/config.toml`. Set
+`SYNTHESIZE_CONFIG` to point at a different file.
+
+```toml
+self_hosted = true
+api_base_url = "https://app.synthesize.bio"
+
+[model_endpoints]
+gem_1_bulk = "https://gem-1-bulk.internal.example"
+gem_1_sc = "https://gem-1-sc.internal.example"
+gem_2 = "https://gem-2.internal.example"
+```
+
 ### Resolution precedence
 
 The base URL is resolved in this order:
 
 1. An explicit `api_base_url` argument passed to the call.
-2. The per-model variable `SYNTHESIZE_API_BASE_URL__<MODEL>`.
-3. The global `SYNTHESIZE_API_BASE_URL`.
-4. The production default (`https://app.synthesize.bio`).
+2. Values passed to `pysynthbio.configure(...)`.
+3. Per-model environment variables (`SYNTHESIZE_ENDPOINT_GEM_1_BULK`,
+   `SYNTHESIZE_ENDPOINT_GEM_1_SC`, `SYNTHESIZE_ENDPOINT_GEM_2`).
+4. The global `SYNTHESIZE_API_BASE_URL`.
+5. The config file (`$SYNTHESIZE_CONFIG` or
+   `~/.config/synthbio/config.toml`).
+6. The production default (`https://app.synthesize.bio`).
 
 You can always override the environment by passing `api_base_url` directly:
 

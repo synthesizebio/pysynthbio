@@ -40,6 +40,12 @@ The canonical pysynthbio docs live at [docs.synthesize.bio/pysynthbio](https://d
 - [Get started](https://docs.synthesize.bio/pysynthbio/getting-started)
 - [Installation](https://docs.synthesize.bio/pysynthbio/installation)
 - [Models](https://docs.synthesize.bio/pysynthbio/models/baseline)
+- [Self-hosted models](https://docs.synthesize.bio/pysynthbio/self-hosted)
+
+For self-hosted model containers, install the Arrow extra with
+`pip install "pysynthbio[self_hosted]"`, then configure model endpoints with
+`pysynthbio.configure(...)`, environment variables such as
+`SYNTHESIZE_ENDPOINT_GEM_1_BULK`, or `$SYNTHESIZE_CONFIG`.
 
 The legacy GitHub Pages site at `synthesizebio.github.io/pysynthbio` redirects to the new URLs and is no longer updated. The MDX source for the customer-facing docs lives in [`docs-external/`](./docs-external) and is aggregated into [`docs-external`](https://github.com/synthesizebio/docs-external) by the Mintlify multirepo workflow.
 
