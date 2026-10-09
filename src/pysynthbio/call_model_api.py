@@ -2,6 +2,7 @@
 Core API functionality for the Synthesize Bio API
 """
 
+import math
 import time
 from typing import Any, Dict, Literal, Tuple, overload
 
@@ -44,6 +45,7 @@ def predict_query(
     poll_timeout_seconds: int = ...,
     return_download_url: Literal[True] = ...,
     raw_response: bool = ...,
+    self_hosted_timeout_seconds: float = ...,
     **kwargs: Any,
 ) -> Dict[str, str]: ...
 
@@ -58,6 +60,7 @@ def predict_query(
     poll_timeout_seconds: int = ...,
     return_download_url: bool = ...,
     raw_response: Literal[True] = ...,
+    self_hosted_timeout_seconds: float = ...,
     **kwargs: Any,
 ) -> dict: ...
 
@@ -72,6 +75,7 @@ def predict_query(
     poll_timeout_seconds: int = ...,
     return_download_url: bool = ...,
     raw_response: bool = ...,
+    self_hosted_timeout_seconds: float = ...,
     **kwargs: Any,
 ) -> Dict[str, pd.DataFrame]: ...
 
@@ -86,6 +90,7 @@ def predict_query(
     return_download_url: bool = False,
     raw_response: bool = False,
     self_hosted: bool | None = None,
+    self_hosted_timeout_seconds: float = SELF_HOSTED_TIMEOUT,
     **kwargs: Any,
 ) -> Dict[str, pd.DataFrame] | Dict[str, str] | dict:
     """
@@ -134,6 +139,10 @@ def predict_query(
         ``SYNTHESIZE_API_BASE_URL__GEM_1_BULK``), then ``SYNTHESIZE_API_BASE_URL``.
         Authentication is optional and only sent when ``SYNTHESIZE_API_KEY`` is
         set. Default False.
+    self_hosted_timeout_seconds : float, optional
+        Positive finite seconds to wait for a self-hosted prediction (default
+        600). Increase this for a model that needs longer to start from idle.
+        This does not change the hosted API polling timeout.
     **kwargs : dict, optional
         Additional parameters to include in the query body. These are passed
         directly to the API and validated server-side.
@@ -172,6 +181,7 @@ def predict_query(
             api_base_url=api_base_url,
             return_download_url=return_download_url,
             raw_response=raw_response,
+            self_hosted_timeout_seconds=self_hosted_timeout_seconds,
             **kwargs,
         )
 
@@ -259,6 +269,7 @@ def _predict_self_hosted(
     api_base_url: str,
     return_download_url: bool,
     raw_response: bool,
+    self_hosted_timeout_seconds: float = SELF_HOSTED_TIMEOUT,
     **kwargs: Any,
 ) -> Dict[str, pd.DataFrame] | bytes:
     """Synchronous Arrow-stream prediction against a self-hosted container."""
@@ -268,13 +279,21 @@ def _predict_self_hosted(
             "container returns results synchronously as an Arrow stream."
         )
 
+    if (
+        isinstance(self_hosted_timeout_seconds, bool)
+        or not isinstance(self_hosted_timeout_seconds, (int, float))
+        or not math.isfinite(self_hosted_timeout_seconds)
+        or self_hosted_timeout_seconds <= 0
+    ):
+        raise ValueError("self_hosted_timeout_seconds must be a positive finite number")
+
     query = {**query, "source": "pysynthbio", **kwargs}
 
     with open_arrow_stream(
         endpoint=f"/api/models/{model_id}/predict",
         api_base_url=api_base_url,
         json=query,
-        timeout=SELF_HOSTED_TIMEOUT,
+        timeout=self_hosted_timeout_seconds,
     ) as response:
         if raw_response:
             return response.content

@@ -122,3 +122,21 @@ raw = pysynthbio.predict_query(
 
 table = pa.ipc.open_stream(io.BytesIO(raw)).read_all()
 ```
+
+## Waiting for a model to start
+
+A model that has been idle may need time to load before its first prediction.
+The default request timeout is 600 seconds (10 minutes). Set
+`self_hosted_timeout_seconds` to allow a longer wait:
+
+```python
+result = pysynthbio.predict_query(
+    query,
+    model_id="gem-1-bulk",
+    self_hosted=True,
+    self_hosted_timeout_seconds=1800,
+)
+```
+
+The value must be a positive, finite number of seconds. It controls the HTTP
+request timeout; it does not change the model inputs or hosted API polling.
