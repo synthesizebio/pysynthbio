@@ -169,6 +169,3 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-# Generated local Claude adapter; signed API commits cannot preserve symlink mode.
-.claude/skills
