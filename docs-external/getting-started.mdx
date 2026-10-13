@@ -60,6 +60,8 @@ There are several ways to make `pysynthbio` aware of your token.
 
 Synthesize Bio provides several model types for different use cases.
 
+This guide uses GEM-1 models. GEM-2 is currently available only to Synthesize Bio staff.
+
 ### Baseline models
 
 Generate synthetic gene expression data from metadata alone. Describe the biological conditions and the model generates realistic expression profiles.
@@ -88,7 +90,7 @@ Infer metadata from observed expression data. Given a gene expression profile, p
 See [Metadata prediction](/pysynthbio/models/metadata-prediction) for detailed usage.
 
 <Note>
-  Only baseline models are available to all users. Check programmatically with `list_models()`. Contact [support@synthesize.bio](mailto:support@synthesize.bio) if you have questions.
+  Only the GEM-1 baseline models listed here are available to all users. Check programmatically with `list_models()`. Contact [support@synthesize.bio](mailto:support@synthesize.bio) if you have questions.
 </Note>
 
 ### Listing available models
@@ -170,7 +172,7 @@ The complete response remains available for programmatic handling:
 
 ```python
 try:
-    result = pysynthbio.predict_query(query, model_id="gem-2-sc")
+    result = pysynthbio.predict_query(query, model_id="gem-1-bulk")
 except pysynthbio.ValidationError as error:
     print(error)                 # readable field corrections
     print(error.status_code)     # HTTP status
