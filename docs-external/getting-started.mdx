@@ -160,3 +160,20 @@ Can't store password on keychain: (-25244, 'Unknown Error')
 ```
 
 Your IDE or terminal does not have access to Keychain. Open **System Preferences -> Security & Privacy -> Privacy -> Full Disk Access** and add the terminal or IDE you're working from.
+
+## Request validation errors
+
+For hosted HTTP 400/422 responses, `predict_query()` raises `pysynthbio.ValidationError`.
+When Platform returns field corrections, the exception displays one path and message
+per line. Older or malformed response formats retain their original error text.
+The complete response remains available for programmatic handling:
+
+```python
+try:
+    result = pysynthbio.predict_query(query, model_id="gem-2-sc")
+except pysynthbio.ValidationError as error:
+    print(error)                 # readable field corrections
+    print(error.status_code)     # HTTP status
+    print(error.response_body)   # original response text
+    print(error.response_json)   # parsed JSON, or None if invalid JSON
+```

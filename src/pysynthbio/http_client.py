@@ -1,5 +1,6 @@
 """Centralized HTTP client with consistent error handling for the Synthesize Bio API."""
 
+import json as jsonlib
 import os
 import re
 from typing import Any, Optional
@@ -101,7 +102,49 @@ class NotFoundError(SynthesizeAPIError):
 class ValidationError(SynthesizeAPIError):
     """Raised when the API returns a validation error (400/422)."""
 
-    pass
+    def __init__(
+        self,
+        message: str,
+        status_code: Optional[int] = None,
+        *,
+        response_body: Optional[str] = None,
+        response_json: Any = None,
+    ):
+        super().__init__(message, status_code=status_code)
+        self.response_body = response_body
+        self.response_json = response_json
+
+
+def _validation_error(status: int, body: str) -> ValidationError:
+    """Render field corrections, retaining the full response for callers."""
+    try:
+        payload = jsonlib.loads(body)
+    except ValueError:
+        payload = None
+    message = f"Invalid request ({status}): {body}"
+    errors = payload.get("errors") if isinstance(payload, dict) else None
+    if (
+        isinstance(errors, list)
+        and errors
+        and all(
+            isinstance(issue, dict)
+            and isinstance(issue.get("path"), str)
+            and isinstance(issue.get("message"), str)
+            and issue["message"].strip()
+            for issue in errors
+        )
+    ):
+        summary = payload.get("error")
+        if not isinstance(summary, str) or not summary.strip():
+            summary = "Invalid request"
+        lines = [f"{summary} ({status}):"]
+        lines.extend(
+            f"- {issue['path'] or '(request)'}: {issue['message']}" for issue in errors
+        )
+        message = "\n".join(lines)
+    return ValidationError(
+        message, status_code=status, response_body=body, response_json=payload
+    )
 
 
 def api_request(
@@ -186,10 +229,7 @@ def api_request(
                 status_code=status,
             ) from err
         elif status in (400, 422):
-            raise ValidationError(
-                f"Invalid request ({status}): {body}",
-                status_code=status,
-            ) from err
+            raise _validation_error(status, body) from err
         else:
             raise SynthesizeAPIError(
                 f"API request failed ({status}): {body}",

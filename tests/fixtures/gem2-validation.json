@@ -1,0 +1,39 @@
+{
+  "error": "Invalid GEM-2 request",
+  "errors": [
+    {
+      "path": "inputs[0].metadata.age_years",
+      "code": "invalid_type",
+      "message": "Omit age_years when unknown; null is not accepted."
+    },
+    {
+      "path": "inputs[0].metadata.cell_line_name",
+      "code": "unknown_field",
+      "message": "Use the public field cell_line instead of cell_line_name. Use its supported vocabulary value."
+    },
+    {
+      "path": "inputs[0].metadata.cell_type_ontology_id",
+      "code": "unknown_field",
+      "message": "Use the public field cell_type instead of cell_type_ontology_id. Use its supported vocabulary value."
+    },
+    {
+      "path": "inputs[0].metadata.disease_ontology_id",
+      "code": "unknown_field",
+      "message": "Use the public field disease instead of disease_ontology_id. Use its supported vocabulary value."
+    },
+    {
+      "path": "inputs[0].metadata.tissue_ontology_id",
+      "code": "unknown_field",
+      "message": "Use the public field tissue instead of tissue_ontology_id. Use its supported vocabulary value."
+    }
+  ],
+  "details": {
+    "formErrors": [],
+    "fieldErrors": {
+      "inputs": [
+        "Expected number, received null",
+        "Unrecognized key(s) in object: 'cell_line_name', 'cell_type_ontology_id', 'disease_ontology_id', 'tissue_ontology_id'"
+      ]
+    }
+  }
+}
