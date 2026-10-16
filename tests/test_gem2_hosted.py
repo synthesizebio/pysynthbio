@@ -86,3 +86,30 @@ def test_ordinary_gem2_client_dispatch(operation, suffix, canonical, modality):
                 == [{"model_release_id": "qualified", "vae_run_id": "same-vae"}] * 2
             )
     assert content == original
+
+
+@pytest.mark.parametrize(
+    "operation",
+    ["predict-expression", "predict-expression-from-reference", "autoencode"],
+)
+@pytest.mark.parametrize("mixed", [False, True])
+def test_missing_and_null_rows_preserve_gem2_alignment(operation, mixed):
+    from pysynthbio.gem2_output_transformers import gem2_output_transformer
+
+    rows = [{"counts": [16777217, 2], "metadata": None}, {"counts": [3, 4]}]
+    if mixed:
+        rows[1].update(metadata={"tissue": "liver"}, latents={"generated": [0.1, 0.2]})
+    if operation == "autoencode":
+        for row in rows:
+            row.update(model_release_id="qualified", vae_run_id="same-vae")
+    content = {"outputs": rows, "gene_order": ["gene1", "gene2"]}
+    before = deepcopy(content)
+    result = gem2_output_transformer("gem-2", {"operation": operation})(content)
+    assert result["expression"].values.tolist() == [[16777217, 2], [3, 4]]
+    assert result["metadata"].shape == (2, 1 if mixed else 0)
+    assert result["latents"].shape == (2, 1 if mixed else 0)
+    if mixed:
+        assert result["metadata"]["tissue"].isna().tolist() == [True, False]
+        assert result["latents"]["generated"].iloc[1] == [0.1, 0.2]
+        assert result["latents"]["generated"].isna().tolist() == [True, False]
+    assert content == before

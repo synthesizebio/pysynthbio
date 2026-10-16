@@ -35,9 +35,21 @@ def transform_gem2_metadata(content: dict) -> dict:
     }
 
 
+def transform_gem2_expression(content: dict) -> dict:
+    # Preserve positions for absent/null metadata or optional embedding rows.
+    rows = [
+        {
+            **row,
+            "metadata": {} if row.get("metadata") is None else row["metadata"],
+            "latents": {} if row.get("latents") is None else row["latents"],
+        }
+        for row in content["outputs"]
+    ]
+    return transform_standard_model_output({**content, "outputs": rows})
+
+
 def transform_gem2_autoencode(content: dict) -> dict:
-    result = transform_standard_model_output(content)
-    result["latents"] = pd.DataFrame(index=range(len(content["outputs"])))
+    result = transform_gem2_expression(content)
     result["provenance"] = pd.DataFrame(
         [
             {key: row[key] for key in ("model_release_id", "vae_run_id")}
@@ -58,8 +70,8 @@ def gem2_output_transformer(model_id: str, query: dict) -> Callable | None:
     else:
         return None
     return {
-        "predict-expression": transform_standard_model_output,
-        "predict-expression-from-reference": transform_standard_model_output,
+        "predict-expression": transform_gem2_expression,
+        "predict-expression-from-reference": transform_gem2_expression,
         "predict-metadata": transform_gem2_metadata,
         "autoencode": transform_gem2_autoencode,
     }.get(operation)
