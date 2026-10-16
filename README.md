@@ -46,3 +46,51 @@ The legacy GitHub Pages site at `synthesizebio.github.io/pysynthbio` redirects t
 ## Questions? Suggestions? Support?
 
 Email us at [support@synthesize.bio](mailto:support@synthesize.bio). We'd love to hear from you!
+
+## Hosted GEM-2 operations
+
+Use `predict_query(..., model_id="gem-2")` for a release that supports the requested
+operation. GEM-2 uses `operation` to select `predict-expression`,
+`predict-expression-from-reference`, `predict-metadata`, or `autoencode`.
+The server checks support for the selected release and modality.
+
+```python
+import pysynthbio
+
+query = {
+    "operation": "predict-expression",
+    "inputs": {
+        "modality": "bulk",
+        "items": [{
+            "metadata": {
+                "sample_type": "primary tissue",
+                "library_layout": "PAIRED",
+                "library_selection": "cDNA",
+                "tissue": "liver",
+                "bioactive_entity_perturbations": [{"smiles": "CCO"}],
+                "gene_perturbations": [],
+                "infection_perturbations": [],
+            },
+            "num_samples": 1,
+            "output_total": {"type": "custom", "value": 8478},
+        }],
+    },
+    "options": {"seed": 42, "sampling_strategy": "mean estimation"},
+}
+result = pysynthbio.predict_query(query, model_id="gem-2")
+```
+
+SMILES and direct ChEMBL IDs require an enabled molecule release. For a ChEMBL ID,
+replace `{"smiles": "CCO"}` with `{"entity_ontology_id": "CHEMBL3261331"}`.
+Supply exactly one of `entity`, `entity_ontology_id`, or `smiles` per molecule;
+`entity` retains the supported-name lookup. Pin a release with the optional
+request field `release` when testing a candidate.
+
+Expression results contain `expression`, `metadata`, and `latents` DataFrames.
+Metadata prediction contains predicted `metadata`, `classifier_probs`, and
+`latents` with the `encoded` column; its `expression` has one row per result and
+no columns because this operation does not generate counts. Reconstruction
+(`autoencode`) retains counts and returns a `provenance` DataFrame with each
+row's `model_release_id` and `vae_run_id`. Its `latents` has no columns.
+Existing GEM-2 compatibility model names also use these operation-aware formats.
+`raw_response=True` continues to return the original response unchanged.

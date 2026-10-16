@@ -8,6 +8,7 @@ from typing import Any, Dict, Literal, Tuple, overload
 import pandas as pd
 
 from pysynthbio.arrow_transformers import transform_arrow_stream
+from pysynthbio.gem2_output_transformers import gem2_output_transformer
 from pysynthbio.http_client import (
     API_BASE_URL,
     DEFAULT_TIMEOUT,
@@ -242,7 +243,9 @@ def predict_query(
     if raw_response:
         return final_json
 
-    transformer = OUTPUT_TRANSFORMERS.get(model_id)
+    transformer = gem2_output_transformer(model_id, query) or OUTPUT_TRANSFORMERS.get(
+        model_id
+    )
     if transformer is None:
         raise ValueError(
             f"No output formatter registered for model_id '{model_id}'. "
