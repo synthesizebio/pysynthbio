@@ -1,0 +1,86 @@
+---
+title: "VERDICT API"
+description: "Call GEM-2, Safety, Outcome, and trial workflows with VerdictClient."
+---
+
+`VerdictClient` connects to VERDICT independently of the legacy Platform client.
+
+<Note>
+This interface targets pysynthbio 4.3.0. The API is in preview; client publication and live model qualification are separate rollout steps. Use an API-enabled deployment and a client build that includes `VerdictClient`.
+</Note>
+
+## Connect
+
+Create a key on your VERDICT deployment's **API keys** page at `/app/api-keys`. Set `VERDICT_API_KEY` in your environment. For a preview deployment, also set `VERDICT_API_BASE_URL` to its HTTPS origin without an `/api/v1` suffix.
+
+```python
+from pysynthbio import VerdictClient, VerdictAPIError
+
+client = VerdictClient()  # Reads VERDICT_API_KEY
+models = client.models()
+```
+
+The default origin is `https://verdict.synthesize.bio`. You can also pass `api_key`, `api_base_url`, and an HTTP `timeout` in seconds to the constructor. Existing `SYNTHESIZE_API_KEY` and Platform functions keep their existing behavior. A Platform key cannot authorize VERDICT requests.
+
+## Run a model
+
+```python
+example = client.example("safety")
+run = client.predict(
+    "safety",
+    **example,
+    idempotency_key="safety-notebook-1",
+)
+run_id = run["id"]  # Persist this before polling
+status = client.wait(run_id, timeout=1800, interval=5)
+print(status["status"], status.get("failureCode"))
+
+# A terminal run may be failed or scientifically unavailable.
+if status.get("result") is not None:
+    result = client.result(run_id)
+```
+
+`wait()` returns all terminal states, including failures. Inspect the status and scientific result before using predictions. If polling raises `TimeoutError`, resume with `client.run(run_id)` or `client.wait(run_id)`. Polling does not resubmit inference.
+
+For GEM-2, choose an operation explicitly:
+
+```python
+example = client.example("gem-2", operation="baseline")
+run = client.predict("gem-2", **example, idempotency_key="gem2-notebook-1")
+```
+
+Other GEM-2 operations are `reference_conditioned`, `predict_metadata`, and `autoencode`. Outcome uses model `outcome` with operation `predict_analysis_outcome`. Read the [model guide](/platform/verdict/models) for schemas, count ordering, and release behavior. An optional `release` argument pins an exact advertised release.
+
+## Submit a trial workflow
+
+Save the [workflow example](/platform/verdict/workflows) as `workflow-input.json`, then:
+
+```python
+import json
+
+with open("workflow-input.json") as source:
+    workflow_input = json.load(source)
+
+run = client.submit_workflow(workflow_input, idempotency_key="trial-notebook-1")
+run_id = run["id"]
+status = client.wait(run_id)
+history = client.workflows()
+```
+
+Use `client.result(run_id)` to retrieve the saved consolidated report once it is available. Workflow history includes your UI and API trials; independent model calls are retrieved by ID.
+
+## Handle errors and retries
+
+```python
+try:
+    status = client.run(run_id)
+except VerdictAPIError as error:
+    print(error.status_code)
+    print(error.details)
+```
+
+HTTP errors preserve status and structured server details. Non-JSON responses also raise `VerdictAPIError`. Transport errors from `requests` propagate separately.
+
+Retain a stable `idempotency_key` before submitting and reuse it with the unchanged input after an uncertain transport failure. Keys must be nonblank strings of at most 180 characters. Omitting the key generates a new UUID for each call, so use an explicit key when you need to recover a submission whose response was lost.
+
+The client returns dictionaries and lists without converting scientific outputs into a matrix. Keep the complete saved JSON, including provenance and unavailable values. See the [HTTP reference](/platform/verdict/reference) for limits and error codes.
