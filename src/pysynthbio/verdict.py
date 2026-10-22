@@ -60,10 +60,23 @@ class VerdictClient:
         try:
             result = response.json()
         except ValueError:
-            result = {"error": "non_json_response", "status": response.status_code}
+            raise VerdictAPIError(
+                response.status_code,
+                {"error": "non_json_response", "body": response.text},
+            ) from None
         if not 200 <= response.status_code < 300:
             raise VerdictAPIError(response.status_code, result)
         return result
+
+    @staticmethod
+    def _submission_key(value):
+        if value is None:
+            return str(uuid4())
+        if not isinstance(value, str) or not value.strip() or len(value) > 180:
+            raise ValueError(
+                "idempotency_key must be a nonblank string of at most 180 characters"
+            )
+        return value
 
     def models(self):
         """Discover models, operations, input schemas, releases and limits."""
@@ -84,7 +97,7 @@ class VerdictClient:
             "POST",
             f"models/{quote(model, safe='')}/predict",
             body,
-            idempotency_key=idempotency_key or str(uuid4()),
+            idempotency_key=self._submission_key(idempotency_key),
         )
 
     def run(self, run_id):
@@ -103,7 +116,7 @@ class VerdictClient:
             "workflows",
             {
                 "input": input,
-                "idempotencyKey": idempotency_key or str(uuid4()),
+                "idempotencyKey": self._submission_key(idempotency_key),
             },
         )
 

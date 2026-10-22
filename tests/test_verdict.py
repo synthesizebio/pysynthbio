@@ -52,3 +52,25 @@ def test_endpoint_never_allows_plaintext_or_embedded_credentials():
     for origin in ["http://verdict.synthesize.bio", "https://user:secret@example.org"]:
         with pytest.raises(ValueError):
             VerdictClient("key", origin)
+
+
+def test_malformed_success_and_http_errors_preserve_diagnostic_body():
+    for status in (200, 502):
+        reply = Mock(status_code=status, text="upstream unavailable")
+        reply.json.side_effect = ValueError("not JSON")
+        with patch("pysynthbio.verdict.requests.request", return_value=reply):
+            with pytest.raises(VerdictAPIError) as failure:
+                VerdictClient("key").models()
+            assert failure.value.status_code == status
+            assert failure.value.details["body"] == "upstream unavailable"
+
+
+def test_explicit_unusable_idempotency_keys_are_rejected_before_sending():
+    client = VerdictClient("key")
+    with patch("pysynthbio.verdict.requests.request") as send:
+        for key in ("", "  ", 42):
+            with pytest.raises(ValueError, match="idempotency_key"):
+                client.predict("safety", "predict", {}, idempotency_key=key)
+            with pytest.raises(ValueError, match="idempotency_key"):
+                client.submit_workflow({}, idempotency_key=key)
+        send.assert_not_called()
