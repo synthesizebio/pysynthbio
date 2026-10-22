@@ -46,3 +46,29 @@ The legacy GitHub Pages site at `synthesizebio.github.io/pysynthbio` redirects t
 ## Questions? Suggestions? Support?
 
 Email us at [support@synthesize.bio](mailto:support@synthesize.bio). We'd love to hear from you!
+
+## VERDICT models and trials
+
+Create a key at [VERDICT API keys](https://verdict.synthesize.bio/app/api-keys)
+and set `VERDICT_API_KEY`. This additive client preserves the existing Platform
+functions and defaults, including GEM-1. VERDICT supports GEM-2, Safety, Outcome
+and complete trial workflows. Results retain their scientific JSON structure.
+
+```python
+from pysynthbio import VerdictClient
+
+client = VerdictClient()  # VERDICT_API_BASE_URL can select a preview
+models = client.models()
+example = client.example("safety")
+run = client.predict("safety", **example, idempotency_key="safety-1")
+status = client.wait(run["id"])
+result = client.result(run["id"])
+```
+
+Use `client.submit_workflow(workflow_input, idempotency_key="trial-1")` for the
+same workflow available in VERDICT. Retain run IDs to resume polling or retrieve
+saved results. Reuse a submission key after an uncertain network failure;
+submitting different input under the same key returns a conflict.
+`VerdictAPIError.status_code` and `.details` preserve structured server errors.
+The client does not silently route GEM-1 to Platform or coerce model outputs into
+expression matrices. Package publication follows deployed API qualification.

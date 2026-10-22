@@ -38,3 +38,5 @@ from .key_handlers import (
 from .list_models import (
     list_models as list_models,
 )
+from .verdict import VerdictAPIError as VerdictAPIError
+from .verdict import VerdictClient as VerdictClient
