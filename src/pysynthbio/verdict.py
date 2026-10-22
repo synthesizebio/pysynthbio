@@ -125,13 +125,12 @@ class VerdictClient:
         if timeout <= 0 or interval <= 0:
             raise ValueError("timeout and interval must be positive")
         deadline = time.monotonic() + timeout
-        while True:
+        while time.monotonic() < deadline:
             run = self.run(run_id)
             if run["status"] not in {"queued", "running"}:
                 return run
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise TimeoutError(
-                    f"VERDICT run {run_id} is still running; resume polling"
-                )
+                break
             time.sleep(min(interval, remaining))
+        raise TimeoutError(f"VERDICT run {run_id} is still running; resume polling")

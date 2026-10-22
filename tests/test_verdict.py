@@ -74,3 +74,25 @@ def test_explicit_unusable_idempotency_keys_are_rejected_before_sending():
             with pytest.raises(ValueError, match="idempotency_key"):
                 client.submit_workflow({}, idempotency_key=key)
         send.assert_not_called()
+
+
+def test_polling_deadline_prevents_another_request_and_allows_resumption():
+    client = VerdictClient("key")
+    clock = 0
+
+    def sleep(seconds):
+        nonlocal clock
+        clock += seconds
+
+    with patch("pysynthbio.verdict.time.monotonic", side_effect=lambda: clock):
+        with patch("pysynthbio.verdict.time.sleep", side_effect=sleep) as pause:
+            with patch.object(
+                client, "run", return_value={"status": "running"}
+            ) as poll:
+                with pytest.raises(TimeoutError, match="saved-id.*resume polling"):
+                    client.wait("saved-id", timeout=1, interval=5)
+                pause.assert_called_once_with(1)
+                poll.assert_called_once_with("saved-id")
+                poll.return_value = {"status": "complete"}
+                assert client.wait("saved-id")["status"] == "complete"
+                assert poll.call_count == 2

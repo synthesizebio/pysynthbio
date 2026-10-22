@@ -25,10 +25,10 @@ Homepage = "https://github.com/synthesizebio/pysynthbio"
 Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 
 [tool.uv]
-# Fix the scanner-reported cryptography and urllib3 vulnerabilities at their
-# minimum patched versions. cryptography is used by Linux keyring/SecretStorage;
+# Fix scanner-reported TLS dependency vulnerabilities at their minimum patched
+# versions. cryptography is used by Linux keyring/SecretStorage;
 # urllib3 is used by requests. These constraints govern the development lock.
-constraint-dependencies = ["cryptography==50.0.0", "urllib3==2.8.0"]
+constraint-dependencies = ["certifi==2026.10.19", "cryptography==50.0.0", "urllib3==2.8.0"]
 
 [project.optional-dependencies]
 # Core optional dependencies - similar to R options
