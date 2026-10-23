@@ -1,5 +1,6 @@
 """VERDICT's versioned JSON API, independent of legacy Platform defaults."""
 
+import math
 import os
 import time
 from urllib.parse import quote, urlparse
@@ -15,6 +16,27 @@ class VerdictAPIError(RuntimeError):
         self.status_code = status_code
         self.details = details
         super().__init__(f"VERDICT HTTP {status_code}: {details}")
+
+
+class TrialTimeoutError(TimeoutError):
+    """An existing trial is still running; resume with wait_for_trial(run_id)."""
+
+    def __init__(self, run_id):
+        self.run_id = run_id
+        super().__init__(
+            f"Trial {run_id} is still running; use wait_for_trial({run_id!r})"
+        )
+
+
+class TrialRunError(RuntimeError):
+    """A terminal trial has no report. The run ID and server state are retained."""
+
+    def __init__(self, run_id, status):
+        self.run_id, self.status = run_id, status
+        super().__init__(
+            f"Trial {run_id} has no report: {status.get('status')} / "
+            f"{status.get('failureCode')}"
+        )
 
 
 class VerdictClient:
@@ -134,3 +156,58 @@ class VerdictClient:
                 break
             time.sleep(min(interval, remaining))
         raise TimeoutError(f"VERDICT run {run_id} is still running; resume polling")
+
+    @staticmethod
+    def _trial_polling_options(timeout, poll_interval):
+        if (
+            not math.isfinite(timeout)
+            or timeout <= 0
+            or not math.isfinite(poll_interval)
+            or poll_interval <= 0
+        ):
+            raise ValueError("timeout and poll_interval must be finite and positive")
+
+    def run_trial(self, trial_input, *, idempotency_key, timeout=3600, poll_interval=5):
+        """Submit a live trial and wait for a TrialResult.
+
+        Reuse idempotency_key for retries of the same input, including after a
+        lost response or kernel restart. Use a new key for intentional new
+        inference. No local cache or automatic filesystem writes are involved.
+        A TrialTimeoutError retains run_id for wait_for_trial. HTTP errors remain
+        VerdictAPIError; failed runs without reports raise TrialRunError.
+        """
+        from .trials import _validate_report
+
+        self._trial_polling_options(timeout, poll_interval)
+        if idempotency_key is None:
+            raise ValueError("run_trial requires an explicit idempotency_key")
+        key = self._submission_key(idempotency_key)
+        execution = self.workflows()["execution"]
+        if execution.get("mode") != "live":
+            raise RuntimeError("Deployment is not in live mode; no trial was submitted")
+        submitted = self.submit_workflow(trial_input, idempotency_key=key)
+        result = self.wait_for_trial(
+            submitted["id"], timeout=timeout, poll_interval=poll_interval
+        )
+        _validate_report(result.raw, submitted["id"], trial_input)
+        result.provenance["execution"] = execution
+        return result
+
+    def wait_for_trial(self, run_id, *, timeout=3600, poll_interval=5):
+        """Wait for an existing trial and return its report; never submit inference."""
+        self._trial_polling_options(timeout, poll_interval)
+        try:
+            status = self.wait(run_id, timeout=timeout, interval=poll_interval)
+        except TimeoutError as exc:
+            raise TrialTimeoutError(run_id) from exc
+        if status.get("result") is None:
+            raise TrialRunError(run_id, status)
+        return self.get_trial_result(run_id)
+
+    def get_trial_result(self, run_id):
+        """Fetch a completed TrialResult once. No submission or polling."""
+        from .trials import TrialResult, _validate_report
+
+        report = self.result(run_id)
+        _validate_report(report, run_id)
+        return TrialResult(report, self.api_base_url, "Retrieved from the VERDICT API")

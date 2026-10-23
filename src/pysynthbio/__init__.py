@@ -38,5 +38,10 @@ from .key_handlers import (
 from .list_models import (
     list_models as list_models,
 )
+from .trials import TrialResult as TrialResult
+from .trials import load_trial as load_trial
+from .trials import load_trial_result as load_trial_result
+from .verdict import TrialRunError as TrialRunError
+from .verdict import TrialTimeoutError as TrialTimeoutError
 from .verdict import VerdictAPIError as VerdictAPIError
 from .verdict import VerdictClient as VerdictClient

@@ -31,6 +31,8 @@ Issues = "https://github.com/synthesizebio/pysynthbio/issues"
 constraint-dependencies = ["certifi==2026.10.19", "cryptography==50.0.0", "urllib3==2.8.0"]
 
 [project.optional-dependencies]
+# Notebook displays and saved-result charts; HTTP clients do not need these.
+verdict = ["matplotlib>=3.9,<4", "ipython>=8"]
 # Core optional dependencies - similar to R options
 secure = [
     "keyring>=23.0.0",
@@ -41,6 +43,8 @@ self_hosted = [
 ]
 # Install all optional dependencies
 all = [
+    "matplotlib>=3.9,<4",
+    "ipython>=8",
     "keyring>=23.0.0",
     "pyarrow>=15.0.0",
 ]
