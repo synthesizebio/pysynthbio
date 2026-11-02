@@ -3,6 +3,7 @@
 import math
 import os
 import time
+from pathlib import Path
 from urllib.parse import quote, urlparse
 from uuid import uuid4
 
@@ -67,7 +68,17 @@ class VerdictClient:
             raise ValueError("api_base_url must be an HTTPS origin without credentials")
         self.timeout = timeout
 
-    def _request(self, method, path, body=None, idempotency_key=None):
+    def _request(
+        self,
+        method,
+        path,
+        body=None,
+        idempotency_key=None,
+        *,
+        form=None,
+        files=None,
+        timeout=None,
+    ):
         headers = {"Authorization": f"Bearer {self.api_key}"}
         if idempotency_key is not None:
             headers["Idempotency-Key"] = idempotency_key
@@ -76,7 +87,12 @@ class VerdictClient:
             f"{self.api_base_url}/api/v1/{path}",
             headers=headers,
             json=body,
-            timeout=self.timeout,
+            timeout=self.timeout if timeout is None else timeout,
+            **(
+                {"data": form, "files": files}
+                if form is not None or files is not None
+                else {}
+            ),
             allow_redirects=False,
         )
         try:
@@ -99,6 +115,50 @@ class VerdictClient:
                 "idempotency_key must be a nonblank string of at most 180 characters"
             )
         return value
+
+    def import_trial(self, *, nct_id=None, document=None, timeout=210):
+        """Propose a trial draft using Synthia 2.0; never submit an analysis.
+
+        Supply exactly one NCT ID or local PDF/DOCX/TXT path (up to 5 MiB).
+        Returns draft and metadata, including evidence and fields needing review.
+        Extraction errors, including streamed HTTP-200 errors, raise VerdictAPIError.
+        A retry performs a fresh extraction; imports have no saved run/idempotency key.
+        """
+        if (nct_id is None) == (document is None):
+            raise ValueError("Supply exactly one of nct_id or document")
+        if (
+            not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout)
+            or timeout <= 0
+        ):
+            raise ValueError("timeout must be a positive finite number")
+        if nct_id is not None:
+            if not isinstance(nct_id, str) or not nct_id.strip():
+                raise ValueError("nct_id must be a nonblank string")
+            result = self._request(
+                "POST", "synthia/import", form={"nctId": nct_id}, timeout=timeout
+            )
+        else:
+            path = Path(document)
+            if path.suffix.lower() not in {".pdf", ".docx", ".txt"}:
+                raise ValueError("document must be a PDF, DOCX, or TXT file")
+            with path.open("rb") as source:
+                content = source.read(5 * 1024 * 1024 + 1)
+            if not content or len(content) > 5 * 1024 * 1024:
+                raise ValueError("document must contain between 1 byte and 5 MiB")
+            result = self._request(
+                "POST",
+                "synthia/import",
+                files={"document": (path.name, content)},
+                timeout=timeout,
+            )
+        if (
+            not isinstance(result, dict)
+            or "error" in result
+            or not isinstance(result.get("result"), dict)
+        ):
+            raise VerdictAPIError(200, result)
+        return result["result"]
 
     def models(self):
         """Discover models, operations, input schemas, releases and limits."""

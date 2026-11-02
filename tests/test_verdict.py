@@ -96,3 +96,50 @@ def test_polling_deadline_prevents_another_request_and_allows_resumption():
                 poll.return_value = {"status": "complete"}
                 assert client.wait("saved-id")["status"] == "complete"
                 assert poll.call_count == 2
+
+
+def test_synthia_imports_preserve_review_metadata_and_upload_documents(tmp_path):
+    result = {
+        "draft": {"source": "custom"},
+        "metadata": {"fields": [{"needsReview": True}]},
+    }
+    path = tmp_path / "protocol.txt"
+    path.write_text("A randomized study in adults with cancer.")
+    with patch(
+        "pysynthbio.verdict.requests.request", return_value=response({"result": result})
+    ) as send:
+        client = VerdictClient("key")
+        assert client.import_trial(nct_id="NCT01945775") == result
+        assert send.call_args.kwargs["data"] == {"nctId": "NCT01945775"}
+        assert send.call_args.kwargs["timeout"] == 210
+        assert client.import_trial(document=path) == result
+        assert send.call_args.kwargs["files"]["document"] == (
+            "protocol.txt",
+            path.read_bytes(),
+        )
+        assert send.call_args.kwargs["allow_redirects"] is False
+        assert send.call_args.args[1].endswith("/api/v1/synthia/import")
+
+
+def test_synthia_rejects_bad_inputs_and_streamed_errors(tmp_path):
+    with patch("pysynthbio.verdict.requests.request") as send:
+        client = VerdictClient("key")
+        for kwargs in (
+            {},
+            {"nct_id": "NCT01945775", "document": "file.txt"},
+            {"nct_id": ""},
+            {"document": "file.exe"},
+        ):
+            with pytest.raises(ValueError):
+                client.import_trial(**kwargs)
+        send.assert_not_called()
+        for payload, status in (
+            ({"error": "Extraction unavailable"}, 200),
+            ({"error": "Busy"}, 429),
+            ({"wrong": "shape"}, 200),
+        ):
+            send.return_value = response(payload, status)
+            with pytest.raises(VerdictAPIError) as failure:
+                client.import_trial(nct_id="NCT01945775")
+            assert failure.value.details == payload
+            assert failure.value.status_code == status
