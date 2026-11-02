@@ -100,3 +100,18 @@ no columns because this operation does not generate counts. Reconstruction
 row's `model_release_id` and `vae_run_id`. Its `latents` has no columns.
 Existing GEM-2 compatibility model names also use these operation-aware formats.
 `raw_response=True` continues to return the original response unchanged.
+
+
+## Trial Import (preview)
+
+```python
+from pysynthbio import VerdictClient
+client = VerdictClient()  # VERDICT_API_KEY, optionally VERDICT_API_BASE_URL
+proposal = client.import_trial(nct_id="NCT01945775")
+# Or: proposal = client.import_trial(document="protocol.pdf")
+print(proposal["metadata"]["fields"])
+```
+
+Use an API-enabled VERDICT deployment with Trial Import support. Imports accept exactly one NCT ID or local PDF/DOCX/TXT file, up to 5 MiB, and return an editable form draft plus provenance and review metadata. They do not submit an analysis. Review flagged fields before constructing a workflow input; the draft is not itself a workflow request. The import timeout defaults to 210 seconds. Extraction errors raise the normal API error even when the streamed response has HTTP 200. Retrying starts fresh extraction, so save successful proposals locally.
+
+See the [VERDICT Trial Import guide](https://verdict.synthesize.bio/app/api-docs/trial-import) for review semantics and limits. These helpers are on the `app-2924-trial-import` development branch and are not yet a published release.
