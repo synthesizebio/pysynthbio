@@ -47,6 +47,12 @@ The legacy GitHub Pages site at `synthesizebio.github.io/pysynthbio` redirects t
 
 Email us at [support@synthesize.bio](mailto:support@synthesize.bio). We'd love to hear from you!
 
+## VERDICT models and trials
+
+Sign in to [VERDICT API docs](https://verdict.synthesize.bio/app/api-docs/python)
+for the Python client guide, API keys, model calls, and trial workflows.
+An approved VERDICT account is required.
+
 ## Hosted GEM-2 operations
 
 Use `predict_query(..., model_id="gem-2")` for a release that supports the requested
