@@ -2,6 +2,7 @@
 
 import math
 import os
+import re
 import time
 from pathlib import Path
 from urllib.parse import quote, urlparse
@@ -159,6 +160,65 @@ class VerdictClient:
         ):
             raise VerdictAPIError(200, result)
         return result["result"]
+
+    # ---- Trial designs (verdict.clinical-design/v1) ---------------------------------
+
+    _DESIGN_KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,199}$")
+
+    @classmethod
+    def _design_key(cls, value):
+        if value is None:
+            return str(uuid4())
+        if not isinstance(value, str) or not cls._DESIGN_KEY.match(value):
+            raise ValueError(
+                "idempotency_key must start with a letter or digit and use only "
+                "letters, "
+                "digits, '_', '.', ':' or '-' (at most 200 characters)"
+            )
+        return value
+
+    def trial_catalog(self):
+        """Endpoint families and release evidence for trial designs (no inference)."""
+        return self._request("GET", "trial-designs/catalog")
+
+    def trial_schema(self):
+        """The trial-design request schema as OpenAPI 3.1 (field types and enums)."""
+        return self._request("GET", "trial-designs/openapi.json")
+
+    def prepare_trial_design(self, design, idempotency_key=None):
+        """Resolve names and check every analysis for a design dict. Runs nothing.
+
+        Accepts a dict or a :class:`~pysynthbio.Trial`. Returns issues, resolved and
+        unresolved entities, assumptions, per-analysis availability and the
+        ``reviewFingerprint`` needed by :meth:`run_trial_design`. Use the same key
+        for preparation and execution.
+        """
+        design = design.to_dict() if hasattr(design, "to_dict") else design
+        return self._request(
+            "POST",
+            "trial-designs/prepare",
+            {"idempotencyKey": self._design_key(idempotency_key), "design": design},
+        )
+
+    def run_trial_design(self, design, review_fingerprint, *, idempotency_key):
+        """Execute a reviewed design; returns the run receipt (``id``, ``status``).
+
+        Send the same design and key used for :meth:`prepare_trial_design`, with its
+        fingerprint. A changed design needs a new review (409); requesting an
+        unavailable analysis is refused (422). Reuse the key to recover a run.
+        """
+        design = design.to_dict() if hasattr(design, "to_dict") else design
+        if idempotency_key is None:
+            raise ValueError("run_trial_design requires an explicit idempotency_key")
+        return self._request(
+            "POST",
+            "trial-designs/run",
+            {
+                "idempotencyKey": self._design_key(idempotency_key),
+                "design": design,
+                "reviewFingerprint": review_fingerprint,
+            },
+        )
 
     def models(self):
         """Discover models, operations, input schemas, releases and limits."""

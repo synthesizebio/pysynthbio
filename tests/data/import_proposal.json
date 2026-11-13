@@ -1,0 +1,38 @@
+{
+  "draft": {
+    "source": "custom",
+    "publicTrial": "",
+    "analyses": ["efficacy", "toxicity", "biology"],
+    "queries": [{"term": "", "seriousness": "serious"}],
+    "custom": {
+      "name": "MONALEESA-2 style import",
+      "population": "Postmenopausal women with HR+, HER2- advanced breast cancer",
+      "startDate": "2014-01",
+      "conditions": [{"name": "Breast cancer", "mondoId": "MONDO:0007254"}],
+      "phases": ["PHASE3"],
+      "healthyVolunteers": "no",
+      "sex": "female",
+      "minAge": "18",
+      "maxAge": "",
+      "arms": [
+        {"id": "arm-1", "label": "Ribociclib + letrozole", "registeredType": "EXPERIMENTAL", "includesPlacebo": "no",
+         "treatments": [
+           {"name": "ribociclib", "kind": "drug", "role": "study", "timing": "", "identity": "chembl", "chemblId": "CHEMBL3545110", "smiles": "", "dose": "600 mg daily"},
+           {"name": "letrozole", "kind": "drug", "role": "background", "timing": "concurrent", "identity": "chembl", "chemblId": "", "smiles": "", "dose": ""}
+         ]},
+        {"id": "arm-2", "label": "Placebo + letrozole", "registeredType": "PLACEBO_COMPARATOR", "includesPlacebo": "yes",
+         "treatments": [
+           {"name": "Placebo", "kind": "other", "role": "placebo", "timing": "", "identity": "name_only", "chemblId": "", "smiles": "", "dose": ""},
+           {"name": "letrozole", "kind": "drug", "role": "background", "timing": "concurrent", "identity": "chembl", "chemblId": "", "smiles": "", "dose": ""}
+         ]}
+      ],
+      "endpoints": [
+        {"id": "endpoint-1", "kind": "progression_free_survival", "family": "progression_free_survival", "name": "PFS", "definition": "Investigator-assessed", "timeFrame": "Up to 3 years",
+         "analysis": {"title": "Progression-free survival", "effectType": "hazard_ratio", "hypothesis": "superiority", "endpointRole": "primary", "primaryEndpoints": "1"}}
+      ],
+      "comparisons": [{"id": "comparison-1", "experimental": "arm-1", "comparator": "arm-2", "endpoints": ["endpoint-1"]}],
+      "outcomeDesign": {"allocation": "RANDOMIZED", "masking": "QUADRUPLE", "primaryPurpose": "TREATMENT", "sponsorClass": "INDUSTRY", "numberOfArms": "2", "startYear": "2014"}
+    }
+  },
+  "metadata": {"fields": []}
+}
