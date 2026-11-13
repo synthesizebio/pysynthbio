@@ -188,11 +188,10 @@ def predict_query(
                 "call set_synthesize_token() before making API requests."
             )
 
-    # Source field for reporting
-    query["source"] = "pysynthbio"
-
-    # Merge any additional kwargs into the query (validated server-side)
-    query.update(kwargs)
+    # Build the request body on a copy: add the source field for reporting and
+    # merge any additional kwargs (validated server-side). Changing the caller's
+    # dict would carry these options into their next call with the same query.
+    query = {**query, "source": "pysynthbio", **kwargs}
 
     model_query_id = _start_model_query(
         api_base_url=api_base_url,
