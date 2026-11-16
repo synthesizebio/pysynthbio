@@ -125,6 +125,7 @@ VOCABULARY: dict[str, tuple[str, ...]] = {
         "OTHER",
     ),
     "seriousness": ("serious", "other"),
+    "enrollment_type": ("ANTICIPATED", "ACTUAL", "UNKNOWN"),
     "analysis": ("trial_characteristics", "efficacy", "toxicity", "biology"),
 }
 
@@ -334,6 +335,13 @@ _FIELDS: tuple[tuple[str, str, str | None, str], ...] = (
     ("details.sponsor_type", "choice", "sponsor_type", "Lead sponsor class"),
     ("details.arm_count", "int", None, "Registered arms, if more than modeled"),
     ("details.primary_endpoint_count", "int", None, "Primary endpoints in the trial"),
+    ("details.enrollment", "int", None, "Sample size: participants across all arms"),
+    (
+        "details.enrollment_type",
+        "choice",
+        "enrollment_type",
+        "Planned (ANTICIPATED) or achieved (ACTUAL)",
+    ),
     ("population.disease", "text", None, "Condition name; MONDO resolves on review"),
     (
         "population.mondo_id",
@@ -1100,6 +1108,8 @@ class TrialDetails(_Record):
         "sponsor_type",
         "arm_count",
         "primary_endpoint_count",
+        "enrollment",
+        "enrollment_type",
     )
 
     def __init__(self, name: str):
@@ -1122,8 +1132,10 @@ class TrialDetails(_Record):
             value = _start_date(value)
         elif name in ("allocation", "blinding", "purpose", "sponsor_type"):
             value = choose(name, value)
-        elif name in ("arm_count", "primary_endpoint_count"):
+        elif name in ("arm_count", "primary_endpoint_count", "enrollment"):
             value = _positive_int(value, name)
+        elif name == "enrollment_type":
+            value = choose("enrollment_type", value)
         object.__setattr__(self, name, value)
 
     @property
@@ -1327,6 +1339,54 @@ class Trial:
             variants.add(label, self.variant(f"{self.name} ({label})", **changes))
         return variants
 
+    def screen(
+        self, arm: Any, drugs: Iterable[Any], *, replace: Any = None
+    ) -> "TrialSet":
+        """One variant per drug, each swapped into ``arm``, as a :class:`TrialSet`.
+
+        ``drugs`` are names, Treatment field dicts or Treatments. The arm's study
+        treatment is replaced (or ``replace``, a treatment name or position); its
+        role and timing are kept and its dose is cleared. Other arms, endpoints and
+        comparisons stay the same, so results compare drugs like for like::
+
+            trial.screen("Experimental", ["ribociclib", "palbociclib", "abemaciclib"])
+        """
+        target = self.arms.get(arm)
+        position = self.arms.index(target)
+        if not len(target.treatments):
+            raise TrialDesignError(f"Arm {target.label!r} has no treatment to replace")
+        if replace is None:
+            slot = next(
+                (
+                    i
+                    for i, t in enumerate(target.treatments)
+                    if t.role in (None, "study")
+                ),
+                0,
+            )
+        else:
+            slot = target.treatments.index(replace)
+        variants = TrialSet()
+        for drug in drugs:
+            if isinstance(drug, Treatment):
+                fields = drug.to_dict()
+            elif isinstance(drug, dict):
+                fields = dict(drug)
+            else:
+                fields = {"name": drug}
+            old = target.treatments.list()[slot]
+            fields.setdefault("role", old.role)
+            fields.setdefault("timing", old.timing)
+            label = fields["name"]
+            twin = self.copy(f"{self.name} ({label})")
+            twin_arm = twin.arms.list()[position]
+            items = twin_arm.treatments._items
+            items[slot] = Treatment(**fields)
+            variants.add(label, twin)
+        if not len(variants):
+            raise TrialDesignError("Pass at least one drug to screen")
+        return variants
+
     # -- serialization ---------------------------------------------------------------
 
     def to_dict(self) -> dict[str, Any]:
@@ -1382,6 +1442,13 @@ class Trial:
                 ),
                 "primaryEndpointCount": d.primary_endpoint_count,
                 **({"startDate": d.start_date} if d.start_date else {}),
+                # Sample size; omitted when unset so older servers accept the design.
+                **({"enrollment": d.enrollment} if d.enrollment else {}),
+                **(
+                    {"enrollmentType": d.enrollment_type}
+                    if d.enrollment and d.enrollment_type
+                    else {}
+                ),
             },
             "requestedAnalyses": list(self._analyses),
         }
@@ -1433,6 +1500,8 @@ class Trial:
             sponsor_type=metadata.get("sponsorType"),
             arm_count=metadata.get("armCount"),
             primary_endpoint_count=metadata.get("primaryEndpointCount"),
+            enrollment=metadata.get("enrollment"),
+            enrollment_type=metadata.get("enrollmentType"),
         )
         trial.population.edit(
             conditions=population.get("conditions") or [],
@@ -1504,6 +1573,12 @@ class Trial:
             sponsor_type=outcome.get("sponsorClass") or None,
             arm_count=number(outcome.get("numberOfArms")),
             primary_endpoint_count=number(counts.pop()) if len(counts) == 1 else None,
+            enrollment=number(design.get("enrollment")),
+            enrollment_type=(
+                (design.get("enrollmentType") or None)
+                if design.get("enrollment")
+                else None
+            ),
         )
         trial.population.edit(
             conditions=[c for c in design.get("conditions") or [] if c.get("name")],
@@ -1672,6 +1747,7 @@ class Trial:
                 ("Purpose", _label(d.purpose)),
                 ("Sponsor", _label(d.sponsor_type)),
                 ("Start", d.start_date),
+                ("Enrollment", d.enrollment),
                 ("Analyses", ", ".join(self._analyses)),
             ],
         )

@@ -143,8 +143,11 @@ result.efficacy.table                              # readable DataFrames
 result.safety.table
 
 # Variations: every combination, run together and compared side by side
-trial.vary(sex=["female", "male"], min_age=[18, 65]).run(
-    client, idempotency_prefix="hcc-sweep"
+trial.vary(enrollment=[200, 600, 1200]).run(client, idempotency_prefix="hcc-size").table
+
+# Screen drugs: one variant per drug swapped into an arm
+trial.screen("Durvalumab", ["durvalumab", "atezolizumab", "nivolumab"]).run(
+    client, idempotency_prefix="hcc-screen"
 ).table
 ```
 

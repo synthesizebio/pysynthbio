@@ -254,3 +254,33 @@ def test_run_drops_toxicity_when_the_release_needs_a_query():
     hcc_trial().run(client, idempotency_key="hcc-3")
     design, _ = client.run_trial_design.call_args.args
     assert design["requestedAnalyses"] == ["efficacy", "biology"]
+
+
+def test_sample_size_is_a_design_field_you_can_vary():
+    trial = hcc_trial()
+    assert "enrollment" not in trial.to_dict()["metadata"]  # unset: left out
+    trial.details.edit(enrollment=600, enrollment_type="anticipated")
+    metadata = trial.to_dict()["metadata"]
+    assert (metadata["enrollment"], metadata["enrollmentType"]) == (600, "ANTICIPATED")
+    assert Trial.from_dict(trial.to_dict()).details.enrollment == 600
+    sizes = trial.vary(enrollment=[100, 600, 1200])
+    assert [t.details.enrollment for _, t in sizes] == [100, 600, 1200]
+    with pytest.raises(TrialDesignError):
+        trial.edit(enrollment=0)
+
+
+def test_screen_swaps_each_drug_into_one_arm():
+    trial = hcc_trial()
+    trial.arms["Durvalumab"].treatments.edit("durvalumab", role="study", dose="1500 mg")
+    trial.arms["Durvalumab"].treatments.add("lenvatinib", role="background")
+    drugs = trial.screen("Durvalumab", ["atezolizumab", {"name": "nivolumab"}])
+    assert drugs.labels() == ["atezolizumab", "nivolumab"]
+    arm = drugs["nivolumab"].arms["Durvalumab"]
+    assert [t.name for t in arm.treatments] == ["nivolumab", "lenvatinib"]
+    assert arm.treatments["nivolumab"].role == "study"
+    assert arm.treatments["nivolumab"].dose is None
+    assert [t.name for t in trial.arms["Durvalumab"].treatments] == [
+        "durvalumab",
+        "lenvatinib",
+    ]
+    assert drugs["atezolizumab"].arms["Sorafenib"].treatments.names() == ["sorafenib"]
