@@ -284,3 +284,16 @@ def test_screen_swaps_each_drug_into_one_arm():
         "lenvatinib",
     ]
     assert drugs["atezolizumab"].arms["Sorafenib"].treatments.names() == ["sorafenib"]
+
+
+def test_import_warns_about_alternative_regimens():
+    proposal = json.loads(
+        (Path(__file__).parent / "data" / "import_proposal.json").read_text()
+    )
+    proposal["draft"]["custom"]["arms"][0][
+        "regimenAlternatives"
+    ] = "Ribociclib or palbociclib."
+    with pytest.warns(
+        UserWarning, match="Ribociclib \\+ letrozole.*alternative regimens"
+    ):
+        Trial.from_import(proposal)

@@ -38,6 +38,7 @@ import html
 import itertools
 import json
 import re
+import warnings
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
@@ -1599,6 +1600,15 @@ class Trial:
                 kind if kind in VOCABULARY["arm_type"] else None,
             )
             arm_ids[arm.get("id")] = added
+            if (arm.get("regimenAlternatives") or "").strip():
+                # The source offers alternatives ("A or B"); every option is listed
+                # as a treatment, which would run as a combination.
+                warnings.warn(
+                    f"Arm {added.label!r} lists alternative regimens: "
+                    f"{arm['regimenAlternatives'].strip()} Keep one regimen and remove "
+                    "the other treatments before running.",
+                    stacklevel=2,
+                )
             for t in arm.get("treatments") or []:
                 if not t.get("name"):
                     continue
