@@ -87,8 +87,91 @@ class TrialResult:
         # Local client provenance is separate from the report's model provenance.
         self.provenance = {"local_client": _provenance(), "execution": execution}
 
+    def headlines(self):
+        """The numbers to read first (P(Success), main efficacy, serious AEs)."""
+        from ._report_tables import headlines
+
+        return headlines(self.raw)
+
     def __repr__(self):
-        return f"TrialResult(run_id={self.run_id!r}, status={self.raw['status']!r})"
+        from ._report_tables import percent
+
+        h = self.headlines()
+        trial = self.raw["request"]["trial"]
+        lines = [f"{trial['name']} — {h['status']}", f"  {self.ui_url}"]
+        if h.get("p_success") is not None:
+            lines.append(
+                f"  P(Success) {percent(h['p_success'])}"
+                f" (historical odds {percent(h.get('historical_odds'))})"
+            )
+        if h.get("main_endpoint"):
+            effect = (
+                f"HR {h['hazard_ratio']:.2f}"
+                if h.get("hazard_ratio") is not None
+                else f"P(significant) {percent(h.get('p_significant'))}"
+            )
+            lines.append(
+                f"  Efficacy · {h['main_comparison']} · {h['main_endpoint']}: {effect}"
+            )
+        for key, value in h.items():
+            if key.startswith("serious_ae: "):
+                lines.append(
+                    f"  Any serious AE · {key.removeprefix('serious_ae: ')}: "
+                    f"{percent(value)}"
+                )
+        lines += [f"  {a['analysis']}: {a['status']}" for a in self.raw["analyses"]]
+        lines.append(
+            "  Tables: .efficacy.table  .safety.table  .biology.table  (.raw for JSON)"
+        )
+        return "\n".join(lines)
+
+    def _repr_html_(self):
+        from ._report_tables import percent
+
+        h = self.headlines()
+        cards = []
+        if h.get("p_success") is not None:
+            cards.append(
+                (
+                    "P(Success)",
+                    percent(h["p_success"]),
+                    f"historical odds {percent(h.get('historical_odds'))}",
+                )
+            )
+        if h.get("main_endpoint"):
+            value = (
+                f"HR {h['hazard_ratio']:.2f}"
+                if h.get("hazard_ratio") is not None
+                else percent(h.get("p_significant"))
+            )
+            cards.append(
+                ("Efficacy", value, f"{h['main_comparison']} · {h['main_endpoint']}")
+            )
+        for key, value in h.items():
+            if key.startswith("serious_ae: "):
+                cards.append(
+                    ("Any serious AE", percent(value), key.removeprefix("serious_ae: "))
+                )
+        card_html = "".join(
+            "<div style='border:1px solid #ddd;border-radius:8px;"
+            "padding:10px 14px;min-width:150px'>"
+            f"<div style='font-size:12px;color:#666'>{_escape(t)}</div>"
+            f"<div style='font-size:24px;font-weight:600'>{_escape(v)}</div>"
+            f"<div style='font-size:12px;color:#666'>{_escape(c)}</div></div>"
+            for t, v, c in cards
+        )
+        sections = "".join(
+            f"<details><summary><strong>{_escape(a.title)}</strong> · "
+            f"{_escape(a.status)}</summary>"
+            f"{a._table_html()}</details>"
+            for a in (self.efficacy, self.safety, self.biology)
+        )
+        return (
+            self.summary._repr_html_()
+            + "<div style='display:flex;gap:10px;flex-wrap:wrap;margin:10px 0'>"
+            + f"{card_html}</div>"
+            + sections
+        )
 
     def save_json(self, path):
         """Write the complete report to a local JSON file; never call the API."""
@@ -195,10 +278,45 @@ class _Analysis:
         )
         return {"analysis": analysis, "components": components}
 
-    def __repr__(self):
+    @property
+    def status(self):
         analysis = self.data["analysis"]
-        status = "not requested" if analysis is None else analysis["status"]
-        return f"{self.title}: {status} (use .data for records or .plot() for charts)"
+        return "not requested" if analysis is None else analysis["status"]
+
+    @property
+    def table(self):
+        """This analysis as a readable pandas DataFrame (no network requests).
+
+        Efficacy: one row per comparison and endpoint. Safety: events by arm.
+        Biology: mean absolute log2 CPM change by tissue and comparison.
+        """
+        from . import _report_tables as tables
+
+        return {
+            "efficacy": tables.efficacy_table,
+            "toxicity": tables.safety_table,
+            "biology": tables.biology_table,
+        }[self.kind](self.prediction.raw)
+
+    def _table_html(self):
+        table = self.table
+        if table.empty:
+            return "<p>No predictions.</p>"
+        percent_columns = [c for c in table.columns if str(c).startswith("p_")]
+        if self.kind == "toxicity":
+            percent_columns = list(table.columns)
+        from ._report_tables import percent
+
+        formatted = table.copy()
+        for column in percent_columns:
+            formatted[column] = formatted[column].map(percent)
+        return formatted.to_html(na_rep="—", index=self.kind != "efficacy")
+
+    def __repr__(self):
+        table = self.table
+        body = "" if table.empty else "\n" + table.head(15).to_string()
+        hint = "(.table for the DataFrame, .data for records, .plot() for charts)"
+        return f"{self.title}: {self.status}{body}\n{hint}"
 
     def plot(self, **selection):
         """Plot saved model outputs; no inference. Biology accepts contrast/tissue_id;
@@ -231,6 +349,10 @@ class _Analysis:
             HTML(
                 f"<h2>{self.title}</h2><p>Status: "
                 f"<strong>{_escape(analysis['status'])}</strong></p>{notes}"
+                + self._table_html()
             )
         )
-        self.plot()
+        try:
+            self.plot()
+        except ImportError:
+            pass  # charts need the pysynthbio[verdict] extra; the table is shown

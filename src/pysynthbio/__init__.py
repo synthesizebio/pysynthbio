@@ -38,6 +38,16 @@ from .key_handlers import (
 from .list_models import (
     list_models as list_models,
 )
+from .trial_design import Arm as Arm
+from .trial_design import Endpoint as Endpoint
+from .trial_design import Treatment as Treatment
+from .trial_design import Trial as Trial
+from .trial_design import TrialDesignError as TrialDesignError
+from .trial_design import TrialReview as TrialReview
+from .trial_design import TrialReviewError as TrialReviewError
+from .trial_design import TrialSet as TrialSet
+from .trial_design import TrialSetResult as TrialSetResult
+from .trial_design import trial_vocabulary as trial_vocabulary
 from .trials import TrialResult as TrialResult
 from .trials import load_trial as load_trial
 from .trials import load_trial_result as load_trial_result
