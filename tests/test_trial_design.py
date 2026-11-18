@@ -297,3 +297,26 @@ def test_import_warns_about_alternative_regimens():
         UserWarning, match="Ribociclib \\+ letrozole.*alternative regimens"
     ):
         Trial.from_import(proposal)
+
+
+def test_biology_chart_names_tissues_like_the_tables(monkeypatch):
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from pysynthbio import _verdict_charts
+
+    text = (Path(__file__).parent / "data" / "trial_report.json").read_text()
+    # A tissue outside the chart's former hard-coded list.
+    report = json.loads(text.replace("UBERON:0002048", "UBERON:0001155"))
+    labels = []
+    monkeypatch.setattr(
+        _verdict_charts.plt,
+        "show",
+        lambda: labels.extend(
+            t.get_text() for t in _verdict_charts.plt.gca().get_yticklabels()
+        ),
+    )
+    _verdict_charts.plot_biology(report)
+    assert any(label.startswith("Colon (n=") for label in labels)
+    assert any(label.startswith("Thyroid gland (n=") for label in labels)
+    assert not any("UBERON" in label for label in labels)
