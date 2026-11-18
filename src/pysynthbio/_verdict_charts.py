@@ -5,39 +5,9 @@ from textwrap import fill
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
 
+from ._tissue_names import TISSUE_NAMES
+
 PURPLE, TEAL = "#6A55A0", "#25857D"
-TISSUES = dict(
-    zip(
-        [
-            "0000014",
-            "0002046",
-            "0002048",
-            "0002084",
-            "0000310",
-            "0002107",
-            "0000945",
-            "0001264",
-            "0002113",
-            "0000178",
-            "0001911",
-            "0002097",
-        ],
-        [
-            "Skin",
-            "Thyroid",
-            "Lung",
-            "Heart · left ventricle",
-            "Mammary gland",
-            "Liver",
-            "Stomach",
-            "Pancreas",
-            "Kidney",
-            "Blood",
-            "Mammary gland",
-            "Skin",
-        ],
-    )
-)
 TRAINING = {
     "in_training": "Used to train this model",
     "selection_only": "Used for model selection",
@@ -293,7 +263,7 @@ def plot_biology(report, contrast=None, tissue_id=None):
     )
 
     def tissue_name(key):
-        return TISSUES.get(key.removeprefix("UBERON:"), key)
+        return TISSUE_NAMES.get(key, key)
 
     trial = report["request"]["trial"]
     arms = {a["arm_id"]: a["label"] for a in trial["arms"]}
